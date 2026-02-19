@@ -1317,7 +1317,7 @@ jobs:
 
           # Get Latest Successful Workflow Run ID
           run_id=$(gh api \
-            "repos/$REPO/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" \
+            "repos/$REPO/actions/workflows/build-manager.yml/runs?branch=${MANAGER_BRANCH}&status=success&per_page=1" \
             --jq '.workflow_runs[0].id' 2>/dev/null || echo "")
 
           if [[ -z "$run_id" ]]; then
