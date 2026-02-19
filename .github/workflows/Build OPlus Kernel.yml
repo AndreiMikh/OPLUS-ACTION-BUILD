@@ -74,7 +74,7 @@ on:
         type: string
         description: "Dynamic Inventory Warehouse Owner"
         required: true
-        default: "KingMikh"
+        default: "AndreiMikh"
       BUILD_TIME:
         type: string
         description: "Custom Build Time (Type F to Use Current UTC Time)"
@@ -379,7 +379,7 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name "KingMikh"
+          git config --global user.name "AndreiMikh"
           git config --global user.email "andreimikhail0088@gmail.com"
           
       - name: Install Dependencies + APTC
@@ -903,14 +903,14 @@ jobs:
               exit 0
             }
           done
-          git clone https://github.com/KingMikh/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close & Try Again"; exit 11; }
-          echo "Pulling Windspeed Patches"
+          git clone https://github.com/AndreiMikh/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close & Try Again"; exit 11; }
+          echo "Pulling Windspeed Patch"
           cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
           if [[ -f "fengchi_${FILE}.patch" ]]; then
             echo "Applying Windspeed Patches"
             dos2unix "fengchi_${FILE}.patch"
             patch -p1 -F 3 < "fengchi_${FILE}.patch"
-            echo "Windspeed Patches Complete"
+            echo "Windspeed Patch Complete"
           else
             echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close & Try Again"
             exit 12
@@ -1210,7 +1210,7 @@ jobs:
 
       - name: Make AnyKernel3
         run: |
-          git clone https://github.com/KingMikh/AnyKernel3 --depth=1
+          git clone https://github.com/AndreiMikh/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
           mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
           image_path=""
