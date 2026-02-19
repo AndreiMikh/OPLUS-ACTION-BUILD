@@ -82,7 +82,7 @@ on:
         default: "Sat Feb 14 07:17:27 UTC 2026"
       KSU_META:
         type: choice
-        description: "Root Manager"
+        description: "KSU Meta Manager"
         required: true
         default: "ReSukiSU"
         options:
@@ -92,7 +92,7 @@ on:
          - KernelSU
       MANAGER_SOURCE:
         type: choice
-        description: "Manager Call Direction"
+        description: "KSU Meta Manager Call Direction"
         required: true
         default: ReSukiSU
         options:
@@ -107,16 +107,16 @@ on:
         default: "0/lz4kd/8589934592"
       SUFFIX:
         type: string
-        description: "Custom kernel suffix (use random string if not specified)"
+        description: "Custom Kernel Suffix (Use Random String if Not Specified)"
         required: false
         default: "8-andreimikhail-4k"
       SUBLEVEL:
-        description: "Custom kernel level spoofing (SUBLEVEL)"
+        description: "Custom Kernel Level Spoofing (Sublevel)"
         required: false
         default: ""
       FAST_BUILD:
         type: boolean
-        description: "Enable rapid build?"
+        description: "Enable Fast Kernel Build?"
         required: true
         default: true
       LSM:
@@ -126,7 +126,7 @@ on:
         default: true
       NETFILTER:
         type: boolean
-        description: "Enable Network Feature Extensions (NETFILTER)?"
+        description: "Enable Network Feature Extensions (Netfilter)?"
         required: true
         default: true
       BBR_ECN:
@@ -141,7 +141,7 @@ on:
         default: true
       SCHED:
         type: boolean
-        description: "Add Windspeed Driver 1.0?"
+        description: "Add Windspeed Driver v1.0 (Fengchi)?"
         required: true
         default: true
       XUS_FIX:
@@ -151,12 +151,12 @@ on:
         default: true
       SUSFS_DEV:
         type: boolean
-        description: "Pull SUSFS-DEV Branch?"
+        description: "Extract SUSFS-Dev Branch?"
         required: true
         default: false
       SPACE_NOCLEAN:
         type: boolean
-        description: "Stop Space Cleaning?"
+        description: "Disable Space Cleaning?"
         required: true
         default: false
       BUILD_NOCCACHE:
@@ -167,7 +167,7 @@ on:
 
 jobs:
   build:
-    name:  Liquid Test
+    name:  Liquid OPlus
     runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
@@ -211,7 +211,7 @@ jobs:
           # Dynamically Calling Source Code Manifest Repository, Repository Priority：1️⃣ KingMikh OnePlusOSS → 2️⃣ Appendix → 3️⃣ Dynamic
           DYNAMIC_REPO_INPUT="${{ github.event.inputs.DYNAMIC_REPO }}"
           declare -A REPOS
-          REPOS["KingMikhail"]="KingMikhail|kernel_manifest"
+          REPOS["KingMikh"]="KingMikhail|kernel_manifest"
           REPOS["Appendix"]="KingMikhail|Kernel_Manifest_Appendix"
           REPOS["Dynamic"]="${DYNAMIC_REPO_INPUT}|kernel_manifest"
 
@@ -701,7 +701,7 @@ jobs:
             # Apply Patch File
             for p in "${patches[@]}"; do
             echo "Downloading $p..."
-            wget -q https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
+            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
             echo "Applying $p..."
             patch -p1 -N -F 3 < $p || echo "⚠ Patch $p May have Already been Applied or Failed"
             done
@@ -726,7 +726,7 @@ jobs:
             # Apply Patch File
             for p in "${patches[@]}"; do
             echo "Downloading $p..."
-            wget -q https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
+            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
             echo "Applying $p..."
             patch -p1 -N -F 3 < $p || echo "⚠ Patch $p May have Already been Applied or Failed"
             done
@@ -751,7 +751,7 @@ jobs:
             # Apply Patch
             for p in "${patches[@]}"; do
             echo "Downloading $p..."
-            wget -q https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
+            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
             echo "Applying $p..."
             patch -p1 -N -F 3 < $p || echo "⚠ Patch $p May have Already been Applied or Failed"
             done
@@ -781,11 +781,11 @@ jobs:
             cd ..
           fi
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          git clone https://github.com/KingMikhail/Action-Build.git
+          git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
           cd kernel_platform
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "Extract SUSFS Patch"
-            wget https://github.com/KingMikhail/Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch -O ./common/69_hide_stuff.patch
+            wget https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch -O ./common/69_hide_stuff.patch
             cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
@@ -805,7 +805,7 @@ jobs:
 
           if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Fixed Bugs Caused by Kernel v5.15.0~5.15.123 Supporting Older Versions of C Library..."
-            cp ../../Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
             echo "Fix 5.15 Patch Complete"
           fi
@@ -862,7 +862,7 @@ jobs:
               fi
             fi
             if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
-              cp ../../Action-Build/patches/No_5uS.patch ./
+              cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
             fi
           fi
@@ -871,7 +871,7 @@ jobs:
       - name: Apply Conversion
         if: ${{ fromJSON(env.KV1) >= 6 && fromJSON(env.KV2) >= 66 && github.event.inputs.SCHED == 'false' }}
         run: |
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
@@ -887,7 +887,7 @@ jobs:
       - name: Apply Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
           if [ "$KV1" -lt 6 ]; then
             patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1-.patch" || true
@@ -926,11 +926,11 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "Code for Fengchi already exists in the source code; enable secondary rollback"
+              echo "Code for Fengchi Already Exists in Source Code; Enable Secondary Rollback"
               exit 0
             }
           done
-          git clone https://github.com/KingMikhail/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ The CPU branch does not exist, fengchi kernel does not currently support your model, please close and try again"; exit 11; }
+          git clone https://github.com/KingMikhail/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close and Try Again"; exit 11; }
           echo "Pulling Windspeed Patches"
           cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
           if [[ -f "fengchi_${FILE}.patch" ]]; then
@@ -939,7 +939,7 @@ jobs:
             patch -p1 -F 3 < "fengchi_${FILE}.patch"
             echo "Windspeed Patches Complete"
           else
-            echo "❌ No Patch Found, Windspeed Kernel does not Currently Support your Device Model, Close and Try Again"
+            echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close and Try Again"
             exit 12
           fi
 
@@ -1064,7 +1064,7 @@ jobs:
       - name: Fix IPv6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
           if [[ "${CPU}" == sm* ]]; then
             echo "Fix potential false alarms from devices after enabling IPv6 NAT…"
@@ -1347,7 +1347,7 @@ jobs:
         id: zram_find
         run: |
           set -e
-          ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/ZRAM.zip"
+          ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/ZRAM.zip"
 
           if [ ! -f "$ZRAM_ZIP" ]; then
             echo "Not Found ZRAM.zip: $ZRAM_ZIP"
