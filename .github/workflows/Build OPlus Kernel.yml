@@ -606,11 +606,13 @@ jobs:
           git add -A
           git commit -m "Random suffix & remove -dirty"
 
-      - name: KSU Meta Source Call
+      - name: Re-Solve KSU Meta Source
         id: manager
         run: |
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
+          KSU_META="${{ github.event.inputs.KSU_META }}"
 
+          # Resolve Branch + Artifact
           case "$MANAGER_SOURCE" in
             SukiSU-Ultra-Main)
               BRANCH="main"
@@ -634,9 +636,35 @@ jobs:
               ;;
           esac
 
+          # Resolve Actual Repository (Critical Fix)
+          case "$KSU_META" in
+            SukiSU-Ultra)
+              REPO="SukiSU-Ultra/SukiSU-Ultra"
+              ;;
+            KernelSU-Next)
+              REPO="KernelSU-Next/KernelSU-Next"
+              ;;
+            WildKSU)
+              REPO="WildKernels/Wild_KSU"
+              ;;
+            ReSukiSU)
+              REPO="ReSukiSU/ReSukiSU"
+              ;;
+            *)
+              echo "Unsupported KSU Meta: $KSU_META"
+              exit 1
+              ;;
+          esac
+
           echo "MANAGER_BRANCH=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "MANAGER_ARTIFACT=$ARTIFACT" >> "$GITHUB_OUTPUT"
-      
+          echo "KSU_REPO=$REPO" >> "$GITHUB_OUTPUT"
+
+          echo "Resolved:"
+          echo "  Repo: $REPO"
+          echo "  Branch: $BRANCH"
+          echo "  Artifact: $ARTIFACT"
+          
       - name: Add Selected KSU Meta
         run: |
           # Go to Kernel Working Directory
