@@ -64,7 +64,7 @@ on:
         options:
           - KPM
           - KPN
-          - NoN
+          - None
       SUSFS_META:
         type: string
         description: "Rollback SUSFS (Enter Hash or Number or -1 to Turn Off)"
@@ -937,7 +937,7 @@ jobs:
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
           # KPM Configuration
-          if [ "${{ github.event.inputs.KPM }}" = "KPM" ] || [ "${{ github.event.inputs.KPM }}" = "NoN" ]; then
+          if [ "${{ github.event.inputs.KPM }}" = "KPM" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
           fi
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ]; then
