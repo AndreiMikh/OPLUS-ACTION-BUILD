@@ -1052,131 +1052,113 @@ jobs:
 
       - name: Add Configuration Settings
         run: |
-          set -e
-
           cd kernel_workspace/kernel_platform/common
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
-
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
-          CPU="${CPU}"
-          ENABLE_RUST="${ENABLE_RUST}"
-
-          # Helper: Safely Set Configuration
-          set_config() {
-            sed -i "/^$1=/d" "$CONFIG_FILE"
-            echo "$1=$2" >> "$CONFIG_FILE"
-          }
+          MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
 
           # KSU Meta Configuration
-          set_config CONFIG_KSU y
-          set_config CONFIG_KSU_MULTI_MANAGER_SUPPORT y
+          echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
+          echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
           # KPM Configuration
-          case "${{ github.event.inputs.KPM }}" in
-            KPM)
-              set_config CONFIG_KPM y
-              ;;
-            *)
-              set_config CONFIG_KPM n
-              ;;
-          esac
+          if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
+            echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
+          fi
+          if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
+            echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
+          fi
 
           # SUSFS Configuration
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            set_config CONFIG_KSU_SUSFS y
-            set_config CONFIG_KSU_SUSFS_SUS_PATH y
-            set_config CONFIG_KSU_SUSFS_SUS_MAP y
-            set_config CONFIG_KSU_SUSFS_SUS_MOUNT y
-            set_config CONFIG_KSU_SUSFS_SUS_KSTAT y
-            set_config CONFIG_KSU_SUSFS_SPOOF_UNAME y
-            set_config CONFIG_KSU_SUSFS_ENABLE_LOG y
-            set_config CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS y
-            set_config CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG y
-            set_config CONFIG_KSU_SUSFS_OPEN_REDIRECT y
+            echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "$CONFIG_FILE"
           else
-            set_config CONFIG_KSU_SUSFS n
+            echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
 
-          # TMPFS Configuration
-          set_config CONFIG_TMPFS_XATTR y
-          set_config CONFIG_TMPFS_POSIX_ACL y
+          # TMPFS Configuration (Mountify)*
+          echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
+          echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
 
-          # BBR & ECN Configuration
+          # BBR & ECN Configuration*
           if [ "${{ github.event.inputs.BBR_ECN }}" = "true" ]; then
-            set_config CONFIG_TCP_CONG_ADVANCED y
-            set_config CONFIG_TCP_CONG_BBR y
-            set_config CONFIG_NET_SCH_FQ y
-            set_config CONFIG_TCP_CONG_BIC n
-            set_config CONFIG_TCP_CONG_WESTWOOD n
-            set_config CONFIG_TCP_CONG_HTCP n
-            set_config CONFIG_IP_ECN y
-            set_config CONFIG_TCP_ECN y
-            set_config CONFIG_IPV6_ECN y
-            set_config CONFIG_IP_NF_TARGET_ECN y
+            echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
+            echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
+            echo "CONFIG_NET_SCH_FQ=y" >> "$CONFIG_FILE"
+            echo "CONFIG_TCP_CONG_BIC=n" >> "$CONFIG_FILE"
+            echo "CONFIG_TCP_CONG_WESTWOOD=n" >> "$CONFIG_FILE"
+            echo "CONFIG_TCP_CONG_HTCP=n" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_ECN=y" >> "$CONFIG_FILE"
+            echo "CONFIG_TCP_ECN=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IPV6_ECN=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_NF_TARGET_ECN=y" >> "$CONFIG_FILE"
           fi
 
-          # ZRAM Configuration
+          # ZRAM Configuration*
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
-            set_config CONFIG_CRYPTO_LZ4HC y
-            set_config CONFIG_CRYPTO_LZ4K y
-            set_config CONFIG_CRYPTO_LZ4KD y
-            set_config CONFIG_CRYPTO_842 y
-            set_config CONFIG_CRYPTO_LZ4K_OPLUS y
-            set_config CONFIG_ZRAM_WRITEBACK y
+            echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> "$CONFIG_FILE"
+            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
           fi
 
-          # LSM Configuration
+          # LSM Configuration*
           if [ "${{ github.event.inputs.LSM }}" = "true" ]; then
-            set_config CONFIG_BBG y
+            echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # NETFILTER & IPv6 NAT (Snapdragon Only)
-          if [[ "$CPU" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
-
+          # IPSET & IPV6 NAT Configuration*
+          if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
-              set_config CONFIG_BPF_STREAM_PARSER y
+              echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
             fi
-
-            set_config CONFIG_NETFILTER_XT_MATCH_ADDRTYPE y
-            set_config CONFIG_NETFILTER_XT_SET y
-            set_config CONFIG_IP_SET y
-            set_config CONFIG_IP_SET_MAX 65534
-            set_config CONFIG_IP_SET_BITMAP_IP y
-            set_config CONFIG_IP_SET_BITMAP_IPMAC y
-            set_config CONFIG_IP_SET_BITMAP_PORT y
-            set_config CONFIG_IP_SET_HASH_IP y
-            set_config CONFIG_IP_SET_HASH_IPMARK y
-            set_config CONFIG_IP_SET_HASH_IPPORT y
-            set_config CONFIG_IP_SET_HASH_IPPORTIP y
-            set_config CONFIG_IP_SET_HASH_IPPORTNET y
-            set_config CONFIG_IP_SET_HASH_IPMAC y
-            set_config CONFIG_IP_SET_HASH_MAC y
-            set_config CONFIG_IP_SET_HASH_NETPORTNET y
-            set_config CONFIG_IP_SET_HASH_NET y
-            set_config CONFIG_IP_SET_HASH_NETNET y
-            set_config CONFIG_IP_SET_HASH_NETPORT y
-            set_config CONFIG_IP_SET_HASH_NETIFACE y
-            set_config CONFIG_IP_SET_LIST_SET y
-            set_config CONFIG_IP6_NF_NAT y
-            set_config CONFIG_IP6_NF_TARGET_MASQUERADE y
+            echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> "$CONFIG_FILE"
+            echo "CONFIG_NETFILTER_XT_SET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_MAX=65534" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_BITMAP_IP=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_BITMAP_IPMAC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_BITMAP_PORT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_IP=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_IPMARK=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_IPPORT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_IPPORTIP=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_IPPORTNET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_IPMAC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_MAC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_NETPORTNET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_NET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_NETNET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_NETPORT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_HASH_NETIFACE=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP_SET_LIST_SET=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP6_NF_NAT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
           fi
 
-          # Build Fixes
+          # Fix Build Issues
           if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
-            set_config CONFIG_DEBUG_INFO_BTF n
+            echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
-
           if [[ "$ENABLE_RUST" == "true" ]]; then
-            set_config CONFIG_RUST y
-            set_config CONFIG_ANDROID_BINDER_IPC_RUST m
+            echo "CONFIG_RUST=y" >> "$CONFIG_FILE"
+            echo "CONFIG_ANDROID_BINDER_IPC_RUST=m" >> "$CONFIG_FILE"
           fi
 
-          # Finalize Configuration
-          make olddefconfig
-
-          # Optional: Remove Defconfig Check (Not Recommended for Production)
+          # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
- 
+
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
@@ -1215,104 +1197,90 @@ jobs:
             fi
           done
 
+      - name: Disable GPUEB
+        if: ${{ env.KERNEL_VERSION == '5.10' && startsWith(env.CPU, 'mt') }}
+        run: |
+          echo "Disabling GPUEB for MTK kernel v5.10"
+          sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
+
       - name: Build Kernel (Fast)
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
         run: |
-          set -euo pipefail
-          set -x
-
-          echo "==== FAST KERNEL BUILD MODE ===="
- 
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
-          WORKDIR="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform"
-          cd "$WORKDIR"
+          cd kernel_workspace/kernel_platform
 
-          ########################################
-          # Detect LLVM_IAS
-          ########################################
-          USE_LLVM_IAS=false
-          if [[ -f common/build.config.arm ]] && \
-            grep -q '^LLVM_IAS=1' common/build.config.arm; then
+          # Automatic Detection of LLVM IAS
+          if [[ -f ./common/build.config.arm ]] && grep -q '^LLVM_IAS=1' ./common/build.config.arm; then
             USE_LLVM_IAS=true
+          else
+            USE_LLVM_IAS=false
           fi
 
-          ########################################
-          # Extract CLANG_PREBUILT_BIN
-          ########################################
+          # Read Clang Prebuilt Bin from Build Config Common
           CLANG_PREBUILT_BIN=""
-          for f in common/build.config.common; do
+          for f in ./common/build.config.common ./"$PATH_2"/build.config.common; do
             [[ -f "$f" ]] || continue
-            CLANG_PREBUILT_BIN="$(grep '^CLANG_PREBUILT_BIN=' "$f" | cut -d'=' -f2 || true)"
+            CLANG_PREBUILT_BIN=$(grep '^CLANG_PREBUILT_BIN=' "$f" | cut -d'=' -f2)
             [[ -n "$CLANG_PREBUILT_BIN" ]] && break
           done
-
           if [[ -z "$CLANG_PREBUILT_BIN" ]]; then
-            echo "Clang prebuilt not found → fallback"
+            echo "⚠️ Clang Prebuilt Bin was Not Found in build.config.common, Revert to Official Build Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
+            echo "Consider Disabling Fast Kernel Build & Submit an Issue"
             exit 0
           fi
 
-          ########################################
-          # Extract CLANG_VERSION
-          ########################################
-          CLANG_VERSION=""
-
+          # Try Extract Clang Version from Clang Prebuilt Bin
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
-          elif [[ -f common/build.config.constants ]]; then
-            CLANG_VERSION="$(grep '^CLANG_VERSION=' common/build.config.constants | cut -d'=' -f2 || true)"
+          else
+            # If No Match Found, Try Extract from Build Config Constants
+            if [[ -f ./common/build.config.constants ]]; then
+              CLANG_VERSION=$(grep '^CLANG_VERSION=' ./common/build.config.constants | cut -d'=' -f2 || true)
+            fi
           fi
 
           if [[ -z "$CLANG_VERSION" ]]; then
-            echo "Unable to determine Clang version → fallback"
+            echo "Unable to Obtain Clang Version from Clang Prebuilt Bin or Build Config Constants; Reverting to Official Build Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
+            echo "Consider Disabling Fast Kernel Build & Submit an Issue"
             exit 0
           fi
 
-          CLANG_PREBUILT_BIN="${CLANG_PREBUILT_BIN/\$\{CLANG_VERSION\}/$CLANG_VERSION}"
+          # Replace with New Clang Version Value
+          CLANG_PREBUILT_BIN=${CLANG_PREBUILT_BIN/\$\{CLANG_VERSION\}/$CLANG_VERSION}
+          # Get First Directory Name of Clang Prebuilt Bin & Assign it to Clang Dir
+          CLANG_DIR=$(echo "$CLANG_PREBUILT_BIN" | cut -d'/' -f1)
+          # Get Parent Directory Name of Clang Prebuilt Bin & Assign it to Clang Path
+          CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
+          echo "-----------------------"
           echo "CLANG_VERSION=$CLANG_VERSION"
-          echo "CLANG_PREBUILT_BIN=$CLANG_PREBUILT_BIN"
+          echo "CLANG_DIR=$CLANG_DIR"
+          echo "CLANG_PATH=$CLANG_PATH"
           echo "USE_LLVM_IAS=$USE_LLVM_IAS"
+          echo "-----------------------"
 
-          ########################################
-          # Setup Environment
-          ########################################
-          source build/kernel/_setup_env.sh 2>/dev/null || true
+          set +u
+          source "$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/build/kernel/_setup_env.sh" 2>/dev/null || true
+          set -u
 
-          FULL_CLANG_PATH="$WORKDIR/$CLANG_PREBUILT_BIN"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/$CLANG_PREBUILT_BIN:$PATH"
+          export PATH="/usr/lib/ccache:$PATH"
 
-          if [[ ! -d "$FULL_CLANG_PATH" ]]; then
-            echo "Clang path not found: $FULL_CLANG_PATH"
-            exit 1
-          fi
-
-          export PATH="$FULL_CLANG_PATH:/usr/lib/ccache:$PATH"
-
-          ########################################
-          # Optional Rust Support
-          ########################################
-          if [[ "${ENABLE_RUST:-false}" == "true" ]]; then
+          if [[ "$ENABLE_RUST" == "true" ]]; then
             export BINDGEN="bindgen"
-            export LIBCLANG_PATH="$(dirname "$FULL_CLANG_PATH")/lib"
+            export LIBCLANG_PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/$(dirname "$CLANG_PREBUILT_BIN")/lib"
           fi
 
-          ########################################
-          # Enter common tree
-          ########################################
-          cd common
+          cd ./common
 
-          ########################################
-          # Reproducible build flags
-          ########################################
+          # Remapping Physical Paths
           MAP="-fdebug-prefix-map=${GITHUB_WORKSPACE}=."
           MPMAP="-fmacro-prefix-map=${GITHUB_WORKSPACE}=."
           FPMAP="-ffile-prefix-map=${GITHUB_WORKSPACE}=."
 
-          ########################################
-          # Make arguments
-          ########################################
           MAKE_ARGS=(
             LLVM=1
             ARCH=arm64
@@ -1321,52 +1289,37 @@ jobs:
             HOSTCC="ccache clang"
             LD=ld.lld
             HOSTLD=ld.lld
+            PAHOLE=../../prebuilts/kernel-build-tools/linux-x86/bin/pahole
             KCFLAGS+="$MAP $MPMAP $FPMAP"
             KCFLAGS+=-Wno-error
             KCFLAGS+=-D__ANDROID_COMMON_KERNEL__
           )
 
-          [[ "$USE_LLVM_IAS" == "true" ]] && \
+          if [[ "$USE_LLVM_IAS" == "true" ]]; then
             MAKE_ARGS=(LLVM_IAS=1 "${MAKE_ARGS[@]}")
-
-          ########################################
-          # Configure Kernel
-          ########################################
+          fi
+          if [[ "$ENABLE_RUST" == "true" ]]; then
+            MAKE_ARGS=(RUSTC=../../prebuilts/rust/linux-x86/$RUSTC_VERSION/bin/rustc "${MAKE_ARGS[@]}")
+          fi
           make O=out "${MAKE_ARGS[@]}" gki_defconfig
+          if [[ "$KERNEL_VERSION" == "5.10" || "$KERNEL_VERSION" == "5.15" ]]; then
+            echo ">> Setup LTO = thin"
+            scripts/config --file out/.config -e LTO_CLANG
+            scripts/config --file out/.config -e LTO_CLANG_THIN
+            scripts/config --file out/.config -d LTO_CLANG_NONE
+            scripts/config --file out/.config -d LTO_CLANG_FULL
+          fi
+
+          if [[ "$KERNEL_VERSION" == "6.12" ]]; then
+            echo ">> Setup LTO = none"
+            scripts/config --file out/.config -e LTO_CLANG
+            scripts/config --file out/.config -e LTO_CLANG_NONE
+            scripts/config --file out/.config -d LTO_CLANG_THIN
+            scripts/config --file out/.config -d LTO_CLANG_FULL
+          fi
           make O=out "${MAKE_ARGS[@]}" olddefconfig
-
-          ########################################
-          # LTO Handling (Only for older kernels)
-          ########################################
-          case "$KERNEL_VERSION" in
-            5.10|5.15)
-              echo ">> Forcing ThinLTO for $KERNEL_VERSION"
-              make O=out "${MAKE_ARGS[@]}" scripts
-              scripts/config --file out/.config -e LTO_CLANG
-              scripts/config --file out/.config -e LTO_CLANG_THIN
-              scripts/config --file out/.config -d LTO_CLANG_NONE
-              scripts/config --file out/.config -d LTO_CLANG_FULL
-              make O=out "${MAKE_ARGS[@]}" olddefconfig
-              ;;
-            6.6|6.12)
-              echo ">> Using default LTO config for $KERNEL_VERSION (no override)"
-              ;;
-            *)
-              echo ">> Unknown kernel version: $KERNEL_VERSION (no LTO changes)"
-              ;;
-          esac
-
-          ########################################
-          # Build Kernel
-          ########################################
-          make -j"$(nproc)" O=out "${MAKE_ARGS[@]}"
-
-          ########################################
-          # Ccache Stats
-          ########################################
-          ccache -s || true
-
-          echo "==== FAST BUILD COMPLETE ===="
+          make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
+          ccache -s
 
       - name: Fallback to Build Kernel
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
