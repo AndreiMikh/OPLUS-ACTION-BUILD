@@ -90,7 +90,6 @@ on:
          - SukiSU-Ultra
          - KernelSU-Next
          - WildKSU
-         - WildKSU
       MANAGER_SOURCE:
         type: choice
         description: "KSU Meta Manager Source"
