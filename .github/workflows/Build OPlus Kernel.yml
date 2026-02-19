@@ -674,7 +674,7 @@ jobs:
           if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
             echo "Configure SukiSU-Ultra..."
             curl -LSs "https://raw.githubusercontent.com/ShirkNeko/SukiSU-Ultra/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$MANAGER_BRANCH"
-            cd KernelSU
+            cd ./KernelSU
             # Get a Short Hash of Current Git Commit (8-Bits)
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
             echo "Current Commit Hash: $GIT_COMMIT_HASH"
@@ -735,7 +735,7 @@ jobs:
             echo "Configure ReSukiSU..."
             curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$MANAGER_BRANCH"
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
-            cd KernelSU
+            cd ./KernelSU
            
             # Generate Custom Version Number (Based on the Commit Count) to Use when it Fails 114514
             KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 114514)
@@ -746,7 +746,7 @@ jobs:
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configure KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$MANAGER_BRANCH"
-            cd KernelSU-Next
+            cd ./KernelSU-Next
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/commits?sha=${MANAGER_BRANCH}&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/g" kernel/Kbuild
@@ -769,11 +769,11 @@ jobs:
            elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configure WildKSU..."
             curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$MANAGER_BRANCH"
-            cd Wild_KSU
+            cd ./Wild_KSU
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/WildKernels/Wild_KSU/commits?sha=${MANAGER_BRANCH}&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/g" kernel/Kbuild
-            KSU_GIT_TAG=$(curl -sL "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/tags" | grep -o '"name": *"[^"]*"' | head -n 1 | sed 's/"name": "//;s/"//')
+            KSU_GIT_TAG=$(curl -sL "https://api.github.com/repos/WildKernels/Wild_KSU/tags" | grep -o '"name": *"[^"]*"' | head -n 1 | sed 's/"name": "//;s/"//')
             sed -i "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/g" kernel/Kbuild
           else
             echo "No Built-in KSU Meta Selected, Skip Configuration..."
@@ -1295,56 +1295,51 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
-      - name: Download Latest KSU Meta Manager Apk from CI
+      - name: Download Latest KSU Meta Manager APK
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          REPO="${{ steps.manager.outputs.KSU_REPO }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
           MANAGER_ARTIFACT="${{ steps.manager.outputs.MANAGER_ARTIFACT }}"
 
-          echo "Using Branch: $MANAGER_BRANCH"
-          echo "Downloading Artifact: $MANAGER_ARTIFACT"
+          echo "Using Repo: $REPO"
+          echo "Branch: $MANAGER_BRANCH"
+          echo "Artifact: $MANAGER_ARTIFACT"
 
-          run_id=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/workflows/build-manager.yml/runs?branch=${MANAGER_BRANCH}&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
+          # Get Latest Successful Workflow Run ID
+          run_id=$(gh api \
+            "repos/$REPO/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id' 2>/dev/null || echo "")
 
           if [[ -z "$run_id" ]]; then
-            echo "No Successful Workflow Run Found in Branch ${MANAGER_BRANCH}, Skipping Download Step"
+            echo "No Successful Workflow Run Found"
             exit 0
           fi
 
-          # List of Repositories to Check
-          repos=(
-            "WildKernels/Wild_KSU"
-            "SukiSU-Ultra/SukiSU-Ultra"
-            "KernelSU-Next/KernelSU-Next"
-            "ReSukiSU/ReSukiSU"
-          )
+          echo "Found Run ID: $run_id"
 
-          artifact_url=""
-
-          for repo in "${repos[@]}"; do
-            echo "Checking Artifacts in $repo ..."
-            artifact_url=$(gh api "repos/$repo/actions/runs/$run_id/artifacts" \
-              | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" \
-              | head -n1)
-
-            if [[ -n "$artifact_url" ]]; then
-              echo "Found Artifact in $repo"
-              break
-            fi
-          done
+          # Get Artifact Download URL
+          artifact_url=$(gh api \
+            "repos/$REPO/actions/runs/$run_id/artifacts" \
+            --jq ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" \
+            | head -n1)
 
           if [[ -z "$artifact_url" ]]; then
-            echo "No Artifact '$MANAGER_ARTIFACT' Found in Run $run_id, Skipping Download Step"
+            echo "Artifact '$MANAGER_ARTIFACT' Not Found in Run $run_id"
             exit 0
           fi
 
-          echo "Downloading from: $artifact_url"
-          curl -fL -H "Authorization: token $GITHUB_TOKEN" \
-            -o "${MANAGER_ARTIFACT}.zip" "$artifact_url"
+          echo "Downloading Artifact..."
+          curl -fL \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -o "${MANAGER_ARTIFACT}.zip" \
+            "$artifact_url"
 
-          unzip -j "${MANAGER_ARTIFACT}.zip" "*.apk" -d ./AnyKernel3/
+          unzip -o -j "${MANAGER_ARTIFACT}.zip" "*.apk" -d ./AnyKernel3/
+
+          echo "Manager APK Download Complete"
           
       - name: Set Zip Suffix
         id: suffix
