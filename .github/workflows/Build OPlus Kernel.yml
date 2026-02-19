@@ -79,7 +79,7 @@ on:
         default: "AndreiMikh"
       BUILD_TIME:
         type: string
-        description: "Custom Build Time (Type F to Use Current UTC Time)"
+        description: "Custom Build Time (Input 'F' to Use Current UTC Time)"
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
       KSU_META:
@@ -94,7 +94,7 @@ on:
          - WildKSU
       MANAGER_SOURCE:
         type: choice
-        description: "KSU Meta Manager Source"
+        description: "KSU Meta Download Source"
         required: true
         default: ReSukiSU-Main
         options:
@@ -159,7 +159,7 @@ on:
         default: false
       SPACE_NOCLEAN:
         type: boolean
-        description: "Space Cleaning?"
+        description: "Enable Space Cleaning?"
         required: true
         default: false
       BUILD_NOCCACHE:
@@ -283,7 +283,7 @@ jobs:
             exit 1
           fi
 
-          echo "Parse Readme.md to Bbtain CPUD & Build Method..."
+          echo "Parse Readme.md to Obtain CPUD & Build Method..."
           if [[ -s "$README_PATH" ]]; then
             BUILD_LINE=$(grep -m1 'oplus_build_kernel.sh' "$README_PATH" || true)
             if [[ -n "$BUILD_LINE" ]]; then
@@ -903,7 +903,7 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "The code for Fengchi Already Exists in the Source Code; Enable Secondary Rollback"
+              echo "Fengchi Codes Already Exists in the Source Code; Enable Secondary Rollback"
               exit 0
             }
           done
@@ -939,10 +939,10 @@ jobs:
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/other/zram/zram_patch/${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform/common
-          echo "LZ4KD Patches is being Applied"
+          echo "LZ4KD Patches being Applied"
           patch -p1 -F 3 < "${PATCH_DIR}/lz4kd.patch" || true
           echo 'LZ4KD Patches Complete'
-          echo "LZ4K OPlus Patches is being Applied"
+          echo "LZ4K OPlus Patches being Applied"
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo 'LZ4K OPlus Patches Complete'
 
@@ -959,7 +959,7 @@ jobs:
             }
           done
           git clone https://github.com/AndreiMikh/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close & Try Again"; exit 11; }
-          echo "Pulling Windspeed Patch"
+          echo "Pull Windspeed Patch"
           cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
           if [[ -f "fengchi_${FILE}.patch" ]]; then
             echo "Applying Windspeed Patches"
@@ -1015,7 +1015,7 @@ jobs:
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
 
-          # TMPFS Configuration*
+          # TMPFS Configuration (Mountify)*
           echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
           echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
 
@@ -1161,7 +1161,7 @@ jobs:
             exit 0
           fi
 
-          # Try Extract Clang-r Version from Clang Prebuilt Bin First
+          # Try Extract Clang Version from Clang Prebuilt Bin
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           else
@@ -1172,7 +1172,7 @@ jobs:
           fi
 
           if [[ -z "$CLANG_VERSION" ]]; then
-            echo "⚠️ Unable to Obtain Clang Version from Clang Prebuilt Bin or Build Config Constants; Reverting to Official Build Script"
+            echo "Unable to Obtain Clang Version from Clang Prebuilt Bin or Build Config Constants; Reverting to Official Build Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
             echo "Consider Disabling Fast Kernel Build & Submit an Issue"
             exit 0
@@ -1369,7 +1369,7 @@ jobs:
           ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/ZRAM.zip"
 
           if [ ! -f "$ZRAM_ZIP" ]; then
-            echo "Not Found ZRAM.zip: $ZRAM_ZIP"
+            echo "Not Found, ZRAM.zip: $ZRAM_ZIP"
             echo "upload=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
