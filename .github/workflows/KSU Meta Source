@@ -1,0 +1,58 @@
+      - name: Resolve KSU Meta Source
+        id: manager
+        run: |
+          MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+
+          # Resolve branch + artifact
+          case "$MANAGER_SOURCE" in
+            SukiSU-Ultra-Main)
+              BRANCH="main"
+              ARTIFACT="Manager"
+              ;;
+            KernelSU-Next-Dev)
+              BRANCH="dev"
+              ARTIFACT="manager"
+              ;;
+            WildKSU-Stable)
+              BRANCH="stable"
+              ARTIFACT="manager"
+              ;;
+            WildKSU-Canary)
+              BRANCH="canary"
+              ARTIFACT="manager"
+              ;;
+            ReSukiSU-Main|*)
+              BRANCH="main"
+              ARTIFACT="Manager-release"
+              ;;
+          esac
+
+          # Resolve Actual repository (CRITICAL FIX)
+          case "$KSU_META" in
+            SukiSU-Ultra)
+              REPO="SukiSU-Ultra/SukiSU-Ultra"
+              ;;
+            KernelSU-Next)
+              REPO="KernelSU-Next/KernelSU-Next"
+              ;;
+            WildKSU)
+              REPO="WildKernels/Wild_KSU"
+              ;;
+            ReSukiSU)
+              REPO="ReSukiSU/ReSukiSU"
+              ;;
+            *)
+              echo "Unsupported KSU_META: $KSU_META"
+              exit 1
+              ;;
+          esac
+
+          echo "MANAGER_BRANCH=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "MANAGER_ARTIFACT=$ARTIFACT" >> "$GITHUB_OUTPUT"
+          echo "KSU_REPO=$REPO" >> "$GITHUB_OUTPUT"
+
+          echo "Resolved:"
+          echo "  Repo: $REPO"
+          echo "  Branch: $BRANCH"
+          echo "  Artifact: $ARTIFACT"
