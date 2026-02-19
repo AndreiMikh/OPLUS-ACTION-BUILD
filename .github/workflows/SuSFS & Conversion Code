@@ -1,0 +1,135 @@
+- name: Apply Patches to KSU Meta
+  env:
+    FILE: ${{ github.event.inputs.FILE }}
+  run: |
+    set -e
+
+    cd kernel_workspace || exit 1
+
+    SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
+    ZRAM="${{ github.event.inputs.ZRAM }}"
+    XUS_FIX="${{ github.event.inputs.XUS_FIX }}"
+    SUSFS_DEV="${{ github.event.inputs.SUSFS_DEV }}"
+    GKI_VERSION="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+
+    ############################
+    # Clone SUSFS (if enabled)
+    ############################
+    if [[ "$SUSFS_META" != "-1" ]]; then
+      echo "Cloning SUSFS..."
+      git clone https://gitlab.com/simonpunk/susfs4ksu.git \
+        -b "gki-${GKI_VERSION}${SUSFS_DEV == 'true' && '-dev' || ''}"
+
+      cd susfs4ksu || exit 1
+
+      if [[ -n "$SUSFS_META" ]]; then
+        if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
+          git checkout "HEAD~$SUSFS_META"
+        else
+          git checkout "$SUSFS_META"
+        fi
+      fi
+
+      cd ..
+    fi
+
+    ################################
+    # Clone Patch Repositories
+    ################################
+    git clone https://github.com/ShirkNeko/SukiSU_patch.git
+    git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
+
+    cd kernel_platform || exit 1
+
+    ################################
+    # Extract SUSFS Files
+    ################################
+    if [[ "$SUSFS_META" != "-1" ]]; then
+      echo "Extracting SUSFS patches..."
+
+      curl -fsSL \
+        https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch \
+        -o ./common/69_hide_stuff.patch
+
+      cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${GKI_VERSION}.patch ./common/
+      cp -r ../susfs4ksu/kernel_patches/fs/* ./common/fs/
+      cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+    fi
+
+    ################################
+    # Extract ZRAM (if enabled)
+    ################################
+    if [[ "$ZRAM" == 1* ]]; then
+      echo "Extracting ZRAM patches..."
+      cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
+      cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
+      cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto/
+      cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
+    fi
+
+    cd common || exit 1
+
+    SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
+
+    ################################
+    # Fix 5.15 Legacy Bug
+    ################################
+    if [[ "$GKI_VERSION" == "android13-5.15" && "$SUBLEVEL" -lt 123 ]]; then
+      echo "Applying 5.15 legacy fix..."
+      cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+      patch -p1 < fix_5.15.legacy.patch
+    fi
+
+    ################################
+    # Trusty Fix for 6.6
+    ################################
+    if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "$SUSFS_META" != "-1" ]]; then
+      if ! grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
+        echo "Applying Trusty compatibility fix..."
+        sed -i 's/-32,12 +32,38/-32,11 +32,37/g' \
+          50_add_susfs_in_gki-${GKI_VERSION}.patch
+        sed -i '/#include <trace\/hooks\/fs.h>/d' \
+          50_add_susfs_in_gki-${GKI_VERSION}.patch
+      fi
+    fi
+
+    ################################
+    # Apply SUSFS Patches
+    ################################
+    if [[ "$SUSFS_META" != "-1" ]]; then
+      echo "Applying SUSFS patch..."
+      patch -p1 < 50_add_susfs_in_gki-${GKI_VERSION}.patch || true
+
+      echo "Applying hide_stuff patch..."
+      patch -p1 -F3 < 69_hide_stuff.patch || true
+
+      ################################
+      # Optional XUS Fix
+      ################################
+      if [[ "$XUS_FIX" == "true" ]]; then
+        cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
+        patch -p1 < No_5uS.patch || true
+      fi
+    fi
+
+- name: Apply Conversion
+  if: ${{ fromJSON(env.KV1) >= 6 && fromJSON(env.KV2) >= 66 && github.event.inputs.SCHED == 'false' }}
+  run: |
+    set -e
+
+    PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
+    cd kernel_workspace/kernel_platform/common || exit 1
+
+    for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
+      if [ -d "$p" ]; then
+        echo "Fengchi code already exists. Skipping conversion."
+        exit 0
+      fi
+    done
+
+    sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
+
+    echo "Applying OGKI → GKI conversion patch..."
+    patch -p1 -F3 < "${PATCH_DIR}/hmbird_patch.patch" || true
+
+    echo "Conversion complete."
