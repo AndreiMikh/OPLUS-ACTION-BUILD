@@ -943,8 +943,12 @@ jobs:
       - name: Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
+          set -euo pipefail
+
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
-          cd kernel_workspace/kernel_platform/common
+
+          cd kernel_workspace/kernel_platform/common || exit 1
+
           if [ "$KV1" -lt 6 ]; then
             patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1-.patch" || true
           else
@@ -954,58 +958,100 @@ jobs:
       - name: ZRAM
         if: startsWith(github.event.inputs.ZRAM, '1/')
         run: |
+          set -euo pipefail
+
           ZRAM="${{ github.event.inputs.ZRAM }}"
-          if [[ "$(grep -o '/' <<< "$ZRAM" | wc -l)" -lt 2 ]]; then
-            echo "Error: ZRAM Parameter is Missing Necessary Separator '/'. Format should be: Main Switch 0 Off 1 On / Algorithm Name (0 at the Beginning is Invalid) / size (0 at the Beginning is Invalid)"
+
+          # Count "/" safely
+          SLASH_COUNT=$(echo "$ZRAM" | tr -cd '/' | wc -c)
+
+          if [ "$SLASH_COUNT" -lt 2 ]; then
+            echo "Error: ZRAM Parameter Format Must be:"
+            echo "Switch(0/1)/Algorithm/Size"
             exit 10
           fi
-          # Parsing fields: Switch Status / Algorithm Name / Size
-          IFS='/' read -r ZRAM_SWSTA ZRAM_ALGO ZRAM_SIZE <<< "$ZRAM"
-          echo "ZRAM_ALGO=$ZRAM_ALGO" >> $GITHUB_ENV
-          echo "ZRAM_ALGO_U=${ZRAM_ALGO^^}" >> $GITHUB_ENV
-          echo "ZRAM_SIZE=$ZRAM_SIZE" >> $GITHUB_ENV
 
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/other/zram/zram_patch/${{ env.KERNEL_VERSION }}"
-          cd kernel_workspace/kernel_platform/common
-          echo "LZ4KD Patches being Applied"
+          # Parse Fields
+          IFS='/' read -r ZRAM_SWSTA ZRAM_ALGO ZRAM_SIZE <<< "$ZRAM"
+
+          echo "ZRAM_ALGO=$ZRAM_ALGO" >> "$GITHUB_ENV"
+          echo "ZRAM_ALGO_U=$(echo "$ZRAM_ALGO" | tr '[:lower:]' '[:upper:]')" >> "$GITHUB_ENV"
+          echo "ZRAM_SIZE=$ZRAM_SIZE" >> "$GITHUB_ENV"
+
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/other/zram/zram_patch/${KERNEL_VERSION}"
+
+          cd kernel_workspace/kernel_platform/common || exit 1
+
+          echo "Applying LZ4KD Patches..."
           patch -p1 -F 3 < "${PATCH_DIR}/lz4kd.patch" || true
-          echo 'LZ4KD Patches Complete'
-          echo "LZ4K OPlus Patches being Applied"
+          echo "LZ4KD Patches Complete"
+
+          echo "Applying LZ4K Patches..."
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
-          echo 'LZ4K OPlus Patches Complete'
+          echo "LZ4K Patches Complete"
 
       - name: Scheduler
+        if: ${{ github.event.inputs.SCHED == 'true' }}
         env:
           FILE: ${{ github.event.inputs.FILE }}
-        if: ${{ github.event.inputs.SCHED == 'true' }}
         run: |
-          cd kernel_workspace/kernel_platform/common
+          set -euo pipefail
+
+          cd kernel_workspace/kernel_platform/common || exit 1
+
+          # Check if Fengchi Already Exists
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
-            [ -d "$p" ] && {
-              echo "Code for Fengchi Already Exists in Source Code; Enable Secondary Rollback"
+            if [ -d "$p" ]; then
+              echo "Fengchi Code Already Exists, Skipping"
               exit 0
-            }
+            fi
           done
-          git clone https://github.com/AndreiMikh/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close & Try Again"; exit 11; }
-          echo "Pull Windspeed Patch"
-          cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
-          if [[ -f "fengchi_${FILE}.patch" ]]; then
-            echo "Applying Windspeed Patches"
-            dos2unix "fengchi_${FILE}.patch"
-            patch -p1 -F 3 < "fengchi_${FILE}.patch"
-            echo "Windspeed Patch Complete"
-          else
-            echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close & Try Again"
+
+          if [ -z "${CPU:-}" ]; then
+            echo "❌ CPU Branch Not Specified"
+            exit 11
+          fi
+
+          git clone https://github.com/AndreiMikh/Kernel-Hmbird-Patch.git -b "$CPU" || {
+            echo "❌ CPU Branch Does Not Exist"
+            exit 11
+          }
+
+          PATCH_FILE="fengchi_${FILE}.patch"
+
+          if [ ! -f "./Kernel-Hmbird-Patch/${PATCH_FILE}" ]; then
+            echo "❌ Patch File Not Found"
             exit 12
           fi
+
+          cp "./Kernel-Hmbird-Patch/${PATCH_FILE}" ./
+
+          echo "Applying Windspeed Patch..."
+          dos2unix "${PATCH_FILE}" || true
+          patch -p1 -F 3 < "${PATCH_FILE}"
+          echo "Windspeed Patch Complete"
 
       - name: LSM BBG
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
-          cd kernel_workspace/kernel_platform/common
-          echo "Enabling Kernel-Level Baseband Protection Support..."
-          curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/fix_blkdev_rename/setup.sh | bash -s fix_blkdev_rename
-          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' ./security/Kconfig
+          set -euo pipefail
+
+          cd kernel_workspace/kernel_platform/common || exit 1
+
+          echo "Enabling Kernel-Level Baseband Protection..."
+
+          curl -LSs \
+            https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/main/setup.sh \
+            | bash -s fix_blkdev_rename
+
+          sed -i '/^config LSM$/,/^help$/{
+            /^[[:space:]]*default/{
+              /baseband_guard/! s/selinux/selinux,baseband_guard/
+            }
+          }' ./security/Kconfig
+            echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close & Try Again"
+            exit 12
+          fi
 
       # Configuration Information, Marked with Asterisk Symbol* Indicates Additional items, which Carry Certain Degree of Risk & Uncertainty
       - name: Add Configuration Settings
