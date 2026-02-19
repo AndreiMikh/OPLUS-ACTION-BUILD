@@ -1268,7 +1268,7 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
-      - name: Download Latest KSU Meta Manager Apk from CI
+      - name: Download Latest KSU Meta Manager Apk from CI (Except WildKSU)
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1278,7 +1278,7 @@ jobs:
 
           echo "Using Branch: $MANAGER_BRANCH"
           echo "Downloading Artifact: $MANAGER_ARTIFACT"
-
+        
           run_id=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
@@ -1330,13 +1330,13 @@ jobs:
             echo "ZRAM_ALGO=${ZRAM_ALGO}"
             echo "ZRAM_SIZE=${ZRAM_SIZE}"
           else
-            echo "Not Found config.prop"
+            echo "Not Found Config Prop"
             echo "upload=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           target="./ZRAM-Module/zram/zram.ko"
-          echo "Find the zram.ko module file..."
+          echo "Find ZRAM.ko Module File..."
           search_paths=(
             "./kernel_workspace/kernel_platform/out"
             "./kernel_workspace/device/qcom"
@@ -1352,7 +1352,7 @@ jobs:
             zram_path=$(find "./kernel_workspace" -type f -name "zram.ko" | head -n 1)
           fi
           if [ -n "$zram_path" ] && [ -f "$zram_path" ]; then
-            echo "ZRAM.ko file finally located at: $zram_path"
+            echo "ZRAM.ko File Finally Located at: $zram_path"
             install -D "$zram_path" "$target"
           else
             echo "ZRAM.ko File was Not Found, Possibly Due to an Unsupported Kernel Version or Build Failure"
