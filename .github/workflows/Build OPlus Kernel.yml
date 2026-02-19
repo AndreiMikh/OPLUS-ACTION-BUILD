@@ -1268,34 +1268,57 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
-      - name: Download Latest KSU Meta Manager Apk from CI (Except WildKSU)
+      - name: Download Latest KSU Meta Manager Apk from CI
         continue-on-error: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
           MANAGER_ARTIFACT="${{ steps.manager.outputs.MANAGER_ARTIFACT }}"
 
           echo "Using Branch: $MANAGER_BRANCH"
           echo "Downloading Artifact: $MANAGER_ARTIFACT"
-        
+
           run_id=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
             echo "No Successful Workflow Run Found in Branch $MANAGER_BRANCH, Skipping Download Step"
             exit 0
           fi
-          
-          artifact_url=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/runs/$run_id/artifacts" | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" | head -n1)
+
+          # List of Repositories to Check
+          repos=(
+            "WildKernels/Wild_KSU"
+            "SukiSU-Ultra/SukiSU-Ultra"
+            "KernelSU-Next/KernelSU-Next"
+            "ReSukiSU/ReSukiSU"
+          )
+
+          artifact_url=""
+
+          for repo in "${repos[@]}"; do
+            echo "Checking Artifacts in $repo ..."
+            artifact_url=$(gh api "repos/$repo/actions/runs/$run_id/artifacts" \
+              | jq -r ".artifacts[] | select(.name == \"$MANAGER_ARTIFACT\") | .archive_download_url" \
+              | head -n1)
+
+            if [[ -n "$artifact_url" ]]; then
+              echo "Found Artifact in $repo"
+              break
+            fi
+          done
 
           if [[ -z "$artifact_url" ]]; then
             echo "No Artifact '$MANAGER_ARTIFACT' Found in Run $run_id, Skipping Download Step"
             exit 0
           fi
-          echo "Downloading from: $artifact_url"
-          curl -fL -H "Authorization: token $GITHUB_TOKEN" -o "${MANAGER_ARTIFACT}.zip" "$artifact_url"
-          unzip -j "${MANAGER_ARTIFACT}.zip" "*.apk" -d ./AnyKernel3/
 
+          echo "Downloading from: $artifact_url"
+          curl -fL -H "Authorization: token $GITHUB_TOKEN" \
+            -o "${MANAGER_ARTIFACT}.zip" "$artifact_url"
+
+          unzip -j "${MANAGER_ARTIFACT}.zip" "*.apk" -d ./AnyKernel3/
+          
       - name: Set Zip Suffix
         id: suffix
         run: |
