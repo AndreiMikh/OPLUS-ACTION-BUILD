@@ -1220,6 +1220,7 @@ jobs:
         id: fast_build
         run: |
           set -euo pipefail
+          set -x
 
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           WORKDIR="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform"
