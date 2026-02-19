@@ -156,7 +156,7 @@ on:
         default: false
       SPACE_NOCLEAN:
         type: boolean
-        description: "Disable Space Cleaning?"
+        description: "Space Cleaning?"
         required: true
         default: false
       BUILD_NOCCACHE:
