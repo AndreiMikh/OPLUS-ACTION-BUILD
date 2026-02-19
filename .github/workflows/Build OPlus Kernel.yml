@@ -93,7 +93,7 @@ on:
          - WildKSU
       MANAGER_SOURCE:
         type: choice
-        description: "KSU Meta Manager Call Direction"
+        description: "KSU Meta Manager Source"
         required: true
         default: ReSukiSU-Main
         options:
