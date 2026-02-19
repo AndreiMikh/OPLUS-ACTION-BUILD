@@ -937,11 +937,11 @@ jobs:
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
           # KPM Configuration
-          if [ "${{ github.event.inputs.KPM }}" = "KPM" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
-            echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
-          fi
-          if [ "${{ github.event.inputs.KPM }}" = "KPN" ]; then
+          if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
+          fi
+          if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
+            echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
           fi
 
           # SUSFS Configuration
