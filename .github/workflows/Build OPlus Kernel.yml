@@ -7,7 +7,7 @@ on:
     inputs:
       FILE:
         type: choice
-        description: "Configuration File"
+        description: " Manifest Configuration File"
         required: true
         default: oneplus_13_b
         options:
@@ -159,7 +159,7 @@ on:
         default: false
       SPACE_NOCLEAN:
         type: boolean
-        description: "Enable Space Cleaning?"
+        description: "Disable Space Cleaning?"
         required: true
         default: false
       BUILD_NOCCACHE:
