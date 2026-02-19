@@ -828,11 +828,17 @@ jobs:
           SUSFS_DEV="${{ github.event.inputs.SUSFS_DEV }}"
           GKI_VERSION="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
+          # Determine SUSFS branch suffix
+          DEV_SUFFIX=""
+          if [[ "$SUSFS_DEV" == "true" ]]; then
+            DEV_SUFFIX="-dev"
+          fi
+
           # Clone SUSFS (If Enabled)
           if [[ "$SUSFS_META" != "-1" ]]; then
             echo "Cloning SUSFS..."
             git clone https://gitlab.com/simonpunk/susfs4ksu.git \
-              -b "gki-${GKI_VERSION}${SUSFS_DEV == 'true' && '-dev' || ''}"
+              -b "gki-${GKI_VERSION}${DEV_SUFFIX}"
 
             cd susfs4ksu || exit 1
 
