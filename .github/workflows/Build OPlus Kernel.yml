@@ -1358,7 +1358,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.KSU_META }}-${{ env.KSUVER }}
+          name: AK3-${{ github.event.inputs.KSU_META }}-v${{ env.KSUVER }}
           path: ./AnyKernel3/*
 
       - name: Extract & Process ZRAM Module
