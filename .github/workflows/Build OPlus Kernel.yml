@@ -296,7 +296,7 @@ jobs:
             echo "Download Failed or is Empty for Readme.md"
           fi
 
-          echo "Parse File-K to obtain Path 2..."
+          echo "Parse File-K to Obtain Path 2..."
           PATH_2=""
           if [[ "$CPU" == sm* ]]; then
             COUNT_SM=0
@@ -323,7 +323,7 @@ jobs:
             echo "PATH_2=$PATH_2"
             echo "PATH_2=$PATH_2" >> "$GITHUB_ENV"
           else
-            echo "No Matching Path 2 Found, Could be Due to Device or Specific List that does Not Meet Criteria, Skipping Step"
+            echo "No Matching Path 2 Found, Could be Due to the Selected Device or Specific List that does Not Meet Criteria, Skipping Step"
           fi
 
           # Convey Combined Information
@@ -1067,13 +1067,13 @@ jobs:
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
           if [[ "${CPU}" == sm* ]]; then
-            echo "Fix potential false alarms from devices after enabling IPv6 NAT…"
+            echo "Fix Potential False Alarms from Selected Devices After Enabling IPV6 NAT..."
             patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
           else
-            echo "Device Selected does not Support IPv6 NAT, Skipping Step"
+            echo "Device Selected does not Support IPV6 NAT, Skipping Step"
           fi
 
-      # Custom Kernel Build Time, without adding #1 SMP PREEMPT
+      # Custom Kernel Build Time, Without Adding #1 SMP PREEMPT
       - name: Custom Build Time
         shell: bash
         run: |
@@ -1090,7 +1090,7 @@ jobs:
           cd kernel_workspace/kernel_platform/
           for f in common/scripts/mkcompile_h msm-kernel/scripts/mkcompile_h; do
             if [ -f "$f" ]; then
-              echo "Patching MKCompile_h with Build Time=$DATESTR"
+              echo "Patching MKCompileh with Build Time=$DATESTR"
               if grep -q 'UTS_VERSION=' "$f"; then
                 perl -pi -e "s{UTS_VERSION=\"\\\$\\(.*?\\)\"}{UTS_VERSION=\"#1 SMP PREEMPT $DATESTR\"}" "$f"
               else
