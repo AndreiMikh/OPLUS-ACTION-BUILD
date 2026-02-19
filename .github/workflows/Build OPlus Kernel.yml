@@ -1271,7 +1271,7 @@ jobs:
       - name: Download Latest KSU Meta Manager Apk from CI
         continue-on-error: true
         env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
           MANAGER_ARTIFACT="${{ steps.manager.outputs.MANAGER_ARTIFACT }}"
