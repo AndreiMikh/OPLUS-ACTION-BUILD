@@ -74,7 +74,7 @@ on:
         type: string
         description: "Dynamic Inventory Warehouse Owner"
         required: true
-        default: "KingMikhail"
+        default: "KingMikh"
       BUILD_TIME:
         type: string
         description: "Custom Build Time (Type F to Use Current UTC Time)"
@@ -211,8 +211,8 @@ jobs:
           # Dynamically Calling Source Code Manifest Repository, Repository Priority：1️⃣ KingMikh OnePlusOSS → 2️⃣ Appendix → 3️⃣ Dynamic
           DYNAMIC_REPO_INPUT="${{ github.event.inputs.DYNAMIC_REPO }}"
           declare -A REPOS
-          REPOS["KingMikh"]="KingMikhail|kernel_manifest"
-          REPOS["Appendix"]="KingMikhail|Kernel_Manifest_Appendix"
+          REPOS["KingMikh"]="KingMikh|kernel_manifest"
+          REPOS["Appendix"]="KingMikh|Kernel_Manifest_Appendix"
           REPOS["Dynamic"]="${DYNAMIC_REPO_INPUT}|kernel_manifest"
 
           FOUND_REPO=""
@@ -249,7 +249,7 @@ jobs:
             done
             return 1
           }
-          if ! check_repo "${REPOS["KingMikhail"]}"; then
+          if ! check_repo "${REPOS["KingMikh"]}"; then
             if ! check_repo "${REPOS["Appendix"]}"; then
               check_repo "${REPOS["Dynamic"]}"
             fi
@@ -264,7 +264,7 @@ jobs:
           
           # Parse Revision String
           REVISION=$(grep -oP '<project[^>]+revision="\K[^"]+' "$XML_PATH" | head -n1 || true)
-          echo "Parse the File to Obtain CPU and Android Version..."
+          echo "Parse the File to Obtain CPU & Android Version..."
           # Extract CPU
           CPU=$(echo "$REVISION" | sed -E 's#^(oneplus|realme|oppo)/([^_]+).*#\2#')
           # Extract Android Version
@@ -280,7 +280,7 @@ jobs:
             exit 1
           fi
 
-          echo "Parse Readme.md to Bbtain CPUD and Build Method..."
+          echo "Parse Readme.md to Bbtain CPUD & Build Method..."
           if [[ -s "$README_PATH" ]]; then
             BUILD_LINE=$(grep -m1 'oplus_build_kernel.sh' "$README_PATH" || true)
             if [[ -n "$BUILD_LINE" ]]; then
@@ -361,7 +361,7 @@ jobs:
       - name: Check Disk Space
         run: df -h
 
-      - name: Create and Enable 3G Swap
+      - name: Create & Enable 3G Swap
         run: |
           sudo swapoff -a
           sudo fallocate -l 3G /swapfile
@@ -379,7 +379,7 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name "KingMikhail"
+          git config --global user.name "KingMikh"
           git config --global user.email "andreimikhail0088@gmail.com"
           
       - name: Install Dependencies + APTC
@@ -420,7 +420,7 @@ jobs:
           chmod a+x ~/repo
           sudo mv ~/repo /usr/local/bin/repo
 
-      - name: Initialize Repo and Sync
+      - name: Initialize Repo & Sync
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -457,10 +457,10 @@ jobs:
             echo "KANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
             echo "KERNEL_VERSION=${BRANCH#*-}" >> $GITHUB_ENV
           else
-            echo "No Branch Found in build.config* and ACK_SHA Files"
+            echo "No Branch Found in Build Config* & ACK Sha Files"
           fi
           
-          # Obtain Full Kernel Version Number and Optional Kernel Level Modification from Makefile
+          # Obtain Full Kernel Version Number & Optional Kernel Level Modification from MakeFile
           ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
       
           # Force Modification of Sublevel 
@@ -539,7 +539,7 @@ jobs:
               else
                 echo "Standard Build: Injecting Suffix via Cut/Echo"
                 if [[ -f ./kernel_platform/build_with_bazel.py ]]; then
-                  echo "When Compiling Using Official Script and when Using `Build with Bazel`, There may be a Limitation on Number of Special Symbols, if Compilation Fails Modify the Script"
+                  echo "When Compiling Using Official Script & when Using `Build with Bazel`, There may be a Limitation on Number of Special Symbols, if Compilation Fails Modify the Script"
                   echo "When Using Official Script and Building with Build with Bazel, Build may Fail Due to Limit on Number of Special Characters, Modify the Configuration if that Happens"
                 fi
                 tac "$path" | sed "0,/echo \"\\\$res\"/s//res=\\\$(echo \\\$res | cut -d- -f1-2)-${SUFFIX}; echo \"\\\$res\";/" | tac > "$path.tmp" && mv "$path.tmp" "$path"
@@ -662,7 +662,7 @@ jobs:
 
             # Store API Version Number to GitHub Environment Variable
             echo "KSU_API_VERSION=$KSU_API_VERSION" >> $GITHUB_ENV
-            # Create Version Definition Template and Version Format Function: Use Obtained Commit Hash and Fixed Suffix
+            # Create Version Definition Template and Version Format Function: Use Obtained Commit Hash & Fixed Suffix
             # KSU Version API: API Version Definition
             # KSU Version Full: Full Version Definition
             VERSION_DEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$GIT_COMMIT_HASH"$'@Andrei\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"$GIT_COMMIT_HASH"$'Andrei'
@@ -675,7 +675,7 @@ jobs:
             sed -i '/KSU_VERSION_FULL :=/d' kernel/Kbuild
             # Insert the New Version Definition After the Repo Owner Line
             awk -v def="$VERSION_DEFINITIONS" '
-              # When Repo Owner Line is Found, Insert Version Definition and Set Markup
+              # When Repo Owner Line is Found, Insert Version Definition & Set Markup
               /REPO_OWNER :=/ {print; print def; inserted=1; next}
               # Print All Lines
               1
@@ -817,7 +817,7 @@ jobs:
             fi
             echo "trusty_exists=$TRUSTY_EXISTS" >> $GITHUB_OUTPUT
             if [[ "$TRUSTY_EXISTS" == "false" ]]; then
-              echo "Fixed SUSFS Error Caused by the Absence of TrustyOS in Source Code and Inventory for Models with Kernel v6.6.0~6.6.30"
+              echo "Fixed SUSFS Error Caused by Absence of TrustyOS in Source Code & Inventory for Models with Kernel v6.6.0~6.6.30"
               sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
               sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
             fi
@@ -930,7 +930,7 @@ jobs:
               exit 0
             }
           done
-          git clone https://github.com/KingMikhail/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close and Try Again"; exit 11; }
+          git clone https://github.com/KingMikh/Kernel-Hmbird-Patch.git -b $CPU || { echo "❌ CPU Branch does Not Exist, Fengchi Kernel does Not Currently Support Selected Device, Close & Try Again"; exit 11; }
           echo "Pulling Windspeed Patches"
           cp ./Kernel-Hmbird-Patch/fengchi_${FILE}.patch ./
           if [[ -f "fengchi_${FILE}.patch" ]]; then
@@ -939,7 +939,7 @@ jobs:
             patch -p1 -F 3 < "fengchi_${FILE}.patch"
             echo "Windspeed Patches Complete"
           else
-            echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close and Try Again"
+            echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close & Try Again"
             exit 12
           fi
 
@@ -947,11 +947,11 @@ jobs:
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform/common
-          echo "Enabling kernel-level baseband protection support..."
+          echo "Enabling Kernel-Level Baseband Protection Support..."
           curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/fix_blkdev_rename/setup.sh | bash -s fix_blkdev_rename
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' ./security/Kconfig
 
-      # Configuration Information, Marked with Asterisk Symbol* Indicates Additional items, which Carry Certain Degree of Risk and Uncertainty
+      # Configuration Information, Marked with Asterisk Symbol* Indicates Additional items, which Carry Certain Degree of Risk & Uncertainty
       - name: Add Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform/common
@@ -991,7 +991,7 @@ jobs:
           echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
           echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
 
-          # BBR and ECN Configuration*
+          # BBR & ECN Configuration*
           if [ "${{ github.event.inputs.BBR_ECN }}" = "true" ]; then
             echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
             echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
@@ -1020,7 +1020,7 @@ jobs:
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # IPSET and IPv6 NAT Configuration*
+          # IPSET & IPV6 NAT Configuration*
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
@@ -1129,7 +1129,7 @@ jobs:
           if [[ -z "$CLANG_PREBUILT_BIN" ]]; then
             echo "⚠️ Clang Prebuilt Bin was Not Found in build.config.common, Revert to Official Build Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
-            echo "Consider Disabling Fast Kernel Build and Submit an Issue"
+            echo "Consider Disabling Fast Kernel Build & Submit an Issue"
             exit 0
           fi
 
@@ -1137,24 +1137,24 @@ jobs:
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           else
-            # If No Match is Found, Try Extract from Build Config Constants
+            # If No Match Found, Try Extract from Build Config Constants
             if [[ -f ./common/build.config.constants ]]; then
               CLANG_VERSION=$(grep '^CLANG_VERSION=' ./common/build.config.constants | cut -d'=' -f2 || true)
             fi
           fi
 
           if [[ -z "$CLANG_VERSION" ]]; then
-            echo "⚠️ Unable to Obtain the Clang Version from Clang Prebuilt Bin or build.config.constants; Reverting to the Official Build Script"
+            echo "⚠️ Unable to Obtain Clang Version from Clang Prebuilt Bin or Build Config Constants; Reverting to Official Build Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
-            echo "Consider Disabling Fast Kernel Build and Submit an Issue"
+            echo "Consider Disabling Fast Kernel Build & Submit an Issue"
             exit 0
           fi
 
           # Replace with New Clang Version Value
           CLANG_PREBUILT_BIN=${CLANG_PREBUILT_BIN/\$\{CLANG_VERSION\}/$CLANG_VERSION}
-          # Get First Directory Name of CLANG_PREBUILT_BIN and Assign it to CLANG_DIR
+          # Get First Directory Name of Clang Prebuilt Bin & Assign it to Clang Dir
           CLANG_DIR=$(echo "$CLANG_PREBUILT_BIN" | cut -d'/' -f1)
-          # Get Parent Directory Name of CLANG_PREBUILT_BIN and Assign it to CLANG_PATH
+          # Get Parent Directory Name of Clang Prebuilt Bin & Assign it to Clang Path
           CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
           echo "-----------------------"
@@ -1237,7 +1237,7 @@ jobs:
 
       - name: Make AnyKernel3
         run: |
-          git clone https://github.com/KingMikhail/AnyKernel3 --depth=1
+          git clone https://github.com/KingMikh/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
           mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
           image_path=""
@@ -1263,7 +1263,7 @@ jobs:
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
 
-      - name: Apply Patch Linux and Replace Image
+      - name: Apply Patch Linux & Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
@@ -1342,7 +1342,7 @@ jobs:
           name: AK3-${{ github.event.inputs.KSU_META }}-${{ env.KSUVER }}
           path: ./AnyKernel3/*
 
-      - name: Extract and Process ZRAM Module
+      - name: Extract & Process ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/')
         id: zram_find
         run: |
