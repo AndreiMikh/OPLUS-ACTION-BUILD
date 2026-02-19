@@ -1,4 +1,6 @@
+# "-----------------------"
 # OnePlus Kernel Action Build
+# "-----------------------"
 name: KernelSU Forks Liquid
 on:
   workflow_dispatch:
@@ -332,7 +334,7 @@ jobs:
           
       - name: Debug Show Selected Inputs
         run: |
-          echo "============================"
+          echo "-----------------------"
           echo "Selected CPU: ${{ env.CPU }}"
           echo "Selected CPUD: ${{ env.CPUD }}"
           echo "Selected ANDROID_VERSION: ${{ env.ANDROID_VERSION }}"
@@ -357,7 +359,7 @@ jobs:
           echo "Selected SCHED: ${{ github.event.inputs.SCHED }}"
           echo "Selected UNICODE_BYPASS: ${{ github.event.inputs.UNICODE_BYPASS }}"
           echo "Selected XUS_FIX: ${{ github.event.inputs.XUS_FIX }}"
-          echo "============================"
+          echo "-----------------------"
 
       - name: Check Disk Space
         run: df -h
@@ -1302,7 +1304,7 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
-      - name: Download Latest KSU Meta Manager APK
+      - name: Download Selected KSU Meta Manager APK
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
