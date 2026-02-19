@@ -739,55 +739,151 @@ jobs:
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
             cd ./KernelSU
            
-            # Generate Custom Version Number (Based on the Commit Count) to Use when it Fails 114514
-            KSU_VERSION=$(expr $(git rev-list --count main) + 30700 2>/dev/null || echo 114514)
-        
-            # Store Version Number to a GitHub Environment Variable
-            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-        
-          elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
-            echo "Configure KernelSU Next..."
-            curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s dev_susfs
-            cd KernelSU-Next
-            KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/commits?sha=${MANAGER_BRANCH}&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
-            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/g" kernel/Kbuild
-            KSU_GIT_TAG=$(curl -sL \
-              "https://api.github.com/repos/KernelSU-Next/KernelSU-Next/tags" \
-              | grep -o '"name": *"[^"]*"' \
-              | head -n 1 \
-              | sed 's/"name": "//;s/"//')
-            sed -i "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/g" kernel/Kbuild
-            
-            # List of Patch Files
-            cd ../common/drivers/kernelsu
-            patches=(
-              "overwrite_hook_mode.patch"
-            )
-            # Apply Patch
-            for p in "${patches[@]}"; do
-            echo "Downloading $p..."
-            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
-            echo "Applying $p..."
-            patch -p2 -N -F 3 < $p || echo "⚠ Patch $p May have Already been Applied or Failed"
-            done
-              echo "KernelSU-Next Custom Patches Complete"  
+      - name: Add Selected KSU Meta
+        run: |
+          set -e
 
-           elif [[ "$KSU_META" == "WildKSU" ]]; then
-            echo "Configure WildKSU..."
-            curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/refs/heads/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$MANAGER_BRANCH"
-            cd Wild_KSU
-            KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/WildKernels/Wild_KSU/commits?sha=${MANAGER_BRANCH}&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
-            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/g" kernel/Kbuild
-            KSU_GIT_TAG=$(curl -sL \
-              "https://api.github.com/repos/WildKernels/Wild_KSU/tags" \
+          cd kernel_workspace/kernel_platform || exit 1
+
+          MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+
+          get_commit_count_version() {
+            local repo="$1"
+            local branch="$2"
+            local offset="$3"
+
+            LAST_PAGE=$(curl -sI \
+              "https://api.github.com/repos/${repo}/commits?sha=${branch}&per_page=1" \
+              | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p')
+
+            echo $((LAST_PAGE + offset))
+          }
+
+          get_latest_tag() {
+            local repo="$1"
+            curl -sL "https://api.github.com/repos/${repo}/tags" \
               | grep -o '"name": *"[^"]*"' \
-              | head -n 1 \
-              | sed 's/"name": "//;s/"//')
-            sed -i "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/g" kernel/Kbuild
+              | head -n1 \
+              | cut -d'"' -f4
+          }
+
+          if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
+            echo "Configuring SukiSU-Ultra..."
+
+            REPO="ShirkNeko/SukiSU-Ultra"
+
+            curl -fsSL \
+              "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
+              | bash -s builtin
+
+            cd KernelSU || exit 1
+
+            GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
+            echo "Current Commit Hash: $GIT_COMMIT_HASH"
+
+            # Get API version (retry 3 times)
+            for i in {1..3}; do
+              KSU_API_VERSION=$(curl -s \
+                "https://raw.githubusercontent.com/${REPO}/builtin/kernel/Kbuild" \
+                | grep -m1 "KSU_VERSION_API :=" \
+                | awk -F'= ' '{print $2}' \
+                | tr -d '[:space:]')
+              [ -n "$KSU_API_VERSION" ] && break || sleep 1
+            done
+
+            [ -z "$KSU_API_VERSION" ] && KSU_API_VERSION="3.1.7"
+
+            echo "KSU_API_VERSION=$KSU_API_VERSION" >> "$GITHUB_ENV"
+
+            # Generate commit-based version
+            KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 37185 ))
+            echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+            echo "SukiSU-Ultra Version: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}"
+
+          elif [[ "$KSU_META" == "ReSukiSU" ]]; then
+            echo "Configuring ReSukiSU..."
+
+            REPO="ReSukiSU/ReSukiSU"
+
+            curl -fsSL \
+              "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
+              | bash -s "$MANAGER_BRANCH"
+
+            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
+
+            cd KernelSU || exit 1
+
+            KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
+            echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+          elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
+            echo "Configuring KernelSU-Next..."
+
+            REPO="KernelSU-Next/KernelSU-Next"
+
+            curl -fsSL \
+              "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
+              | bash -s dev_susfs
+
+            cd KernelSU-Next || exit 1
+
+            KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
+            echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+            sed -i \
+              "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/" \
+              kernel/Kbuild
+
+            KSU_GIT_TAG=$(get_latest_tag "$REPO")
+
+            sed -i \
+              "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
+              kernel/Kbuild
+
+            # Apply patches
+            cd ../common/drivers/kernelsu || exit 1
+
+            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
+
+            for p in overwrite_hook_mode.patch; do
+              echo "Downloading $p..."
+              curl -fsSL "$PATCH_BASE/$p" -o "$p"
+
+              echo "Applying $p..."
+              patch -p2 -N -F3 < "$p" || \
+                echo "⚠ Patch $p may already be applied"
+            done
+
+            echo "KernelSU-Next patches complete."
+
+          elif [[ "$KSU_META" == "WildKSU" ]]; then
+            echo "Configuring WildKSU..."
+
+            REPO="WildKernels/Wild_KSU"
+
+            curl -fsSL \
+              "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
+              | bash -s "$MANAGER_BRANCH"
+
+            cd Wild_KSU || exit 1
+
+            KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
+            echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+            sed -i \
+              "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/" \
+              kernel/Kbuild
+
+            KSU_GIT_TAG=$(get_latest_tag "$REPO")
+
+            sed -i \
+              "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
+              kernel/Kbuild
+
           else
-            echo "No Built-in KSU Meta Selected, Skip Configuration..."
+            echo "No built-in KSU meta selected. Skipping..."
           fi
 
       - name: Apply Patches to KSU Meta
@@ -808,6 +904,7 @@ jobs:
             else
               echo "If SUSFS META is Empty, Use Latest Upstream SUSFS"
             fi
+          
             cd ..
           fi
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
