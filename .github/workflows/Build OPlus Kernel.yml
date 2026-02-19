@@ -7,7 +7,7 @@ on:
     inputs:
       FILE:
         type: choice
-        description: " Manifest Configuration File"
+        description: "Kernel Manifest Configuration File"
         required: true
         default: oneplus_13_b
         options:
