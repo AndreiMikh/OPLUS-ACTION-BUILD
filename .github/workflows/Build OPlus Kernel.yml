@@ -208,7 +208,7 @@ jobs:
           echo "Deal with FILE=$FILE, CONF=$FILE_CONF, BASE=$FILE_BASE"
           echo "FILE_CONF=$FILE_CONF" >> $GITHUB_ENV
           echo "FILE_BASE=$FILE_BASE" >> $GITHUB_ENV
-          # Dynamically Calling Source Code Manifest Repository, Repository Priority：1️⃣ OnePlusOSS → 2️⃣ Appendix → 3️⃣ Dynamic
+          # Dynamically Calling Source Code Manifest Repository, Repository Priority：OnePlusOSS → Appendix → Dynamic
           DYNAMIC_REPO_INPUT="${{ github.event.inputs.DYNAMIC_REPO }}"
           declare -A REPOS
           REPOS["OnePlusOSS"]="OnePlusOSS|kernel_manifest"
@@ -249,7 +249,7 @@ jobs:
             done
             return 1
           }
-          if ! check_repo "${REPOS["KingMikh"]}"; then
+          if ! check_repo "${REPOS["OnePlusOSS"]}"; then
             if ! check_repo "${REPOS["Appendix"]}"; then
               check_repo "${REPOS["Dynamic"]}"
             fi
