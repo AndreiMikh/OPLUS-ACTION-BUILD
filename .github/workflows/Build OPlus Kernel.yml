@@ -1049,11 +1049,7 @@ jobs:
               /baseband_guard/! s/selinux/selinux,baseband_guard/
             }
           }' ./security/Kconfig
-            echo "❌ No Patch Found, Windspeed Kernel does Not Currently Support Selected Device, Close & Try Again"
-            exit 12
-          fi
 
-      # Configuration Information, Marked with Asterisk Symbol* Indicates Additional items, which Carry Certain Degree of Risk & Uncertainty
       - name: Add Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform/common
