@@ -1,4 +1,11 @@
-      - name: Resolve KSU Meta Source
+      KSU_GIT_TAG=$(curl -sL \
+        "https://api.github.com/repos/WildKernels/Wild_KSU/tags" \
+        | grep -o '"name": *"[^"]*"' \
+        | head -n 1 \
+        | sed 's/"name": "//;s/"//')
+
+
+- name: Resolve KSU Meta Source
         id: manager
         run: |
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
