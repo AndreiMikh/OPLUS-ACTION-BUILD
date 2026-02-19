@@ -12,15 +12,13 @@
           SUSFS_DEV="${{ github.event.inputs.SUSFS_DEV }}"
           GKI_VERSION="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
-          ############################
-          # Clone SUSFS (if enabled)
-          ############################
+          # Clone SUSFS (If Enabled)
           if [[ "$SUSFS_META" != "-1" ]]; then
             echo "Cloning SUSFS..."
             git clone https://gitlab.com/simonpunk/susfs4ksu.git \
               -b "gki-${GKI_VERSION}${SUSFS_DEV == 'true' && '-dev' || ''}"
 
-            cd susfs4ksu
+            cd susfs4ksu || exit 1
 
             if [[ -n "$SUSFS_META" ]]; then
               if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
@@ -33,19 +31,15 @@
             cd ..
           fi
 
-          ################################
           # Clone Patch Repositories
-          ################################
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
 
           cd kernel_platform || exit 1
 
-          ################################
           # Extract SUSFS Files
-          ################################
           if [[ "$SUSFS_META" != "-1" ]]; then
-            echo "Extracting SUSFS patches..."
+            echo "Extracting SUSFS Patches..."
 
             curl -fsSL \
               https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch \
@@ -56,36 +50,30 @@
             cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
 
-          ################################
-          # Extract ZRAM (if enabled)
-          ################################
+          # Extract ZRAM (If Enabled)
           if [[ "$ZRAM" == 1* ]]; then
-            echo "Extracting ZRAM patches..."
+            echo "Extracting ZRAM Patches..."
             cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
             cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
             cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto/
             cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
           fi
 
-          cd common
+          cd common || exit 1
 
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
-          ################################
           # Fix 5.15 Legacy Bug
-          ################################
           if [[ "$GKI_VERSION" == "android13-5.15" && "$SUBLEVEL" -lt 123 ]]; then
             echo "Applying 5.15 legacy fix..."
             cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
           fi
 
-          ################################
           # Trusty Fix for 6.6
-          ################################
           if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "$SUSFS_META" != "-1" ]]; then
             if ! grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
-              echo "Applying Trusty compatibility fix..."
+              echo "Applying Trusty Compatibility Fix..."
               sed -i 's/-32,12 +32,38/-32,11 +32,37/g' \
                 50_add_susfs_in_gki-${GKI_VERSION}.patch
               sed -i '/#include <trace\/hooks\/fs.h>/d' \
@@ -93,19 +81,15 @@
             fi
           fi
 
-          ################################
           # Apply SUSFS Patches
-          ################################
           if [[ "$SUSFS_META" != "-1" ]]; then
-            echo "Applying SUSFS patch..."
+            echo "Applying SUSFS Patch..."
             patch -p1 < 50_add_susfs_in_gki-${GKI_VERSION}.patch || true
 
-            echo "Applying hide_stuff patch..."
+            echo "Applying Hide Stuff Patch..."
             patch -p1 -F3 < 69_hide_stuff.patch || true
 
-            ################################
             # Optional XUS Fix
-            ################################
             if [[ "$XUS_FIX" == "true" ]]; then
               cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
@@ -122,7 +106,7 @@
 
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             if [ -d "$p" ]; then
-              echo "Fengchi code already exists. Skipping conversion."
+              echo "Fengchi Code Already Exists, Skipping Conversion"
               exit 0
             fi
           done
