@@ -7,7 +7,7 @@
 
           image_path=""
 
-          # Check unified common out directory
+          # Check Unified Common Out Directory
           if [ -d "./kernel_workspace/kernel_platform/common/out/" ]; then
             image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -type f -name "Image" 2>/dev/null | head -n 1)
             if [ -n "$image_path" ]; then
@@ -15,7 +15,7 @@
             fi
           fi
 
-          # Fallback to official out directory
+          # Fallback to Official Out Directory
           if [ -z "$image_path" ] && [ -d "./kernel_workspace/kernel_platform/out/" ]; then
             image_path=$(find "./kernel_workspace/kernel_platform/out/" -type f -name "Image" 2>/dev/null | head -n 1)
             if [ -n "$image_path" ]; then
@@ -23,7 +23,7 @@
             fi
           fi
 
-          # Final validation
+          # Final Validation
           if [ -z "$image_path" ]; then
             echo "❌ Image File Not Found, Build Failed" >&2
             exit 1
