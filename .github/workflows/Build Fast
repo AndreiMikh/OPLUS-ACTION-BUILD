@@ -10,18 +10,14 @@
 
           echo "==== FAST KERNEL BUILD MODE ===="
 
-          # ----------------------------------------
           # Detect LLVM IAS
-          # ----------------------------------------
           USE_LLVM_IAS=false
           if [[ -f ./common/build.config.arm ]] && \
             grep -q '^LLVM_IAS=1' ./common/build.config.arm; then
             USE_LLVM_IAS=true
           fi
 
-          # ----------------------------------------
           # Extract CLANG_PREBUILT_BIN
-          # ----------------------------------------
           CLANG_PREBUILT_BIN=""
           for f in ./common/build.config.common ./"${PATH_2:-}"/build.config.common; do
             [[ -f "$f" ]] || continue
@@ -35,9 +31,7 @@
             exit 0
           fi
 
-          # ----------------------------------------
           # Extract Clang Version
-          # ----------------------------------------
           CLANG_VERSION=""
 
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
