@@ -1278,10 +1278,10 @@ jobs:
           echo "Using Branch: $MANAGER_BRANCH"
           echo "Downloading Artifact: $MANAGER_ARTIFACT"
 
-          run_id=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
+          run_id=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/workflows/build-manager.yml/runs?branch=${MANAGER_BRANCH}&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
-            echo "No Successful Workflow Run Found in Branch $MANAGER_BRANCH, Skipping Download Step"
+            echo "No Successful Workflow Run Found in Branch ${MANAGER_BRANCH}, Skipping Download Step"
             exit 0
           fi
 
