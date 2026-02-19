@@ -773,7 +773,11 @@ jobs:
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/WildKernels/Wild_KSU/commits?sha=${MANAGER_BRANCH}&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 30000)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSU_VERSION/g" kernel/Kbuild
-            KSU_GIT_TAG=$(curl -sL "https://api.github.com/repos/WildKernels/Wild_KSU/tags" | grep -o '"name": *"[^"]*"' | head -n 1 | sed 's/"name": "//;s/"//')
+            KSU_GIT_TAG=$(curl -sL \
+              "https://api.github.com/repos/WildKernels/Wild_KSU/tags" \
+              | grep -o '"name": *"[^"]*"' \
+              | head -n 1 \
+              | sed 's/"name": "//;s/"//')
             sed -i "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/g" kernel/Kbuild
           else
             echo "No Built-in KSU Meta Selected, Skip Configuration..."
