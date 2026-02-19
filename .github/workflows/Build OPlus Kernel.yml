@@ -693,19 +693,6 @@ jobs:
             grep -A10 "REPO_OWNER" kernel/Kbuild  # Check the Contents After the Insertion Point
             grep "KSU_VERSION_FULL" kernel/Kbuild # Confirm that the Version Definition Exists
             echo "SukiSU-Ultra Version Number: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}"
-
-            # Patch File
-            patches=(
-              "ksu_toolkit.patch"
-            )
-            # Apply Patch File
-            for p in "${patches[@]}"; do
-            echo "Downloading $p..."
-            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
-            echo "Applying $p..."
-            patch -p1 -N -F 3 < $p || echo "⚠ Patch $p May have Already been Applied or Failed"
-            done
-              echo "SukiSU-Ultra Custom Patches Complete"              
             
           elif [[ "$KSU_META" == "ReSukiSU" ]]; then
             echo "Configure ReSukiSU..."
@@ -718,19 +705,6 @@ jobs:
         
             # Store Version Number to a GitHub Environment Variable
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-
-            # Patch File
-            patches=(
-              "ksu_toolkit.patch"
-            )
-            # Apply Patch File
-            for p in "${patches[@]}"; do
-            echo "Downloading $p..."
-            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/$p -O ./$p
-            echo "Applying $p..."
-            patch -p1 -N -F 3 < $p || echo "⚠ Patch $p May have Already been Applied or Failed"
-            done
-              echo "ReSukiSU Custom Patches Complete"              
         
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configure KernelSU Next..."
@@ -745,7 +719,6 @@ jobs:
             # List of Patch Files
             patches=(
               "overwrite_hook_mode.patch"
-              "ksu_toolkit.patch"
               "multi_manager.patch"
             )
             # Apply Patch
@@ -757,10 +730,10 @@ jobs:
             done
               echo "KernelSU-Next Custom Patches Complete"              
           else
-            echo "No Builtin KSU Meta Selected to Skip KernelSU Configuration..."
+            echo "No Built-in KSU Meta Selected, Skip Configuration..."
           fi
 
-      - name: Apply KSU Meta Patches
+      - name: Apply Patches to KSU Meta
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -884,7 +857,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
           echo "OGKI to GKI Patch Conversion Complete"
 
-      - name: Apply Unicode Bypass
+      - name: Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
@@ -895,7 +868,7 @@ jobs:
             patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1+.patch" || true
           fi
 
-      - name: Apply ZRAM
+      - name: ZRAM
         if: startsWith(github.event.inputs.ZRAM, '1/')
         run: |
           ZRAM="${{ github.event.inputs.ZRAM }}"
@@ -918,7 +891,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo 'LZ4K OPlus Patches Complete'
 
-      - name: Apply Scheduler
+      - name: Scheduler
         env:
           FILE: ${{ github.event.inputs.FILE }}
         if: ${{ github.event.inputs.SCHED == 'true' }}
@@ -943,7 +916,7 @@ jobs:
             exit 12
           fi
 
-      - name: Apply LSM BBG
+      - name: LSM BBG
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
           cd kernel_workspace/kernel_platform/common
@@ -1061,7 +1034,7 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix IPv6 NAT Error
+      - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
@@ -1070,7 +1043,7 @@ jobs:
             echo "Fix Potential False Alarms from Selected Devices After Enabling IPV6 NAT..."
             patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
           else
-            echo "Device Selected does not Support IPV6 NAT, Skipping Step"
+            echo "Device Selected does Not Support IPV6 NAT, Skipping Step"
           fi
 
       # Custom Kernel Build Time, Without Adding #1 SMP PREEMPT
@@ -1263,7 +1236,7 @@ jobs:
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
 
-      - name: Apply Patch Linux & Replace Image
+      - name: Patch Linux & Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
@@ -1317,7 +1290,7 @@ jobs:
           run_id=$(gh api "repos/${{ github.event.inputs.KSU_META }}/${{ github.event.inputs.KSU_META }}/actions/workflows/build-manager.yml/runs?branch=$MANAGER_BRANCH&status=success&per_page=1" --jq '.workflow_runs[0].id' || echo "")
 
           if [[ -z "$run_id" ]]; then
-            echo "No Successful Workflow Run Found on Branch $MANAGER_BRANCH, Skipping Download Step"
+            echo "No Successful Workflow Run Found in Branch $MANAGER_BRANCH, Skipping Download Step"
             exit 0
           fi
           
