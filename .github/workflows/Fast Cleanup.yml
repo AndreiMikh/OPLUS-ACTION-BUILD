@@ -1,4 +1,4 @@
-name: Cleanup Old Workflow Runs
+name: Cleanup Old and Failed/Cancelled Workflow Runs
 
 on:
   workflow_dispatch:       # manual trigger
@@ -12,13 +12,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Cleanup Old Workflow Runs
+      - name: Cleanup Workflow Runs
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}   # Your PAT with 'workflow' scope
           REPO: ${{ github.repository }}
           KEEP_LAST: 10
         run: |
-          echo "Cleaning old workflow runs in repository $REPO..."
+          echo "Cleaning Workflow Runs in Repository $REPO..."
           
           # Fetch all workflow IDs
           workflow_ids=$(gh api repos/$REPO/actions/workflows | jq -r '.workflows[].id')
@@ -27,19 +27,25 @@ jobs:
             echo "Processing workflow ID: $wf_id"
             
             # List all runs for this workflow, newest first
-            runs=$(gh api repos/$REPO/actions/workflows/$wf_id/runs --paginate | jq -r '.workflow_runs[].id')
+            runs=$(gh api repos/$REPO/actions/workflows/$wf_id/runs --paginate | jq -r '.workflow_runs[] | "\(.id) \(.status) \(.conclusion)"')
             
             count=0
-            for run_id in $runs; do
-              count=$((count+1))
-              if [ $count -le $KEEP_LAST ]; then
-                echo "Keeping run $run_id"
+            while read -r run_id status conclusion; do
+              # Increment counter only for completed/successful runs
+              if [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
+                count=$((count+1))
+              fi
+
+              # Delete runs that are either:
+              # 1. Older than last $KEEP_LAST successful runs
+              # 2. Cancelled or failed
+              if [ "$status" = "completed" ] && [ "$conclusion" = "success" ] && [ $count -le $KEEP_LAST ]; then
+                echo "Keeping successful run $run_id"
               else
-                echo "Attempting to delete run $run_id..."
-                # Delete run, suppress errors (like 403) so workflow continues
+                echo "Deleting run $run_id (status=$status, conclusion=$conclusion)..."
                 gh api -X DELETE repos/$REPO/actions/runs/$run_id || echo "⚠️ Could not delete run $run_id (skipping)"
               fi
-            done
+            done <<< "$runs"
           done
 
           echo "Cleanup complete!"
