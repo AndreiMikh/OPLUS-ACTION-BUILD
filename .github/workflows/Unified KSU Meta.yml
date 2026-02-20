@@ -58,6 +58,7 @@ on:
           - oneplus_15r_aosp
           - oneplus_15
           - oneplus_15_aosp
+          - oneplus_15_w
       KPM:
         type: choice
         description: "Kernel Module Implementation Methods"
