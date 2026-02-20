@@ -74,9 +74,9 @@ on:
         default: ""
       DYNAMIC_REPO:
         type: string
-        description: "Dynamic Inventory Warehouse Owner"
-        required: true
-        default: "AndreiMikh"
+        description: "Optional: Custom Manifest Repository"
+        required: false
+        default: ""
       BUILD_TIME:
         type: string
         description: "Custom Build Time (Input 'F' to Use Current UTC Time)"
