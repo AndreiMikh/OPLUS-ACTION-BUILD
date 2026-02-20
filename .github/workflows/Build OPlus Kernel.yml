@@ -196,52 +196,105 @@ jobs:
         id: extract_info
         env:
           FILE: ${{ github.event.inputs.FILE }}
+          DYNAMIC_REPO_INPUT: ${{ github.event.inputs.DYNAMIC_REPO }}
         run: |
           set -e
           cd "$GITHUB_WORKSPACE"
+
+          echo "Extract Manifest"
+
+          # Normalize File Name
           if [[ "$FILE" =~ ^(.+)_([a-zA-Z])$ ]]; then
             FILE_CONF="${BASH_REMATCH[1]}"
           else
             FILE_CONF="$FILE"
           fi
-          FILE_BASE=$(echo "$FILE_CONF" | sed -E 's/_aosp/(AOSP)/g; s/_([a-zA-Z0-9])/\U\1/g; s/^oneplus/OnePlus/; s/^realme/RealME/; s/^oppo/OPPO/')
+          
+          FILE_BASE=$(echo "$FILE_CONF" | sed -E '
+            s/_aosp/(AOSP)/g;
+            s/_([a-zA-Z0-9])/\U\1/g;
+            s/^oneplus/OnePlus/;
+            s/^realme/RealME/;
+            s/^oppo/OPPO/
+          ')
+
           mkdir -p ".repo/manifests_fallback"
           XML_PATH=".repo/manifests_fallback/${FILE}.xml"
           README_PATH=".repo/manifests_fallback/README.md"
-          echo "Deal with FILE=$FILE, CONF=$FILE_CONF, BASE=$FILE_BASE"
-          echo "FILE_CONF=$FILE_CONF" >> $GITHUB_ENV
-          echo "FILE_BASE=$FILE_BASE" >> $GITHUB_ENV
-          # Dynamically Calling Source Code Manifest Repository, Repository Priority：OnePlusOSS → Appendix → Dynamic
-          DYNAMIC_REPO_INPUT="${{ github.event.inputs.DYNAMIC_REPO }}"
-          declare -A REPOS
-          REPOS["OnePlusOSS"]="OnePlusOSS|kernel_manifest"
-          REPOS["Appendix"]="OnePlusOSS|Kernel_Manifest_Appendix"
-          REPOS["Dynamic"]="${DYNAMIC_REPO_INPUT}|kernel_manifest"
 
-          FOUND_REPO=""
-          FOUND_BRANCH=""
+          echo "FILE=$FILE"
+          echo "FILE_CONF=$FILE_CONF"
+          echo "FILE_BASE=$FILE_BASE"
 
-          check_repo() {
-            local ENTRY=$1
-            local OWNER=${ENTRY%%|*}
-            local REPO_NAME=${ENTRY##*|}
+          {
+            echo "FILE_CONF=$FILE_CONF"
+            echo "FILE_BASE=$FILE_BASE"
+            } >> "$GITHUB_ENV"
+          
+            # Repository Priority:
+            # 1. OnePlusOSS/kernel_manifest
+            # 2. OnePlusOSS/Kernel_Manifest_Appendix
+            # 3. User Defined Dynamic Repo
+          
+            declare -A REPOS
+          
+            REPOS["OnePlusOSS"]="OnePlusOSS|kernel_manifest"
+            REPOS["Appendix"]="OnePlusOSS|Kernel_Manifest_Appendix"
+          
+            # Only Register Dynamic Repository if Input is Not Empty
+            if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
+              # Remove https://github.com/ if User Pasted full URL
+              DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT#https://github.com/}"
+              DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT%/}"
+              
+              if [[ "$DYNAMIC_REPO_INPUT" =~ ^[^/]+/[^/]+$ ]]; then
+                echo "Dynamic Repository Detected: $DYNAMIC_REPO_INPUT"
+                REPOS["Dynamic"]="${DYNAMIC_REPO_INPUT}|kernel_manifest"
+              else
+                echo "WARNING: Invalid Dynamic Repository Format"
+                echo "Expected: OWNER/REPO"
+                echo "Provided: $DYNAMIC_REPO_INPUT"
+                echo "Skipping Dynamic Repository Instead of Failing"
+              fi
+            fi
+                        
+            FOUND_REPO=""
+            FOUND_REPO_NAME=""
+            FOUND_BRANCH=""
+
+            check_repo() {
+              local ENTRY="$1"
+              [[ -z "$ENTRY" ]] && return 1
+                     
+              local OWNER=${ENTRY%%|*}
+              local REPO_NAME=${ENTRY##*|}
+
+              echo ""
+              echo ">>> Checking ${OWNER}/${REPO_NAME}"
+            
             local API_URL="https://api.github.com/repos/${OWNER}/${REPO_NAME}"
 
-            echo "Try Pull Branch List of ${OWNER}/${REPO_NAME}..."
-            BRANCHES=$(curl -fsL "$API_URL/branches" | jq -r 'if type=="array" then .[].name else empty end' 2>/dev/null || true)
+            # Fetch Branches Safely
+            local BRANCHES
+            BRANCHES=$(curl -fsSL "${API_URL}/branches" \
+              | jq -r '.[]?.name' 2>/dev/null || true)
 
             if [[ -z "$BRANCHES" ]]; then
-              echo "${OWNER}/${REPO_NAME} Failed to Retrieve Branch List, Try Re-Running Workflow"
+              echo "Failed to Retrieve Branches for ${OWNER}/${REPO_NAME}"
               return 1
             fi
+            
             for BRANCH in $BRANCHES; do
+              echo "  → Trying Branch: $BRANCH"
+              
               XML_URL="https://raw.githubusercontent.com/${OWNER}/${REPO_NAME}/${BRANCH}/${FILE}.xml"
               README_URL="https://raw.githubusercontent.com/${OWNER}/${REPO_NAME}/${BRANCH}/README.md"
 
               if curl -sf --head "$XML_URL" >/dev/null; then
-                echo "Locate ${FILE}.xml (branch: ${BRANCH}) Within ${OWNER}/${REPO_NAME}"
-                curl -s -o "$XML_PATH" "$XML_URL"
-                curl -s -o "$README_PATH" "$README_URL" || true
+                echo "Found ${FILE}.xml in ${OWNER}/${REPO_NAME} (Branch: $BRANCH)"
+                
+                curl -fsSL -o "$XML_PATH" "$XML_URL"
+                curl -fsSL -o "$README_PATH" "$README_URL" || true
 
                 FOUND_REPO="$OWNER"
                 FOUND_REPO_NAME="$REPO_NAME"
@@ -250,116 +303,199 @@ jobs:
                 return 0
               fi
             done
+
+            echo "Not Found in ${OWNER}/${REPO_NAME}"
             return 1
           }
-          if ! check_repo "${REPOS["OnePlusOSS"]}"; then
-            if ! check_repo "${REPOS["Appendix"]}"; then
-              check_repo "${REPOS["Dynamic"]}"
+
+          # Ordered Search
+          for key in OnePlusOSS Appendix Dynamic; do
+            if [[ -n "${REPOS[$key]}" ]]; then
+              if check_repo "${REPOS[$key]}"; then
+                break
+              fi
             fi
-          fi
+          done
+
+          # Final Validation
           if [[ -z "$FOUND_REPO" || ! -s "$XML_PATH" ]]; then
-            echo "Unable to Find in Any Warehouse ${FILE}.xml"
+            echo ""
+            echo "ERROR: ${FILE}.xml Not Found in Any Configured Repository"
             exit 9
           fi
-          echo "MANIFEST_REPO=$FOUND_REPO" >> "$GITHUB_ENV"
-          echo "MANIFEST_REPO_NAME=$FOUND_REPO_NAME" >> "$GITHUB_ENV"
-          echo "MANIFEST_BRANCH=$FOUND_BRANCH" >> "$GITHUB_ENV"
-          
+
+          echo ""
+          echo "============= Manifest Located ============="
+          echo "Repository : ${FOUND_REPO}/${FOUND_REPO_NAME}"
+          echo "Branch     : ${FOUND_BRANCH}"
+          echo "============================================"
+
+          {
+            echo "MANIFEST_REPO=$FOUND_REPO"
+            echo "MANIFEST_REPO_NAME=$FOUND_REPO_NAME"
+            echo "MANIFEST_BRANCH=$FOUND_BRANCH"
+          } >> "$GITHUB_ENV"
+                 
           # Parse Revision String
+
+          echo "Parsing Manifest"
+
           REVISION=$(grep -oP '<project[^>]+revision="\K[^"]+' "$XML_PATH" | head -n1 || true)
-          echo "Parse the File to Obtain CPU & Android Version..."
-          # Extract CPU
-          CPU=$(echo "$REVISION" | sed -E 's#^(oneplus|realme|oppo)/([^_]+).*#\2#')
-          # Extract Android Version
-          ANDROID_VERSION=$(echo "$REVISION" | grep -oP '\d{1,2}\.\d{1,2}(\.\d{1,2})?')
-          if [[ -n "$CPU" && -n "$ANDROID_VERSION" ]]; then
-            echo "CPU=$CPU, ANDROID_VERSION=$ANDROID_VERSION"
-            echo "CPU=$CPU" >> $GITHUB_ENV
-            echo "ANDROID_VERSION=$ANDROID_VERSION" >> $GITHUB_ENV
-            # Get Short Android Version Number
-            echo "ANDROID_SHORT_VERSION=${ANDROID_VERSION%%.*}" >> $GITHUB_ENV
-          else
-            echo "Unable to Extract CPU or Android Version from Revision"
+
+          if [[ -z "${REVISION:-}" ]]; then
+            echo "ERROR: No revision string found in XML"
             exit 1
           fi
 
-          echo "Parse Readme.md to Obtain CPUD & Build Method..."
-          if [[ -s "$README_PATH" ]]; then
-            BUILD_LINE=$(grep -m1 'oplus_build_kernel.sh' "$README_PATH" || true)
-            if [[ -n "$BUILD_LINE" ]]; then
-              CPUD=$(echo "$BUILD_LINE" | awk '{print $(NF-1)}')
-              BUILD_METHOD=$(echo "$BUILD_LINE" | awk '{print $NF}')
-              echo "CPUD=$CPUD, BUILD_METHOD=$BUILD_METHOD"
-              echo "CPUD=$CPUD" >> $GITHUB_ENV
-              echo "BUILD_METHOD=$BUILD_METHOD" >> $GITHUB_ENV
-            else
-              echo "Build Command was Not Found in Readme.md"
-            fi
-          else
-            echo "Download Failed or is Empty for Readme.md"
+          echo "REVISION=$REVISION"
+          echo "Parsing CPU & Android Version..."
+
+          # Extract CPU
+          CPU=$(echo "$REVISION" | sed -E 's#^(oneplus|realme|oppo)/([^_]+).*#\2#')
+
+          # Extract Android Version (e.g. 13.0 or 14.0.1)
+          ANDROID_VERSION=$(echo "$REVISION" | grep -oE '[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?' | head -n1 || true)
+
+          if [[ -z "$CPU" || -z "$ANDROID_VERSION" ]]; then
+            echo "ERROR: Failed to extract CPU or Android version"
+            exit 1
           fi
 
-          echo "Parse File-K to Obtain Path 2..."
+          ANDROID_SHORT_VERSION="${ANDROID_VERSION%%.*}"
+
+          echo "CPU=$CPU"
+          echo "ANDROID_VERSION=$ANDROID_VERSION"
+          echo "ANDROID_SHORT_VERSION=$ANDROID_SHORT_VERSION"
+
+          {
+            echo "CPU=$CPU"
+            echo "ANDROID_VERSION=$ANDROID_VERSION"
+            echo "ANDROID_SHORT_VERSION=$ANDROID_SHORT_VERSION"
+          } >> "$GITHUB_ENV"
+
+          # Parse README to Obtain CPUD & Build Method
+          echo "Parsing README"
+
+          if [[ -s "$README_PATH" ]]; then
+            BUILD_LINE=$(grep -m1 'oplus_build_kernel.sh' "$README_PATH" || true)
+
+            if [[ -n "$BUILD_LINE" ]]; then
+              # More reliable extraction: pull last two arguments
+              CPUD=$(awk '{print $(NF-1)}' <<< "$BUILD_LINE")
+              BUILD_METHOD=$(awk '{print $NF}' <<< "$BUILD_LINE")
+
+              echo "CPUD=$CPUD"
+              echo "BUILD_METHOD=$BUILD_METHOD"
+
+              {
+                echo "CPUD=$CPUD"
+                echo "BUILD_METHOD=$BUILD_METHOD"
+              } >> "$GITHUB_ENV"
+            else
+              echo "WARNING: Build command not found in README.md"
+            fi
+          else
+            echo "WARNING: README missing or empty"
+          fi
+
+          # Parse XML to Obtain PATH_2
+          echo "Searching PATH_2"
+
           PATH_2=""
+
           if [[ "$CPU" == sm* ]]; then
-            COUNT_SM=0
-            COUNT_MASTER=0
-            while read -r LINE; do
-              REV=$(echo "$LINE" | grep -oP 'revision="\K[^"]+' || true)
-              PATH_VAL=$(echo "$LINE" | grep -oP 'path="\K[^"]+' || true)
-              if [[ "$REV" =~ ^(oneplus|oppo)/ ]] && [[ -n "$PATH_VAL" ]]; then
-                COUNT_SM=$((COUNT_SM + 1))
-                if [[ $COUNT_SM -eq 2 ]]; then
-                  PATH_2="${PATH_VAL#kernel_platform/}"
-                  break
-                fi
-              elif [[ "$REV" == "master" ]] && [[ -n "$PATH_VAL" ]]; then
-                COUNT_MASTER=$((COUNT_MASTER + 1))
-                if [[ $COUNT_MASTER -eq 2 ]]; then
+            COUNT_MATCH=0
+
+            while IFS= read -r LINE; do
+              REV=$(grep -oP 'revision="\K[^"]+' <<< "$LINE" || true)
+              PATH_VAL=$(grep -oP 'path="\K[^"]+' <<< "$LINE" || true)
+
+              [[ -z "$REV" || -z "$PATH_VAL" ]] && continue
+
+              if [[ "$REV" =~ ^(oneplus|oppo)/ ]] || [[ "$REV" == "master" ]]; then
+                COUNT_MATCH=$((COUNT_MATCH + 1))
+
+                if [[ $COUNT_MATCH -eq 2 ]]; then
                   PATH_2="${PATH_VAL#kernel_platform/}"
                   break
                 fi
               fi
             done < <(grep "<project " "$XML_PATH" || true)
           fi
+
           if [[ -n "$PATH_2" ]]; then
             echo "PATH_2=$PATH_2"
             echo "PATH_2=$PATH_2" >> "$GITHUB_ENV"
           else
-            echo "No Matching Path 2 Found, Could be Due to the Selected Device or Specific List that does Not Meet Criteria, Skipping Step"
+            echo "No valid PATH_2 found (may not apply to this device)"
           fi
 
-          # Convey Combined Information
+          # Export Combined Output Value
           echo "value=${FILE_BASE}_Android${ANDROID_VERSION}" >> "$GITHUB_OUTPUT"
+
+          echo "Manifest Parsing Complete"    
           
-      - name: Debug Show Selected Inputs
+      - name: Debug – Show Selected Inputs
+        shell: bash
         run: |
-          echo "-----------------------"
-          echo "Selected CPU: ${{ env.CPU }}"
-          echo "Selected CPUD: ${{ env.CPUD }}"
-          echo "Selected ANDROID_VERSION: ${{ env.ANDROID_VERSION }}"
-          echo "Selected BUILD_METHOD: ${{ env.BUILD_METHOD }}"
-          echo "Selected FILE: ${{ github.event.inputs.FILE }}"
-          echo "Selected KPM: ${{ github.event.inputs.KPM }}"
-          echo "Selected MANAGER_SOURCE: ${{ github.event.inputs.MANAGER_SOURCE }}"
-          echo "Custom SUSFS_META: ${{ github.event.inputs.SUSFS_META }}"
-          echo "Custom KSU_META: ${{ github.event.inputs.KSU_META }}"
-          echo "Selected ZRAM: ${{ github.event.inputs.ZRAM }}"
-          echo "Custom BUILD_TIME: ${{ github.event.inputs.BUILD_TIME }}"
-          echo -n "BUILD_TIME Unicode: "
-          python3 -c "import unicodedata; print(''.join(f'\033[31mU+{ord(c):04X}\033[0m ' if c.isspace() or unicodedata.category(c)=='Cf' else f'U+{ord(c):04X} ' for c in '''${{ github.event.inputs.BUILD_TIME }}'''))"
-          echo "Custom SUFFIX: ${{ github.event.inputs.SUFFIX }}"
-          echo -n "SUFFIX Unicode: "
-          python3 -c "import unicodedata; print(''.join(f'\033[31mU+{ord(c):04X}\033[0m ' if c.isspace() or unicodedata.category(c)=='Cf' else f'U+{ord(c):04X} ' for c in '''${{ github.event.inputs.SUFFIX }}'''))"
-          echo "Selected LSM: ${{ github.event.inputs.LSM }}"
-          echo "Selected NETFILTER: ${{ github.event.inputs.NETFILTER }}"
-          echo "Selected BBR_ECN: ${{ github.event.inputs.BBR_ECN }}"
-          echo "Selected SUSFS_DEV: ${{ github.event.inputs.SUSFS_DEV }}"
-          echo "Selected FAST_BUILD: ${{ github.event.inputs.FAST_BUILD }}"
-          echo "Selected SCHED: ${{ github.event.inputs.SCHED }}"
-          echo "Selected UNICODE_BYPASS: ${{ github.event.inputs.UNICODE_BYPASS }}"
-          echo "Selected XUS_FIX: ${{ github.event.inputs.XUS_FIX }}"
-          echo "-----------------------"
+          set -euo pipefail
+
+          echo "--- DEBUG INPUTS ---"
+
+           # Helper: Print Unicode Codepoints
+           print_unicode() {
+             local LABEL="$1"
+             local VALUE="$2"
+
+             echo -n "$LABEL Unicode: "
+
+             python3 <<EOF
+          import unicodedata
+          value = """$VALUE"""
+          output = []
+          for c in value:
+              code = f"U+{ord(c):04X}"
+              if c.isspace() or unicodedata.category(c) == "Cf":
+                  output.append(f"\033[31m{code}\033[0m")
+              else:
+                  output.append(code)
+          print(" ".join(output))
+          EOF
+                echo
+              }
+
+              # ENV Variables (Parsed from Manifest)
+              
+              echo "MANIFEST PARSED VALUES"
+              echo "CPU               : ${CPU:-<empty>}"
+              echo "CPUD              : ${CPUD:-<empty>}"
+              echo "ANDROID_VERSION   : ${ANDROID_VERSION:-<empty>}"
+              echo "BUILD_METHOD      : ${BUILD_METHOD:-<empty>}"
+
+              # GitHub Action Inputs
+              
+              echo "GITHUB INPUTS"
+              echo "FILE              : ${{ github.event.inputs.FILE }}"
+              echo "KPM               : ${{ github.event.inputs.KPM }}"
+              echo "MANAGER_SOURCE    : ${{ github.event.inputs.MANAGER_SOURCE }}"
+              echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
+              echo "KSU_META          : ${{ github.event.inputs.KSU_META }}"
+              echo "ZRAM              : ${{ github.event.inputs.ZRAM }}"
+              echo "BUILD_TIME        : ${{ github.event.inputs.BUILD_TIME }}"
+              echo "SUFFIX            : ${{ github.event.inputs.SUFFIX }}"
+              echo "LSM               : ${{ github.event.inputs.LSM }}"
+              echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
+              echo "BBR_ECN           : ${{ github.event.inputs.BBR_ECN }}"
+              echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
+              echo "FAST_BUILD        : ${{ github.event.inputs.FAST_BUILD }}"
+              echo "SCHED             : ${{ github.event.inputs.SCHED }}"
+              echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
+              echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
+
+              # Unicode Inspection (Whitespace / Hidden Character Detection)
+
+              print_unicode "BUILD_TIME" "${{ github.event.inputs.BUILD_TIME }}"
+              print_unicode "SUFFIX" "${{ github.event.inputs.SUFFIX }}"
 
       - name: Check Disk Space
         run: df -h
