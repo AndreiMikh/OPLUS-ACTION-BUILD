@@ -8,9 +8,9 @@ on:
         required: true
         default: "1"
       CONFIRMATION:
-        description: "I have read the README.md, understand the workflow risks, can cancel stuck runs, clear caches, and still wish to proceed"
+        description: "Confirm"
         required: true
-        default: "Enter full confirmation"
+        default: "Enter Confirm to Proceed"
 
 permissions:
   actions: read
