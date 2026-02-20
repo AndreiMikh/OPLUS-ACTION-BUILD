@@ -1,0 +1,203 @@
+name: Android16 SM8850 Kernel 6.12.23 Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ksu_variant:
+        description: "KernelSU variant"
+        required: true
+        type: choice
+        default: "resukisu"
+        options:
+          - resukisu
+          - sukisu
+          - ksunext
+          - ksu
+          - none
+
+      enable_susfs:
+        description: "Enable SUSFS"
+        required: true
+        type: boolean
+        default: true
+
+      enable_bbr:
+        description: "Enable BBR"
+        required: true
+        type: boolean
+        default: false
+
+      enable_adios:
+        description: "Enable ADIOS I/O scheduler"
+        required: true
+        type: boolean
+        default: true
+
+      enable_baseband_guard:
+        description: "Enable Baseband Guard"
+        required: true
+        type: boolean
+        default: true
+
+env:
+  TZ: Asia/Shanghai
+  ANDROID_VERSION: android16
+  KERNEL_VERSION: 6.12.23
+  KERNEL_BRANCH: oneplus/sm8850_v_16.0.0_oneplus_15
+  CCACHE_DIR: ~/.ccache
+  CCACHE_MAXSIZE: 3G
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------
+      # 1️⃣ Install Dependencies
+      # ------------------------------------------------
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            git bc bison flex libssl-dev libelf-dev \
+            build-essential clang lld python3 \
+            ccache zip unzip curl wget
+
+      # ------------------------------------------------
+      # 2️⃣ Clone Kernel Source
+      # ------------------------------------------------
+      - name: Clone Kernel Source
+        run: |
+          git clone https://github.com/cctv18/android_kernel_common_oneplus_sm8850.git kernel
+          cd kernel
+          git checkout $KERNEL_BRANCH
+
+      # ------------------------------------------------
+      # 3️⃣ Setup Toolchain (Clang 19 + Rust)
+      # ------------------------------------------------
+      - name: Setup LLVM Clang 19
+        run: |
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 clang
+          echo "$PWD/clang/clang-r*/bin" >> $GITHUB_PATH
+
+      # ------------------------------------------------
+      # 4️⃣ Configure Ccache
+      # ------------------------------------------------
+      - name: Configure Ccache
+        run: |
+          mkdir -p $CCACHE_DIR
+          ccache -M $CCACHE_MAXSIZE
+          ccache -s
+
+      # ------------------------------------------------
+      # 5️⃣ Integrate KernelSU (Optional)
+      # ------------------------------------------------
+      - name: Integrate KernelSU
+        if: inputs.ksu_variant != 'none'
+        run: |
+          cd kernel
+          case "${{ inputs.ksu_variant }}" in
+            resukisu)
+              curl -LSs https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh | bash -s main
+              ;;
+            sukisu)
+              curl -LSs https://raw.githubusercontent.com/ShirkNeko/SukiSU-Ultra/main/kernel/setup.sh | bash -s builtin
+              ;;
+            ksunext)
+              curl -LSs https://raw.githubusercontent.com/pershoot/KernelSU-Next/dev-susfs/kernel/setup.sh | bash -s dev-susfs
+              ;;
+            ksu)
+              curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -s main
+              ;;
+          esac
+
+      # ------------------------------------------------
+      # 6️⃣ Apply SUSFS (Optional)
+      # ------------------------------------------------
+      - name: Apply SUSFS
+        if: inputs.enable_susfs == true
+        run: |
+          cd kernel
+          git clone --depth=1 https://github.com/cctv18/susfs4oki.git
+          cp susfs4oki/kernel_patches/*.patch .
+          for p in *.patch; do patch -p1 < "$p" || true; done
+
+      # ------------------------------------------------
+      # 7️⃣ Enable Kernel Config Flags
+      # ------------------------------------------------
+      - name: Configure Defconfig
+        run: |
+          cd kernel
+          DEFCONFIG=common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> $DEFCONFIG
+          echo "CONFIG_LOCALVERSION_AUTO=n" >> $DEFCONFIG
+
+          if [[ "${{ inputs.enable_bbr }}" == "true" ]]; then
+            echo "CONFIG_TCP_CONG_ADVANCED=y" >> $DEFCONFIG
+            echo "CONFIG_TCP_CONG_BBR=y" >> $DEFCONFIG
+            echo "CONFIG_DEFAULT_TCP_CONG=bbr" >> $DEFCONFIG
+          fi
+
+          if [[ "${{ inputs.enable_adios }}" == "true" ]]; then
+            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> $DEFCONFIG
+            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> $DEFCONFIG
+          fi
+
+          if [[ "${{ inputs.enable_baseband_guard }}" == "true" ]]; then
+            echo "CONFIG_BBG=y" >> $DEFCONFIG
+          fi
+
+      # ------------------------------------------------
+      # 8️⃣ Build Kernel (6.12 GKI)
+      # ------------------------------------------------
+      - name: Build Kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export LLVM=1
+          export CC=clang
+          export LD=ld.lld
+          export CROSS_COMPILE=aarch64-linux-gnu-
+
+          cd kernel/common
+          make O=out gki_defconfig
+          make -j$(nproc) O=out Image
+
+      # ------------------------------------------------
+      # 9️⃣ Package with AnyKernel3
+      # ------------------------------------------------
+      - name: Package AnyKernel3
+        run: |
+          git clone --depth=1 https://github.com/cctv18/AnyKernel3
+          cp kernel/common/out/arch/arm64/boot/Image AnyKernel3/
+
+          cd AnyKernel3
+          zip -r9 ../SM8850_6.12.23_${{ inputs.ksu_variant }}.zip ./*
+
+      # ------------------------------------------------
+      # 🔟 Upload Artifact
+      # ------------------------------------------------
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-ZIP
+          path: SM8850_6.12.23_*.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Kernel-ZIP
+          path: release
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: SM8850-6.12.23-${{ github.run_number }}
+          name: Android16 SM8850 Kernel 6.12.23
+          files: release/*.zip
