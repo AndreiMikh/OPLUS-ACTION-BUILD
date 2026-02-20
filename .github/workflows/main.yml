@@ -1,0 +1,194 @@
+name: Multi-KSU Unified Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      BATCH:
+        description: "Choose batch (1-4), 9 devices per batch"
+        required: true
+        default: "1"
+      ROOT_MANAGER:
+        description: "Select Root Manager Workflow to Build (ReSukiSU, SukiSU-Ultra, KernelSU-Next, WildKSU)"
+        required: true
+        default: "ReSukiSU"
+      CONFIRMATION:
+        description: "I have Read the README.md, Understand the Workflow Risks, can Cancel Stuck Runs, Clear Caches & Still Wish to Proceed"
+        required: true
+        default: "Enter Full Confirmation Text"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Check User Confirmation
+        run: |
+          CONFIRM="${{ github.event.inputs.CONFIRMATION }}"
+          EXPECT="I have read the README.md, understand the workflow risks, can cancel stuck runs, clear caches, and still wish to proceed"
+          if [[ "$CONFIRM" != "$EXPECT" ]]; then
+            echo "❌ Invalid input: You did not confirm workflow risks correctly."
+            exit 1
+
+      - name: Set Matrix from Device List
+        id: set-matrix
+        run: |
+          BATCH="${{ github.event.inputs.BATCH }}"
+          case "$BATCH" in
+            1)
+              FILE_LIST=( "oneplus_nord_ce4_lite_5g_v" "oneplus_nord_ce4_v" "oneplus_nord_4_v" "oneplus_ace_3v_v" "oneplus_10_pro_v" "oneplus_10t_v" "oneplus_11r_v" "oneplus_ace2_v" "oneplus_ace_pro_v" )
+              ;;
+            2)
+              FILE_LIST=( "oneplus_11_v" "oneplus_12r_v" "oneplus_ace2_pro_v" "oneplus_ace3_v" "oneplus_open_v" "oneplus_12_v" "oneplus_13r" "oneplus_ace3_pro_v" "oneplus_ace5" )
+              ;;
+            3)
+              FILE_LIST=( "oneplus_pad_pro_v" "oneplus_pad2_v" "oneplus_nord_5" "oneplus_ace5_pro" "oneplus_ace5_pro_b" "oneplus_13" "oneplus_13_b" "oneplus_13t" "oneplus_13t_b" )
+              ;;
+            4)
+              FILE_LIST=( "oneplus_13_global" "oneplus_13s" "oneplus_13s_b" "oneplus_pad_2_pro" "oneplus_pad_3" "oneplus_ace5_ultra" "oneplus_ace_6" "oneplus_15" )
+              ;;
+            *)
+              echo "Invalid BATCH value: $BATCH"
+              exit 1
+              ;;
+          esac
+
+          MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
+            split("\n")[:-1] |
+            map({
+              file: .,
+              file_short: (sub("_[a-z]$"; "") | sub("_v$"; "")),
+              enable_sched: (
+                . == "oneplus_pad_2_pro" or
+                . == "oneplus_13" or
+                . == "oneplus_13_global" or
+                . == "oneplus_13t" or
+                . == "oneplus_13s" or
+                . == "oneplus_ace5_ultra" or
+                . == "oneplus_ace5_pro"
+              )
+            })
+          ')
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+  build:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Call Selected Root Manager Workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: ${{ github.event.inputs.ROOT_MANAGER }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          inputs: |
+            {
+              "FILE": "${{ matrix.file }}",
+              "SCHED": "${{ matrix.enable_sched }}",
+              "FAST_BUILD": "true",
+              "LSM": "true",
+              "ZRAM": "false"
+            }
+
+      - name: Wait for Build Artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILE="${{ matrix.file_short }}"
+          echo "Waiting for $FILE build to complete..."
+          TIMEOUT=$((35 * 60))
+          INTERVAL=60
+          ELAPSED=0
+
+          while [[ $ELAPSED -lt $TIMEOUT ]]; do
+            MATCH=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name' | grep -E "$FILE" || true)
+            if [[ -n "$MATCH" ]]; then
+              echo "✅ Found Artifact: $MATCH"
+              break
+            fi
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+
+          if [[ -z "$MATCH" ]]; then
+            echo "❌ Timeout: $FILE Artifact Not Found"
+            exit 1
+          fi
+
+      - name: Clean Compiler Cache After Build
+        run: |
+          echo "Cleaning ccache for $HOME/.ccache_${{ matrix.file }} ..."
+          rm -rf "$HOME/.ccache_${{ matrix.file }}"
+
+  wait-and-download:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt update && sudo apt install -y gh zip curl jq
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: List and Download Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p all_artifacts
+          BATCH="${{ github.event.inputs.BATCH }}"
+          declare -a FILE_LIST
+
+          case "$BATCH" in
+            1) FILE_LIST=( "oneplus_nord_ce4_lite_5g_v" "oneplus_nord_ce4_v" "oneplus_nord_4_v" "oneplus_ace_3v_v" "oneplus_10_pro_v" "oneplus_10t_v" "oneplus_11r_v" "oneplus_ace2_v" "oneplus_ace_pro_v" );;
+            2) FILE_LIST=( "oneplus_11_v" "oneplus_12r_v" "oneplus_ace2_pro_v" "oneplus_ace3_v" "oneplus_open_v" "oneplus_12_v" "oneplus_13r" "oneplus_ace3_pro_v" "oneplus_ace5" );;
+            3) FILE_LIST=( "oneplus_pad_pro_v" "oneplus_pad2_v" "oneplus_nord_5" "oneplus_ace5_pro" "oneplus_ace5_pro_b" "oneplus_13" "oneplus_13_b" "oneplus_13t" "oneplus_13t_b" );;
+            4) FILE_LIST=( "oneplus_13_global" "oneplus_13s" "oneplus_13s_b" "oneplus_pad_2_pro" "oneplus_pad_3" "oneplus_ace5_ultra" "oneplus_ace_6" "oneplus_15" );;
+            *) echo "Invalid BATCH"; exit 1;;
+          esac
+
+          SHORT_LIST=()
+          for FILE in "${FILE_LIST[@]}"; do
+            SHORT=$(echo "$FILE" | sed -E 's/_[a-z]$//' | sed -E 's/_v$//')
+            SHORT_LIST+=("$SHORT")
+          done
+
+          ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
+
+          MATCHED_ARTIFACTS=()
+          for FILE in "${SHORT_LIST[@]}"; do
+            for ART in $ALL_ARTIFACTS; do
+              if [[ "$ART" == *"$FILE"* ]]; then
+                MATCHED_ARTIFACTS+=("$ART")
+              fi
+            done
+          done
+
+          if [[ "${#MATCHED_ARTIFACTS[@]}" -eq 0 ]]; then
+            echo "No matching artifacts found"
+            exit 1
+          fi
+
+          for ART in "${MATCHED_ARTIFACTS[@]}"; do
+            ID=$(gh api repos/${{ github.repository }}/actions/artifacts --jq ".artifacts[] | select(.name==\"$ART\") | .id")
+            curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -o "all_artifacts/$ART.zip" "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$ID/zip"
+          done
+
+      - name: Aggregate All Artifacts into Single ZIP
+        run: |
+          cd all_artifacts
+          zip -r ../All-Batch-${{ github.event.inputs.BATCH }}.zip ./*
+          
+      - name: Upload Combined ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: All-Batch-${{ github.event.inputs.BATCH }}
+          path: All-Batch-${{ github.event.inputs.BATCH }}.zip
