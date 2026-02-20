@@ -194,7 +194,10 @@ jobs:
             python3 \
             libncurses5-dev \
             libssl-dev \
-            libelf-dev
+            libelf-dev \
+            libncurses-dev \
+            flex \
+            bison
             
       - name: Maximize Build Space
         if: ${{ github.event.inputs.SPACE_NOCLEAN == 'false' }}
