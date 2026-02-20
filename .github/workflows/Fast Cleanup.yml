@@ -1,0 +1,49 @@
+name: Fast Cleanup Old Workflow Runs
+
+on:
+  workflow_dispatch:   # Manual trigger
+  schedule:
+    - cron: '0 2 * * *'   # Optional: Daily at 02:00 UTC
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      PAT_TOKEN: ${{ secrets.PAT_TOKEN }}  # Your PAT with Repository + Workflow Permissions
+      KEEP_LAST: 10                        # Number of Recent Runs to Keep
+
+    steps:
+      - name: Install GitHub CLI & jq
+        run: |
+          sudo apt update
+          sudo apt install -y gh jq
+
+      - name: Cleanup Old Runs
+        run: |
+          REPO="${{ github.repository }}"
+          echo "Cleaning Workflow Runs for Repository: $REPO"
+          echo "Keeping Last $KEEP_LAST Runs per Workflow"
+
+          # Get All Workflows
+          workflow_ids=$(gh api repos/$REPO/actions/workflows --jq '.workflows[].id')
+
+          # Loop Through Each Workflow
+          for wf_id in $workflow_ids; do
+            echo "Processing Workflow ID: $wf_id"
+
+            # Get All Workflow Runs Sorted Newest First
+            run_ids=$(gh api repos/$REPO/actions/workflows/$wf_id/runs --paginate \
+                        --jq ".workflow_runs | sort_by(.created_at) | reverse | .[].id")
+
+            # Convert to Array
+            arr=($run_ids)
+
+            # Loop Over Runs Beyond KEEP_LAST
+            for (( i=KEEP_LAST; i<${#arr[@]}; i++ )); do
+              RUN_ID=${arr[i]}
+              echo "Deleting Workflow Run ID: $RUN_ID"
+              gh api -X DELETE \
+                -H "Authorization: token $PAT_TOKEN" \
+                repos/$REPO/actions/runs/$RUN_ID || echo "Failed to Delete Run $RUN_ID"
+            done
+          done
