@@ -1,4 +1,4 @@
-name: Multi-KSU Unified Build
+name: Unified Multi-KSU Meta
 
 on:
   workflow_dispatch:
