@@ -84,7 +84,7 @@ on:
         default: "Sat Feb 14 07:17:27 UTC 2026"
       KSU_META:
         type: choice
-        description: "KSU Meta Manager"
+        description: "KSU Meta"
         required: true
         default: "ReSukiSU"
         options:
@@ -94,7 +94,7 @@ on:
          - WildKSU
       MANAGER_SOURCE:
         type: choice
-        description: "KSU Meta Manager Artifact (Should be the Same to Selected KSU Meta)"
+        description: "KSU Meta-Branch (Download Manager Artifact)"
         required: true
         default: ReSukiSU-Main
         options:
