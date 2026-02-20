@@ -6,7 +6,7 @@ on:
       BATCH:
         description: "Choose batch (1–4)"
         required: true
-        default: "4"
+        default: "1"
       CONFIRMATION:
         description: "Confirm you understand workflow risks (YES/NO)"
         required: true
@@ -95,7 +95,7 @@ jobs:
         env:
           GITHUB_PAT: ${{ secrets.PAT_TOKEN }}
         run: |
-          WORKFLOW_FILE="Unified KSU Meta.yml"
+          WORKFLOW_FILE="Build All OnePlus Kernels.yml"
           REPO="${{ github.repository }}"
           FILE="${{ matrix.file }}"
           SCHED="${{ matrix.enable_sched }}"
@@ -115,7 +115,7 @@ jobs:
             "inputs": {
               "FILE": "$FILE",
               "SUSFS_CI": "NoN",
-              "KSU_META": "susfs-main/AndreiMikh/",
+              "KSU_META": "susfs-main/Numbersf/",
               "BUILD_TIME": "F",
               "SUFFIX": "",
               "FAST_BUILD": "true",
