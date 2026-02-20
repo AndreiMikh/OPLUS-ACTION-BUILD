@@ -393,7 +393,7 @@ jobs:
             BUILD_LINE=$(grep -m1 'oplus_build_kernel.sh' "$README_PATH" || true)
 
             if [[ -n "$BUILD_LINE" ]]; then
-              # More reliable extraction: pull last two arguments
+              # More Reliable Extraction: Pull Last Two Arguments
               CPUD=$(awk '{print $(NF-1)}' <<< "$BUILD_LINE")
               BUILD_METHOD=$(awk '{print $NF}' <<< "$BUILD_LINE")
 
@@ -1271,7 +1271,7 @@ jobs:
             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
            
             # Disable SUS MAP for SM8450
-            if [ "$CPU" = "sm8450" ]; then
+            if [ "$TARGET_DEVICE" = "sm8450" ]; then
               echo "CONFIG_KSU_SUSFS_SUS_MAP=n" >> "$CONFIG_FILE"
             else
               echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"
