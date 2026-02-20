@@ -297,12 +297,6 @@ jobs:
                 curl -fsSL -o "$XML_PATH" "$XML_URL"
                 curl -fsSL -o "$README_PATH" "$README_URL" || true
 
-                echo "Normalizing CLO ks-kernel Revisions..."
-                sed -i 's/revision="ks-kernel[^"]*"/revision="master"/g' "$XML_PATH"
-
-                echo "Verifying Cleanup..."
-                grep -n 'revision="ks-kernel' "$XML_PATH" || echo "No Invalid Revisions Left"
-                
                 FOUND_REPO="$OWNER"
                 FOUND_REPO_NAME="$REPO_NAME"
                 FOUND_BRANCH="$BRANCH"
@@ -605,6 +599,14 @@ jobs:
           mkdir -p .repo/manifests
           cp "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml" ".repo/manifests/${FILE}.xml"
 
+          # --- Patch ks-Kernel Invalid Branch References ---
+          echo "Normalizing ks-Kernel Revisions in Final Manifest..."
+          sed -i 's/revision="ks-kernel[^"]*"/revision="master"/g' ".repo/manifests/${FILE}.xml"
+
+          echo "Verifying Cleanup..."
+          grep -n 'ks-kernel' ".repo/manifests/${FILE}.xml" || echo "Manifest Clean"
+          # ------------------------------------------------- 
+          
           BASE_URL="https://github.com/${MANIFEST_REPO}/${MANIFEST_REPO_NAME}.git"
           echo "Initializing repository using $MANIFEST_REPO/$MANIFEST_REPO_NAME ($MANIFEST_BRANCH)..."
           repo init -u "$BASE_URL" -b "$MANIFEST_BRANCH" -m "${FILE}.xml" --depth=1 --no-clone-bundle --no-tags
