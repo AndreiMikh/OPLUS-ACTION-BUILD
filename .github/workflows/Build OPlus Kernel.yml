@@ -75,8 +75,8 @@ on:
       DYNAMIC_REPO:
         type: string
         description: "Optional: Custom Manifest Repository"
-        required: false
-        default: ""
+        required: true
+        default: "AndreiMikh"
       BUILD_TIME:
         type: string
         description: "Custom Build Time (Input 'F' to Use Current UTC Time)"
