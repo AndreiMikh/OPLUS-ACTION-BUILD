@@ -243,13 +243,18 @@ jobs:
           
             # Only Register Dynamic Repository if Input is Not Empty
             if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
+              # Remove https://github.com/ if User Pasted full URL
+              DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT#https://github.com/}"
+              DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT%/}"
+              
               if [[ "$DYNAMIC_REPO_INPUT" =~ ^[^/]+/[^/]+$ ]]; then
-                OWNER="${DYNAMIC_REPO_INPUT%%/*}"
-                REPO="${DYNAMIC_REPO_INPUT##*/}"
-                REPOS["Dynamic"]="${OWNER}|${REPO}"
+                echo "Dynamic Repository Detected: $DYNAMIC_REPO_INPUT"
+                REPOS["Dynamic"]="${DYNAMIC_REPO_INPUT}|kernel_manifest"
               else
-                echo "Invalid Dynamic Repository Format (expected OWNER/REPO)"
-                exit 2
+                echo "WARNING: Invalid Dynamic Repository Format"
+                echo "Expected: OWNER/REPO"
+                echo "Provided: $DYNAMIC_REPO_INPUT"
+                echo "Skipping Dynamic Repository Instead of Failing"
               fi
             fi
                         
