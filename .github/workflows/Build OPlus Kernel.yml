@@ -393,10 +393,10 @@ jobs:
                 echo "BUILD_METHOD=$BUILD_METHOD"
               } >> "$GITHUB_ENV"
             else
-              echo "WARNING: Build command not found in README.md"
+              echo "WARNING: Build Command Not Found in README.md"
             fi
           else
-            echo "WARNING: README missing or empty"
+            echo "WARNING: README Missing or Empty"
           fi
 
           # Parse XML to Obtain PATH_2
@@ -428,7 +428,7 @@ jobs:
             echo "PATH_2=$PATH_2"
             echo "PATH_2=$PATH_2" >> "$GITHUB_ENV"
           else
-            echo "No valid PATH_2 found (may not apply to this device)"
+            echo "No Valid PATH_2 Found (May Not Apply to this Device)"
           fi
 
           # Export Combined Output Value
@@ -517,62 +517,96 @@ jobs:
           mkdir -p "$HOME/.ccache_${{ github.event.inputs.FILE }}"
           echo "set: $HOME/.ccache_${{ github.event.inputs.FILE }}"
 
-      - name: Configure Git
+      - name: Set GIT User
         run: |
           git config --global user.name "AndreiMikh"
           git config --global user.email "andreimikhail0088@gmail.com"
           
-      - name: Install Dependencies + APTC
-        uses: awalsh128/cache-apt-pkgs-action@latest 
-        with: 
-          packages: python3 git curl ccache libelf-dev build-essential flex bison libssl-dev libncurses-dev liblz4-tool zlib1g-dev libxml2-utils rsync unzip gawk dos2unix kmod libdw-dev elfutils
+      - name: Setup Required Packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: |
+            python3
+            git
+            curl
+            ccache
+            libelf-dev
+            build-essential
+            flex
+            bison
+            libssl-dev
+            libncurses-dev
+            liblz4-tool
+            zlib1g-dev
+            libxml2-utils
+            rsync
+            unzip
+            gawk
+            dos2unix
+            kmod
+            libdw-dev
+            elfutils
           execute_install_scripts: true
 
-      - name: Restore Ccache
+      - name: Load Ccache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ runner.os }}-${{ github.ref_name }}-${{ github.event.inputs.FILE }}-${{ env.BUILD_METHOD }}-${{ github.event.inputs.FAST_BUILD == 'true' && 'alpha' || 'beta' }}-16.2
+          key: >
+            ccache-${{ runner.os }}-${{ github.ref_name }}-
+            ${{ github.event.inputs.FILE }}-${{ env.BUILD_METHOD }}-
+            ${{ github.event.inputs.FAST_BUILD == 'true' && 'alpha' || 'beta' }}-16.2
 
-      - name: Initialize Ccache
+      - name: Setup Compiler Cache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
         run: |
           INIT_FLAG="${{ env.CCACHE_DIR }}/.ccache_initialized"
+
           if command -v ccache >/dev/null 2>&1; then
             if [ ! -f "$INIT_FLAG" ]; then
-              echo "Initialization ccache (${{ env.CCACHE_DIR }})..."
+              echo "Setting up Compiler Cache at ${{ env.CCACHE_DIR }}..."
               mkdir -p "${{ env.CCACHE_DIR }}"
               ccache -M ${{ env.CCACHE_MAXSIZE }}
               touch "$INIT_FLAG"
-              echo "Ccache Initialization Complete"
+              echo "Compiler Cache Setup Complete"
             else
-              echo "Ccache has been Initialized, Skip this Step"
+              echo "Compiler Cache Already Initialized, Skipping"
             fi
           else
-            echo "Skip if Ccache is Not Installed"
+            echo "Ccache Not Installed, Skipping Compiler Cache Setup"
           fi
-          ccache -s
-          
-      - name: Install Repo Tool
-        run: |
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
-          chmod a+x ~/repo
-          sudo mv ~/repo /usr/local/bin/repo
 
-      - name: Initialize Repo & Sync
+          # Display Current Ccache sStatistics
+          ccache -s
+
+      - name: Setup Google Repository Tool
+        run: |
+          echo "Downloading Google Repository Tool..."
+          curl -sSL https://storage.googleapis.com/git-repo-downloads/repo -o ~/repo
+          chmod +x ~/repo
+          sudo mv ~/repo /usr/local/bin/repo
+          echo "Google Repository Tool Installed Successfully"
+
+      - name: Initialize & Sync Repository
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
-          mkdir kernel_workspace && cd kernel_workspace
+          echo "Creating Kernel Workspace..."
+          mkdir -p kernel_workspace && cd kernel_workspace
+
+          echo "Setting up Manifest Directory..."
           mkdir -p .repo/manifests
           cp "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml" ".repo/manifests/${FILE}.xml"
-          BASE_URL="https://github.com/${MANIFEST_REPO}/${MANIFEST_REPO_NAME}.git"
 
-          echo "Initialize Tepository using $MANIFEST_REPO/$MANIFEST_REPO_NAME($MANIFEST_BRANCH)..."
+          BASE_URL="https://github.com/${MANIFEST_REPO}/${MANIFEST_REPO_NAME}.git"
+          echo "Initializing repository using $MANIFEST_REPO/$MANIFEST_REPO_NAME ($MANIFEST_BRANCH)..."
           repo init -u "$BASE_URL" -b "$MANIFEST_BRANCH" -m "${FILE}.xml" --depth=1 --no-clone-bundle --no-tags
+
+          echo "Syncing Repository..."
           repo sync -c -j$(nproc) --no-clone-bundle --no-tags --force-sync
 
+          echo "Cleaning up BUILD.bazel Files & Protected Exports..."
           for dir in kernel_platform/common kernel_platform/msm-kernel; do
             if [ -e "$dir/BUILD.bazel" ]; then
               sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' "$dir/BUILD.bazel"
@@ -580,79 +614,85 @@ jobs:
             rm -f "$dir/android/abi_gki_protected_exports_"* 2>/dev/null || echo "No protected exports in $dir"
           done
 
-      - name: Kernel Version Handling
+          echo "Repository Initialization & Sync Complete"
+
+      - name: Kernel Version Setup
         run: |
           cd kernel_workspace/kernel_platform
-          # Get Android kernel Version Number and Kernel Version Number
+
+          echo "Determining Android and Kernel Branch Versions..."
+          BRANCH=""
           for f in ./common/build.config.constants ./common/build.config.common; do
-            if [ -f "$f" ]; then
-              BRANCH=$(grep -m1 '^BRANCH=' "$f" | cut -d= -f2)
-              [ -n "$BRANCH" ] && break
-            fi
+            [ -f "$f" ] && BRANCH=$(grep -m1 '^BRANCH=' "$f" | cut -d= -f2) && [ -n "$BRANCH" ] && break
           done
+
           if [[ -z "$BRANCH" && -n "$PATH_2" ]]; then
             BRANCH=$(sed -n '2p' "./$PATH_2/android/ACK_SHA" | awk -F'-' '{print $1"-"$2}')
           fi
+
           if [ -n "$BRANCH" ]; then
             echo "KANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
             echo "KERNEL_VERSION=${BRANCH#*-}" >> $GITHUB_ENV
+            echo "Branch found: $BRANCH"
           else
-            echo "No Branch Found in Build Config* & ACK Sha Files"
-          fi
-          
-          # Obtain Full Kernel Version Number & Optional Kernel Level Modification from MakeFile
-          ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
-      
-          # Force Modification of Sublevel 
-          SUBLEVEL_INPUT="${{ github.event.inputs.SUBLEVEL }}"
-          if [ -n "$SUBLEVEL_INPUT" ]; then
-            echo "Revise Sublevel for $SUBLEVEL_INPUT"
-            sed -i "s/^\(SUBLEVEL[[:space:]]*=[[:space:]]*\).*/\1$SUBLEVEL_INPUT/" ./common/Makefile
-          else
-            echo "Sublevel is Not Specified; Default Value will be Retained"
+            echo "No Branch Found in Build Config or ACK_SHA."
           fi
 
-          # Read Modified Version
+          echo "Reading Original Kernel Version..."
+          ORIG_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
+
+          SUBLEVEL_INPUT="${{ github.event.inputs.SUBLEVEL }}"
+          if [ -n "$SUBLEVEL_INPUT" ]; then
+            echo "Updating Sublevel to: $SUBLEVEL_INPUT"
+            sed -i "s/^\(SUBLEVEL[[:space:]]*=[[:space:]]*\).*/\1$SUBLEVEL_INPUT/" ./common/Makefile
+          else
+            echo "No Sublevel Input Provided; Keeping Default"
+          fi
+
           NEW_VERSION=$(awk '/^VERSION =/ {v=$3} /^PATCHLEVEL =/ {p=$3} /^SUBLEVEL =/ {s=$3} END {print v"."p"."s}' ./common/Makefile)
 
           if [ "$ORIG_VERSION" != "$NEW_VERSION" ]; then
-            echo "Kernel Version:$ORIG_VERSION->$NEW_VERSION"
+            echo "Kernel Version Changed: $ORIG_VERSION -> $NEW_VERSION"
             echo "TKERNEL_VERSION=$NEW_VERSION" >> $GITHUB_ENV
           else
-            echo "Kernel Version:$ORIG_VERSION No changes"
+            echo "Kernel Version Unchanged: $ORIG_VERSION"
             echo "TKERNEL_VERSION=$ORIG_VERSION" >> $GITHUB_ENV
           fi
 
-          # Kernel Version Number Conversion for Comparison
           KV_TMP="${BRANCH#*-}"
           echo "KV1=$(echo "$KV_TMP" | cut -d. -f1)" >> $GITHUB_ENV
           echo "KV2=$(echo "$KV_TMP" | tr -d '.')" >> $GITHUB_ENV
           echo "KV3=$(echo "$NEW_VERSION" | tr -d '.')" >> $GITHUB_ENV
 
-      - name: Rust Version Handling
+      - name: Rust Compiler Setup
         run: |
           cd kernel_workspace/kernel_platform
-          # Read Build Config Constants from Rustc Version
+
+          echo "Checking Rust Compiler Version..."
           RUSTC_VERSION=""
           if [[ -f ./common/build.config.constants ]]; then
             RUSTC_VERSION=$(grep '^RUSTC_VERSION=' ./common/build.config.constants | cut -d'=' -f2 || true)
           fi
+
           if [[ -n "$RUSTC_VERSION" ]]; then
-            echo "RUSTC_VERSION=$RUSTC_VERSION"
+            echo "Found Rustc Version: $RUSTC_VERSION"
             echo "RUSTC_VERSION=$RUSTC_VERSION" >> $GITHUB_ENV
             echo "ENABLE_RUST=true" >> $GITHUB_ENV
           else
-            echo "Rustc Version Not Found; Rust Compilation is Disabled"
+            echo "Rustc Version Not Found; Rust Compilation Disabled"
             echo "ENABLE_RUST=false" >> $GITHUB_ENV
           fi
-      
-      - name: Custom Kernel Suffix if Set
+
+      - name: Inject Custom Kernel Version Suffix
         if: ${{ github.event.inputs.SUFFIX != '' }}
         run: |
           cd kernel_workspace
+
           SUFFIX="${{ github.event.inputs.SUFFIX }}"
           KANDROID_VERSION="${{ env.KANDROID_VERSION }}"
           FAST_BUILD="${{ github.event.inputs.FAST_BUILD }}"
+
+          echo "Injecting Custom Kernel Suffix: $SUFFIX"
 
           for path in \
             kernel_platform/common/scripts/setlocalversion \
@@ -660,53 +700,57 @@ jobs:
             kernel_platform/external/dtc/scripts/setlocalversion; do
 
             [ -f "$path" ] || continue
+            echo "Processing: $path"
 
-            echo "Modifying: $path"
-
-            # Remove -dirty
+            # Remove -dirty tags
             sed -i 's/ -dirty//g' "$path"
             sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' "$path"
 
             if grep -q 'KERNELVERSION.*scm_version' "$path"; then
-              echo "Detected New Set Local Version Format"
+              echo "New SetLocalVersion Format Detected"
               sed -i "s|echo \"\${KERNELVERSION}.*scm_version}\"|echo \"\${KERNELVERSION}-${KANDROID_VERSION}-${SUFFIX}\"|" "$path"
 
             elif grep -q 'echo "\$res"' "$path"; then
-              echo "Detected Old Set Local Version Format"
+              echo "Old SetLocalVersion Format Detected"
+
               if [ "$FAST_BUILD" = "true" ]; then
-                echo "Fast Build Enabled: Using Static Res"
+                echo "Fast Build Enabled: Setting Static Res Value"
                 sed -i "s/^res=.*/res=\"-${KANDROID_VERSION}-${SUFFIX}\"/" "$path"
               else
-                echo "Standard Build: Injecting Suffix via Cut/Echo"
+                echo "Standard Build: Dynamically Injecting Suffix"
                 if [[ -f ./kernel_platform/build_with_bazel.py ]]; then
-                  echo "When Compiling Using Official Script & when Using `Build with Bazel`, There may be a Limitation on Number of Special Symbols, if Compilation Fails Modify the Script"
-                  echo "When Using Official Script and Building with Build with Bazel, Build may Fail Due to Limit on Number of Special Characters, Modify the Configuration if that Happens"
+                  echo "Note: Using Bazel may Limit Special Characters, Adjust Script if Compilation Fails"
                 fi
-                tac "$path" | sed "0,/echo \"\\\$res\"/s//res=\\\$(echo \\\$res | cut -d- -f1-2)-${SUFFIX}; echo \"\\\$res\";/" | tac > "$path.tmp" && mv "$path.tmp" "$path"
+                tac "$path" | sed "0,/echo \"\\\$res\"/s//res=\\\$(echo \\\$res | cut -d- -f1-2)-${SUFFIX}; echo \"\\\$res\";/" | tac > "$path.tmp"
+                mv "$path.tmp" "$path"
               fi
+
             else
-              echo "Unknown Format, Appending Echo Manually"
+              echo "Unknown Format: Appending Suffix Manually"
               echo "echo \"\$res-${SUFFIX}\"" >> "$path"
             fi
 
             chmod +x "$path"
           done
 
+          echo "Committing Suffix Modifications..."
           git add -A
-          git commit -m "Custom suffix & removed -dirty"
-      
-      # Random Suffix in Pseudo-Official Format (Only Works if Suffix is Not Set)*
-      - name: Custom Kernel Random Suffix if Empty
+          git commit -m "Inject custom kernel suffix and remove -dirty tags"
+
+      - name: Apply Auto-Generated Kernel Suffix
         if: ${{ github.event.inputs.SUFFIX == '' }}
         run: |
           cd kernel_workspace
+
           KANDROID_VERSION="${{ env.KANDROID_VERSION }}"
           FAST_BUILD="${{ github.event.inputs.FAST_BUILD }}"
 
-          # Generate Random Numbers and Random Hashes
+          echo "Generating Random Kernel Suffix..."
           RANDOM_DIGIT=$(od -An -N1 -tu1 < /dev/urandom | tr -d '[:space:]' | awk '{print $1 % 11}')
           RANDOM_HASH=$(od -An -N7 -tx1 /dev/urandom | tr -d ' \n')
-          RANDOM_SUFFIX="${RANDOM_DIGIT}-o-g${RANDOM_HASH}"
+          AUTO_SUFFIX="${RANDOM_DIGIT}-o-g${RANDOM_HASH}"
+
+          echo "Random Suffix Generated: $AUTO_SUFFIX"
 
           for path in \
             kernel_platform/common/scripts/setlocalversion \
@@ -714,36 +758,39 @@ jobs:
             kernel_platform/external/dtc/scripts/setlocalversion; do
 
             [ -f "$path" ] || continue
+            echo "Processing: $path"
 
-            echo "Modifying: $path"
-
-            # Remove -dirty
+            # Remove -dirty markers
             sed -i 's/ -dirty//g' "$path"
             sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' "$path"
 
             if grep -q 'KERNELVERSION.*scm_version' "$path"; then
-              echo "Detected New Set Local Version Format"
-              sed -i "s|echo \"\${KERNELVERSION}.*scm_version}\"|echo \"\${KERNELVERSION}-${KANDROID_VERSION}-${RANDOM_SUFFIX}\"|" "$path"
+              echo "New SetLocalVersion Format Detected"
+              sed -i "s|echo \"\${KERNELVERSION}.*scm_version}\"|echo \"\${KERNELVERSION}-${KANDROID_VERSION}-${AUTO_SUFFIX}\"|" "$path"
 
             elif grep -q 'echo "\$res"' "$path"; then
-              echo "Detected Old Set local Version Format"
+              echo "Old SetLocalVersion Format Detected"
+
               if [ "$FAST_BUILD" = "true" ]; then
-                echo "Fast Build Enabled: Using Static Res with Random Suffix"
-                sed -i "s/^res=.*/res=\"-${KANDROID_VERSION}-${RANDOM_SUFFIX}\"/" "$path"
+                echo "Fast Build: Using Static Res with Random Suffix"
+                sed -i "s/^res=.*/res=\"-${KANDROID_VERSION}-${AUTO_SUFFIX}\"/" "$path"
               else
-                echo "Standard Build: Injecting Random suffix via Cut/Echo"
-                tac "$path" | sed "0,/echo \"\\\$res\"/s//res=\\\$(echo \\\$res | cut -d- -f1-2)-${RANDOM_SUFFIX}; echo \"\\\$res\";/" | tac > "$path.tmp" && mv "$path.tmp" "$path"
+                echo "Standard Build: Injecting Random Suffix Dynamically"
+                tac "$path" | sed "0,/echo \"\\\$res\"/s//res=\\\$(echo \\\$res | cut -d- -f1-2)-${AUTO_SUFFIX}; echo \"\\\$res\";/" | tac > "$path.tmp"
+                mv "$path.tmp" "$path"
               fi
+
             else
-              echo "Unknown Format, Appending Echo Manually"
-              echo "echo \"\$res-${RANDOM_SUFFIX}\"" >> "$path"
+              echo "Unknown Format: Appending Random Suffix Manually"
+              echo "echo \"\$res-${AUTO_SUFFIX}\"" >> "$path"
             fi
 
             chmod +x "$path"
           done
 
+          echo "Committing Changes with Auto-Generated Kernel Suffix..."
           git add -A
-          git commit -m "Random suffix & remove -dirty"
+          git commit -m "Apply auto-generated kernel suffix & remove -dirty markers"
 
       - name: Re-Solve KSU Meta Source
         id: manager
