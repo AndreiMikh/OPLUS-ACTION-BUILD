@@ -298,17 +298,6 @@ jobs:
                 curl -fsSL -o "$XML_PATH" "$XML_URL"
                 curl -fsSL -o "$README_PATH" "$README_URL" || true
 
-                # Patch OnePlus SM8850 Manifest
-                if [[ "$CPU" == "sm8850" ]]; then
-                  echo "Patching OnePlus SM8850 Manifest: Replacing ks-Kernel.lnx.5.0.r3-rel with Master..."
-                  sed -i 's/ks-kernel\.lnx\.5\.0\.r3-rel/master/g' "$XML_PATH"
-                  grep -n "ks-kernel" "$XML_PATH" || echo "No Invalid Revisions Left"
-                fi
-
-                # Initialize & Sync Repository After Patch
-                repo init -u "$BASE_URL" -b "$MANIFEST_BRANCH" -m "${FILE}.xml" --depth=1 --no-clone-bundle --no-tags
-                repo sync -c -j$(nproc) --no-clone-bundle --no-tags --force-sync
-                
                 FOUND_REPO="$OWNER"
                 FOUND_REPO_NAME="$REPO_NAME"
                 FOUND_BRANCH="$BRANCH"
@@ -1269,14 +1258,7 @@ jobs:
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
-           
-            # Disable SUS MAP for SM8450
-            if [ "$TARGET_DEVICE" = "sm8450" ]; then
-              echo "CONFIG_KSU_SUSFS_SUS_MAP=n" >> "$CONFIG_FILE"
-            else
-              echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"
-            fi
-            
+            echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"            
             echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "$CONFIG_FILE"
