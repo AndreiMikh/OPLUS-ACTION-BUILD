@@ -11,7 +11,10 @@
             python3 \
             libncurses5-dev \
             libssl-dev \
-            libelf-dev
+            libelf-dev \
+            libncurses-dev \
+            flex \
+            bison
 
       #######################################################################################################################
 
