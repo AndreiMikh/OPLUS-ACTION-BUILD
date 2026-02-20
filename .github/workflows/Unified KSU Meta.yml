@@ -146,7 +146,7 @@ on:
         type: boolean
         description: "Add Windspeed Driver v1.0 (Fengchi)?"
         required: true
-        default: true
+        default: false
       XUS_FIX:
         type: boolean
         description: "Prevent Generation of 5US Error Files?"
