@@ -297,9 +297,11 @@ jobs:
                 curl -fsSL -o "$XML_PATH" "$XML_URL"
                 curl -fsSL -o "$README_PATH" "$README_URL" || true
 
-                echo "Fixing Known Invalid Branch References..."
-                sed -i '/bazel/ s/revision="[^"]*"/revision="master"/' "$XML_PATH"
-                sed -i '/bazelbuild/ s/revision="[^"]*"/revision="master"/' "$XML_PATH"
+                echo "Normalizing CLO ks-kernel Revisions..."
+                sed -i 's/revision="ks-kernel[^"]*"/revision="master"/g' "$XML_PATH"
+
+                echo "Verifying Cleanup..."
+                grep -n 'revision="ks-kernel' "$XML_PATH" || echo "No Invalid Revisions Left"
                 
                 FOUND_REPO="$OWNER"
                 FOUND_REPO_NAME="$REPO_NAME"
