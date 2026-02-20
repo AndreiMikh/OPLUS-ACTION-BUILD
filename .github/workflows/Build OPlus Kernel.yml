@@ -181,6 +181,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Required Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld ccache build-essential bc git python3
+
       - name: Maximize Build Space
         if: ${{ github.event.inputs.SPACE_NOCLEAN == 'false' }}
         uses: easimon/maximize-build-space@master
