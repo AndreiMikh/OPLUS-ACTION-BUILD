@@ -80,9 +80,9 @@
             
             local API_URL="https://api.github.com/repos/${OWNER}/${REPO_NAME}"
 
-            # Fetch Branches Safely
+            # Fetch Branches Safely with GitHub Token
             local BRANCHES
-            BRANCHES=$(curl -fsSL "${API_URL}/branches" \
+            BRANCHES=$(curl -fsSL -H "Authorization: token $GH_TOKEN" "${API_URL}/branches" \
               | jq -r '.[]?.name' 2>/dev/null || true)
 
             if [[ -z "$BRANCHES" ]]; then
@@ -96,11 +96,12 @@
               XML_URL="https://raw.githubusercontent.com/${OWNER}/${REPO_NAME}/${BRANCH}/${FILE}.xml"
               README_URL="https://raw.githubusercontent.com/${OWNER}/${REPO_NAME}/${BRANCH}/README.md"
 
-              if curl -sf --head "$XML_URL" >/dev/null; then
+              if curl -sf -H "Authorization: token $GH_TOKEN" --head "$XML_URL" >/dev/null; then
                 echo "Found ${FILE}.xml in ${OWNER}/${REPO_NAME} (Branch: $BRANCH)"
-                
-                curl -fsSL -o "$XML_PATH" "$XML_URL"
-                curl -fsSL -o "$README_PATH" "$README_URL" || true
+
+                # Download XML and README using GitHub Token
+                curl -fsSL -H "Authorization: token $GH_TOKEN" -o "$XML_PATH" "$XML_URL"
+                curl -fsSL -H "Authorization: token $GH_TOKEN" -o "$README_PATH" "$README_URL" || true
 
                 FOUND_REPO="$OWNER"
                 FOUND_REPO_NAME="$REPO_NAME"
