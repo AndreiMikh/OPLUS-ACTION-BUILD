@@ -4,14 +4,14 @@
         run: |
           cd kernel_workspace/kernel_platform
 
-          # === Automatic LLVM IAS Detection ===
+          # Automatic LLVM IAS Detection 
           if [[ -f ./common/build.config.arm ]] && grep -q '^LLVM_IAS=1' ./common/build.config.arm; then
             USE_LLVM_IAS=true
           else
             USE_LLVM_IAS=false
           fi
 
-          # === Locate Clang Prebuilt Bin ===
+          # Locate Clang Prebuilt Bin 
           CLANG_PREBUILT_BIN=""
           for f in ./common/build.config.common ./"$PATH_2"/build.config.common; do
             [[ -f "$f" ]] || continue
@@ -25,7 +25,7 @@
             exit 0
           fi
 
-          # === Extract Clang Version ===
+          # Extract Clang Version
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           elif [[ -f ./common/build.config.constants ]]; then
@@ -48,7 +48,7 @@
           echo "CLANG_PATH=$CLANG_PATH"
           echo "USE_LLVM_IAS=$USE_LLVM_IAS"
 
-          # === Environment Setup ===
+          # Environment Setup 
           set +u
           source "$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/build/kernel/_setup_env.sh" 2>/dev/null || true
           set -u
@@ -160,7 +160,6 @@
           cp "$image_path" ./AnyKernel3/Image
           cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
 
-
       - name: Patch Linux & Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
@@ -188,70 +187,4 @@
 
           echo "✅ Linux Patch Applied and Image Replaced Successfully"
 
-      - name: Make AnyKernel3
-        run: |
-          set -euo pipefail
-
-          echo ">> Cloning AnyKernel3 Repository"
-          git clone https://github.com/AndreiMikh/AnyKernel3 --depth=1
-          rm -rf ./AnyKernel3/.git
-
-          echo ">> Ensuring Final-Image-Find Directory Exists"
-          mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
-
-          image_path=""
-
-          # Try to Locate Image in Unified Build Path
-          if [ -d "./kernel_workspace/kernel_platform/common/out/" ]; then
-            image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
-            if [ -n "$image_path" ]; then
-              echo "✅ Unified Path Image Found: $image_path"
-            fi
-          fi
-
-          # If Not Found, Try Fallback Path
-          if [ -z "$image_path" ] && [ -d "./kernel_workspace/kernel_platform/out/" ]; then
-            image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
-            if [ -n "$image_path" ]; then
-              echo "✅ Fallback Path Image Found: $image_path"
-            fi
-          fi
-
-          # Fail if No Image Found
-          if [ -z "$image_path" ]; then
-            echo "❌ Image File Not Found, Build Failed" >&2
-            exit 1
-          fi
-
-          echo "✅ Copying Image to AnyKernel3 and Final-Image-Find"
-          cp "$image_path" ./AnyKernel3/Image
-          cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
-
-
-      - name: Patch Linux & Replace Image
-        if: ${{ github.event.inputs.KPM == 'KPM' }}
-        run: |
-          set -euo pipefail
-
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
-          OUT_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/out/Final-Image-Find"
-
-          echo ">> Entering Final-Image-Find Directory"
-          cd "${OUT_DIR}"
-
-          echo ">> Copying Patch Linux Script and Making it Executable"
-          cp "${PATCH_DIR}/patch_linux" .
-          chmod +x patch_linux
-
-          echo ">> Applying Linux Patch"
-          ./patch_linux
-
-          echo ">> Replacing Image with Patched Version"
-          rm -f Image
-          mv oImage Image
-
-          echo ">> Copying Patched Image Back to AnyKernel3"
-          cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
-
-          echo "✅ Linux Patch Applied and Image Replaced Successfully"
-
+   
