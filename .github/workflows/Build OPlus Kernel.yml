@@ -94,7 +94,7 @@ on:
          - WildKSU
       MANAGER_SOURCE:
         type: choice
-        description: "KSU Meta Download Source"
+        description: "KSU Meta Manager Artifact (Should be the Same to Selected KSU Meta)"
         required: true
         default: ReSukiSU-Main
         options:
@@ -1558,7 +1558,7 @@ jobs:
           mv oImage Image
           cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
 
-      - name: Download Selected KSU Manager APK
+      - name: Fetch Selected KSU Manager APK
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
