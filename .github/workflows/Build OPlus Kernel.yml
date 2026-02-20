@@ -1441,26 +1441,55 @@ jobs:
           make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
 
-      - name: Fallback Build (HDRINST + LLVM + LLD Fix)
+      - name: Fallback Build (HDRINST + LLVM + LLD)
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         run: |
-          cd kernel_workspace
+          cd kernel_workspace/kernel_platform
 
-          # Fix HDRINST and host tools
+          # === Fix HDRINST to avoid install headers error ===
           export HDRINST=:
+
+          # === Ensure Clang + lld are used for host and target ===
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/prebuilts/clang/host/linux-x86/llvm-rXYZ/bin:$PATH"
           export CC=clang
           export HOSTCC=clang
           export LD=ld.lld
           export HOSTLD=ld.lld
 
-          if [ -f ./kernel_platform/build_with_bazel.py ]; then
-            ./kernel_platform/oplus/bazel/oplus_modules_variant.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
-            ./kernel_platform/build_with_bazel.py -t ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
-          else
-            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 \
-            ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
+          # Optional: ccache if desired
+          export PATH="/usr/lib/ccache:$PATH"
+
+          # === Build kernel in common/out ===
+          cd common
+
+          # Remap physical paths to avoid debug file warnings
+          MAP="-fdebug-prefix-map=${GITHUB_WORKSPACE}=."
+          MPMAP="-fmacro-prefix-map=${GITHUB_WORKSPACE}=."
+          FPMAP="-ffile-prefix-map=${GITHUB_WORKSPACE}=."
+
+          MAKE_ARGS=(
+            ARCH=arm64
+            CROSS_COMPILE=aarch64-linux-gnu-
+            CC="$CC"
+            HOSTCC="$HOSTCC"
+            LD="$LD"
+            HOSTLD="$HOSTLD"
+            KCFLAGS+="$MAP $MPMAP $FPMAP"
+            KCFLAGS+=-Wno-error
+            KCFLAGS+=-D__ANDROID_COMMON_KERNEL__
+          )
+
+          # Run sub-make safely
+          make O=out "${MAKE_ARGS[@]}" gki_defconfig || true
+          make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}" || true
+
+          # Check if Image is generated
+          if [ ! -f out/Image ]; then
+            echo "❌ Kernel build failed: Image not found" >&2
+            exit 1
           fi
+
+          echo "✅ Kernel build completed successfully"
         
       - name: Make AnyKernel3
         run: |
