@@ -97,13 +97,13 @@ jobs:
       - name: Call Child Workflow (Unified Build)
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: Build All OnePlus Kernels
+          workflow: Unified KSU Meta
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: |
             {
               "FILE": "${{ matrix.file }}",
-              "SUSFS_CI": "NoN",
-              "KSU_META": "susfs-main/Numbersf/",
+              "SUSFS_CI": "None",
+              "KSU_META": "susfs-main/AndreiMikh/",
               "BUILD_TIME": "F",
               "SUFFIX": "",
               "FAST_BUILD": "true",
