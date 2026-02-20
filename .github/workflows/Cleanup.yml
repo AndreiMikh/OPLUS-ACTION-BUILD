@@ -12,7 +12,7 @@ on:
           - Unified KSU Meta
       cache_mode:
         type: choice
-        description: 'Type of cache to clean'
+        description: 'Type of Cache to  Clean'
         required: false
         default: 'none'
         options:
@@ -21,31 +21,31 @@ on:
           - ccache
           - apt-cache
       count:
-        description: 'Maximum number of runs to access'
+        description: 'Maximum Number of Runs to Access'
         required: false
         default: '20'
       delete_failed:
-        description: 'Delete failed runs of the specified workflow?'
+        description: 'Delete Failed Runs of the Specified Workflow?'
         required: false
         type: boolean
         default: true
       delete_success:
-        description: 'Delete successful runs of the specified workflow?'
+        description: 'Delete Successful Runs of the Specified Workflow?'
         required: false
         type: boolean
         default: false
       delete_cancelled:
-        description: 'Delete cancelled runs of the specified workflow?'
+        description: 'Delete Cancelled Runs of the Specified Workflow?'
         required: false
         type: boolean
         default: false
       reverse_order:
-        description: 'Clean from oldest to newest?'
+        description: 'Clean from Oldest to Newest?'
         required: false
         type: boolean
         default: false
       cancel_all:
-        description: 'Cancel all runs of the specified workflow at once?'
+        description: 'Cancel All Runs of the Specified Workflow at Once?'
         required: false
         type: boolean
         default: false
@@ -61,7 +61,7 @@ jobs:
      || inputs.delete_success
      || inputs.delete_cancelled }}
     steps:
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y gh jq
@@ -69,7 +69,7 @@ jobs:
       - name: Authenticate GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Clean workflow runs
+      - name: Clean Workflow Runs
         env:
           REPO: ${{ github.repository }}
           COUNT: ${{ inputs.count }}
@@ -83,26 +83,26 @@ jobs:
         run: |
           set -e
 
-          echo "Finding workflow ID for \"$WORKFLOW_NAME\"..."
+          echo "Finding Workflow ID for \"$WORKFLOW_NAME\"..."
           WORKFLOWS_JSON=$(gh api repos/$REPO/actions/workflows || true)
           if ! echo "$WORKFLOWS_JSON" | jq -e '.workflows | type=="array"' >/dev/null 2>&1; then
-            echo "❌ Unable to get workflows (GitHub API returned non-JSON)"
+            echo "❌ Unable to Get Workflows (GitHub API Returned Non-JSON)"
             exit 1
           fi
           WORKFLOW_ID=$(echo "$WORKFLOWS_JSON" | jq -r ".workflows[] | select(.name == \"$WORKFLOW_NAME\") | .id")
           if [ -z "$WORKFLOW_ID" ]; then
-            echo "Workflow \"$WORKFLOW_NAME\" not found, exiting."
+            echo "Workflow \"$WORKFLOW_NAME\" Not Found, Exiting"
             exit 1
           fi
 
-          echo "Fetching all workflow runs page by page..."
+          echo "Fetching All Workflow Runs Page by Page..."
           PER_PAGE=100
           PAGE=1
           ALL_RUNS="[]"
           while true; do
             RESP=$(gh api "repos/$REPO/actions/workflows/$WORKFLOW_ID/runs?per_page=$PER_PAGE&page=$PAGE" || true)
             if ! echo "$RESP" | jq -e '.workflow_runs | type=="array"' >/dev/null 2>&1; then
-              echo "⚠️ Runs API returned non-JSON, stopping pagination"
+              echo "⚠️ Runs API Returned Non-JSON, Stopping Pagination"
               break
             fi
 
@@ -113,21 +113,21 @@ jobs:
             PAGE=$((PAGE + 1))
           done
 
-          echo "Total runs fetched: $(echo "$ALL_RUNS" | jq 'length')"
+          echo "Total Runs Fetched: $(echo "$ALL_RUNS" | jq 'length')"
 
           if [[ "$CANCEL_ALL" == "true" ]]; then
-            echo "Cancelling in-progress or queued runs..."
+            echo "Cancelling in Progress or Queued Runs..."
             CANCEL_COUNT=0
             echo "$ALL_RUNS" | jq -c '.[] | select((.status == "in_progress") or (.status == "queued"))' | while read run; do
               ID=$(echo "$run" | jq -r '.id')
               if [[ "$ID" == "$CURRENT_RUN_ID" ]]; then continue; fi
-              echo "Cancelling run ID: $ID"
+              echo "Cancelling Run ID: $ID"
               gh api -X POST "repos/$REPO/actions/runs/$ID/cancel" && CANCEL_COUNT=$((CANCEL_COUNT + 1))
             done
-            echo "Cancelled $CANCEL_COUNT runs."
+            echo "Cancelled $CANCEL_COUNT Runs"
           fi
 
-          echo "Processing delete logic..."
+          echo "Processing Delete Logic..."
           if [[ "$REVERSE_ORDER" == "true" ]]; then
             SORTED_RUNS=$(echo "$ALL_RUNS" | jq 'sort_by(.run_started_at)')
           else
@@ -146,19 +146,19 @@ jobs:
             if [[ "$STATUS" == "success" && "$DELETE_SUCCESS" != "true" ]]; then continue; fi
             if [[ "$STATUS" == "cancelled" && "$DELETE_CANCELLED" != "true" ]]; then continue; fi
 
-            echo "Deleting run ID: $ID"
+            echo "Deleting Run ID: $ID"
             gh api -X DELETE "repos/$REPO/actions/runs/$ID" || echo "Delete failed"
           done
 
-          echo "Cleaning this workflow's runs (excluding current run)..."
+          echo "Cleaning this Workflow's Runs (Excluding Current Run)..."
           SELF_WORKFLOW_ID=$(gh api repos/$REPO/actions/workflows | jq -r '.workflows[] | select(.name == "Workflow and Cache Cleanup") | .id')
           if [ -n "$SELF_WORKFLOW_ID" ]; then
             SELF_RUNS=$(gh api "repos/$REPO/actions/workflows/$SELF_WORKFLOW_ID/runs?per_page=50" | jq -c '.workflow_runs[]')
             echo "$SELF_RUNS" | while read run; do
               ID=$(echo "$run" | jq -r '.id')
               if [[ "$ID" == "$CURRENT_RUN_ID" ]]; then continue; fi
-              echo "Deleting this workflow run ID: $ID"
-              gh api -X DELETE "repos/$REPO/actions/runs/$ID" || echo "Delete failed"
+              echo "Deleting this Workflow Run ID: $ID"
+              gh api -X DELETE "repos/$REPO/actions/runs/$ID" || echo "Delete Failed"
             done
           fi
 
@@ -168,7 +168,7 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: Clean caches based on selected mode
+      - name: Clean Caches Based on Selected Mode
         uses: actions/github-script@v6
         with:
           script: |
