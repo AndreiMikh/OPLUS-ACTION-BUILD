@@ -241,7 +241,7 @@ jobs:
             REPOS["OnePlusOSS"]="OnePlusOSS|kernel_manifest"
             REPOS["Appendix"]="OnePlusOSS|Kernel_Manifest_Appendix"
           
-            # Only register Dynamic Repository if Input is Not Empty
+            # Only Register Dynamic Repository if Input is Not Empty
             if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
               if [[ "$DYNAMIC_REPO_INPUT" =~ ^[^/]+/[^/]+$ ]]; then
                 OWNER="${DYNAMIC_REPO_INPUT%%/*}"
