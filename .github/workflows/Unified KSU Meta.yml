@@ -232,14 +232,14 @@ jobs:
             } >> "$GITHUB_ENV"
           
             # Repository Priority:
-            # 1. OnePlusOSS/kernel_manifest
-            # 2. OnePlusOSS/Kernel_Manifest_Appendix
+            # 1. AndreiMikh/kernel_manifest
+            # 2. AndreiMikh/Kernel_Manifest_Appendix
             # 3. User Defined Dynamic Repo
           
             declare -A REPOS
           
-            REPOS["OnePlusOSS"]="OnePlusOSS|kernel_manifest"
-            REPOS["Appendix"]="OnePlusOSS|Kernel_Manifest_Appendix"
+            REPOS["AndreiMikh"]="AndreiMikh|kernel_manifest"
+            REPOS["Appendix"]="AndreiMikh|Kernel_Manifest_Appendix"
           
             # Only Register Dynamic Repository if Input is Not Empty
             if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
@@ -321,7 +321,7 @@ jobs:
           }
 
           # Ordered Search
-          for key in OnePlusOSS Appendix Dynamic; do
+          for key in AndreiMikh Appendix Dynamic; do
             if [[ -n "${REPOS[$key]}" ]]; then
               if check_repo "${REPOS[$key]}"; then
                 break
