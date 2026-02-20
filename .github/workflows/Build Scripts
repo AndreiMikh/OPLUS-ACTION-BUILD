@@ -1,3 +1,10 @@
+      - name: Setup Required Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld ccache build-essential bc git python3
+
+      #######################################################################################################################
+
       - name: Build Kernel (Fast)
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
@@ -97,6 +104,8 @@
           make O=out "${MAKE_ARGS[@]}" olddefconfig
           make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
+
+      #######################################################################################################################
 
       - name: Fallback Build (HDRINST + LLVM + lld fix)
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
