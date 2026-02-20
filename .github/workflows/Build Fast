@@ -3,23 +3,15 @@
         id: fast_build
         run: |
           set -euo pipefail
-
-          KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform
 
-          echo ">> Checking required tools"
-          command -v clang >/dev/null 2>&1 || { echo "clang not found"; exit 1; }
-          command -v ccache >/dev/null 2>&1 || { echo "ccache not found"; exit 1; }
-          command -v ld.lld >/dev/null 2>&1 || { echo "ld.lld not found"; exit 1; }
-          command -v pahole >/dev/null 2>&1 || { echo "pahole not found"; exit 1; }
-
-          # LLVM IAS Detection 
+          # Automatic Detection of LLVM IAS
           USE_LLVM_IAS=false
           if [[ -f ./common/build.config.arm ]] && grep -q '^LLVM_IAS=1' ./common/build.config.arm; then
             USE_LLVM_IAS=true
           fi
 
-          # Detect Clang Prebuilt Bin 
+          # Detect Clang Prebuilt Bin
           CLANG_PREBUILT_BIN=""
           for f in ./common/build.config.common ./"$PATH_2"/build.config.common; do
             [[ -f "$f" ]] || continue
@@ -28,12 +20,12 @@
           done
 
           if [[ -z "$CLANG_PREBUILT_BIN" ]]; then
-            echo "⚠️ Clang Prebuilt Bin not found. Falling back."
+            echo "⚠️ Clang Prebuilt Bin Not Found, Fallback to Official Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # --- Extract Clang Version ---
+          # Extract Clang Version
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           elif [[ -f ./common/build.config.constants ]]; then
@@ -41,29 +33,40 @@
           fi
 
           if [[ -z "$CLANG_VERSION" ]]; then
-            echo "⚠️ Unable to obtain Clang version. Falling back."
+            echo "⚠️ Cannot detect Clang Version, fallback"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          # Replace Placeholder with Detected Version
           CLANG_PREBUILT_BIN=${CLANG_PREBUILT_BIN/\$\{CLANG_VERSION\}/$CLANG_VERSION}
+          CLANG_DIR=$(echo "$CLANG_PREBUILT_BIN" | cut -d'/' -f1)
+          CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
+          echo "-----------------------"
           echo "CLANG_VERSION=$CLANG_VERSION"
+          echo "CLANG_DIR=$CLANG_DIR"
+          echo "CLANG_PATH=$CLANG_PATH"
           echo "USE_LLVM_IAS=$USE_LLVM_IAS"
+          echo "-----------------------"
 
-          # Source Environment Safely 
+          # Load Environment (Ignore Errors)
           set +u
           source "$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/build/kernel/_setup_env.sh" 2>/dev/null || true
           set -u
 
+          # Update PATH
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/$CLANG_PREBUILT_BIN:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
 
-          [[ "$ENABLE_RUST" == "true" ]] && export LIBCLANG_PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/$(dirname "$CLANG_PREBUILT_BIN")/lib"
+          if [[ "$ENABLE_RUST" == "true" ]]; then
+            export BINDGEN="bindgen"
+            export LIBCLANG_PATH="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/$(dirname "$CLANG_PREBUILT_BIN")/lib"
+          fi
 
           cd ./common
 
-          # Remap Physical Paths
+          # Remapping Physical Paths
           MAP="-fdebug-prefix-map=${GITHUB_WORKSPACE}=."
           MPMAP="-fmacro-prefix-map=${GITHUB_WORKSPACE}=."
           FPMAP="-ffile-prefix-map=${GITHUB_WORKSPACE}=."
@@ -82,22 +85,28 @@
             KCFLAGS+=-D__ANDROID_COMMON_KERNEL__
           )
 
-          [[ "$USE_LLVM_IAS" == "true" ]] && MAKE_ARGS=(LLVM_IAS=1 "${MAKE_ARGS[@]}")
-          [[ "$ENABLE_RUST" == "true" ]] && MAKE_ARGS=(RUSTC=../../prebuilts/rust/linux-x86/$RUSTC_VERSION/bin/rustc "${MAKE_ARGS[@]}")
+          if [[ "$USE_LLVM_IAS" == "true" ]]; then
+            MAKE_ARGS=(LLVM_IAS=1 "${MAKE_ARGS[@]}")
+          fi
+          if [[ "$ENABLE_RUST" == "true" ]]; then
+            MAKE_ARGS=(RUSTC=../../prebuilts/rust/linux-x86/$RUSTC_VERSION/bin/rustc "${MAKE_ARGS[@]}")
+          fi
 
-          # Ensure Output Directory Exists to Fix HDRINST Errors
-          mkdir -p ../kernel_platform/common/out/include/asm
-
-          # Configure Kernel
+          # Apply HDRINST patch (fix exit 2)
+          export HDRINST=:
+          
           make O=out "${MAKE_ARGS[@]}" gki_defconfig
 
-          # LTO Setup
           if [[ "$KERNEL_VERSION" == "5.10" || "$KERNEL_VERSION" == "5.15" ]]; then
+            echo ">> Setup LTO = thin"
             scripts/config --file out/.config -e LTO_CLANG
             scripts/config --file out/.config -e LTO_CLANG_THIN
             scripts/config --file out/.config -d LTO_CLANG_NONE
             scripts/config --file out/.config -d LTO_CLANG_FULL
-          elif [[ "$KERNEL_VERSION" == "6.12" ]]; then
+          fi
+
+          if [[ "$KERNEL_VERSION" == "6.12" ]]; then
+            echo ">> Setup LTO = none"
             scripts/config --file out/.config -e LTO_CLANG
             scripts/config --file out/.config -e LTO_CLANG_NONE
             scripts/config --file out/.config -d LTO_CLANG_THIN
@@ -105,37 +114,156 @@
           fi
 
           make O=out "${MAKE_ARGS[@]}" olddefconfig
-          make -j"$(nproc)" O=out "${MAKE_ARGS[@]}" || {
-            echo "❌ Kernel Build Failed, Check HDRINST or Missing Headers"
-            exit 2
-          }
-
+          make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
 
-      - name: Fallback to Build Kernel (Fixed)
+      - name: Fallback to Build Kernel
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
+        run: |
+          cd kernel_workspace
+          export HDRINST=:
+          if [ -f ./kernel_platform/build_with_bazel.py ]; then
+            ./kernel_platform/oplus/bazel/oplus_modules_variant.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
+            ./kernel_platform/build_with_bazel.py -t ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
+          else
+            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 \
+            ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
+          fi
+
+
+      ##########################################################################
+
+      - name: Make AnyKernel3
         run: |
           set -euo pipefail
 
-          cd kernel_workspace
+          echo ">> Cloning AnyKernel3 Repository"
+          git clone https://github.com/AndreiMikh/AnyKernel3 --depth=1
+          rm -rf ./AnyKernel3/.git
 
-          echo ">> Ensuring Output/Include Directories Exist to Fix HDRINST"
-          mkdir -p kernel_platform/common/out/include/asm
+          echo ">> Ensuring Final-Image-Find Directory Exists"
+          mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
 
-          if [ -f ./kernel_platform/build_with_bazel.py ]; then
-            echo ">> Using Bazel Build Method"
-            ./kernel_platform/oplus/bazel/oplus_modules_variant.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
-            ./kernel_platform/build_with_bazel.py -t ${{ env.CPUD }} ${{ env.BUILD_METHOD }} || {
-              echo "❌ Bazel Kernel Build Failed"
-              exit 2
-            }
-          else
-            echo ">> Using Traditional OPlus Build Script"
-            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 \
-            ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }} || {
-              echo "❌ Fallback Kernel Build Failed"
-              exit 2
-            }
+          image_path=""
+
+          # Try to Locate Image in Unified Build Path
+          if [ -d "./kernel_workspace/kernel_platform/common/out/" ]; then
+            image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
+            if [ -n "$image_path" ]; then
+              echo "✅ Unified Path Image Found: $image_path"
+            fi
           fi
 
-          echo "✅ Fallback Kernel Build Completed Successfully"
+          # If Not Found, Try Fallback Path
+          if [ -z "$image_path" ] && [ -d "./kernel_workspace/kernel_platform/out/" ]; then
+            image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
+            if [ -n "$image_path" ]; then
+              echo "✅ Fallback Path Image Found: $image_path"
+            fi
+          fi
+
+          # Fail if No Image Found
+          if [ -z "$image_path" ]; then
+            echo "❌ Image File Not Found, Build Failed" >&2
+            exit 1
+          fi
+
+          echo "✅ Copying Image to AnyKernel3 and Final-Image-Find"
+          cp "$image_path" ./AnyKernel3/Image
+          cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
+
+
+      - name: Patch Linux & Replace Image
+        if: ${{ github.event.inputs.KPM == 'KPM' }}
+        run: |
+          set -euo pipefail
+
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
+          OUT_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/out/Final-Image-Find"
+
+          echo ">> Entering Final-Image-Find Directory"
+          cd "${OUT_DIR}"
+
+          echo ">> Copying Patch Linux Script and Making it Executable"
+          cp "${PATCH_DIR}/patch_linux" .
+          chmod +x patch_linux
+
+          echo ">> Applying Linux Patch"
+          ./patch_linux
+
+          echo ">> Replacing Image with Patched Version"
+          rm -f Image
+          mv oImage Image
+
+          echo ">> Copying Patched Image Back to AnyKernel3"
+          cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
+
+          echo "✅ Linux Patch Applied and Image Replaced Successfully"
+
+      - name: Make AnyKernel3
+        run: |
+          set -euo pipefail
+
+          echo ">> Cloning AnyKernel3 Repository"
+          git clone https://github.com/AndreiMikh/AnyKernel3 --depth=1
+          rm -rf ./AnyKernel3/.git
+
+          echo ">> Ensuring Final-Image-Find Directory Exists"
+          mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
+
+          image_path=""
+
+          # Try to Locate Image in Unified Build Path
+          if [ -d "./kernel_workspace/kernel_platform/common/out/" ]; then
+            image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
+            if [ -n "$image_path" ]; then
+              echo "✅ Unified Path Image Found: $image_path"
+            fi
+          fi
+
+          # If Not Found, Try Fallback Path
+          if [ -z "$image_path" ] && [ -d "./kernel_workspace/kernel_platform/out/" ]; then
+            image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
+            if [ -n "$image_path" ]; then
+              echo "✅ Fallback Path Image Found: $image_path"
+            fi
+          fi
+
+          # Fail if No Image Found
+          if [ -z "$image_path" ]; then
+            echo "❌ Image File Not Found, Build Failed" >&2
+            exit 1
+          fi
+
+          echo "✅ Copying Image to AnyKernel3 and Final-Image-Find"
+          cp "$image_path" ./AnyKernel3/Image
+          cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
+
+
+      - name: Patch Linux & Replace Image
+        if: ${{ github.event.inputs.KPM == 'KPM' }}
+        run: |
+          set -euo pipefail
+
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
+          OUT_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/out/Final-Image-Find"
+
+          echo ">> Entering Final-Image-Find Directory"
+          cd "${OUT_DIR}"
+
+          echo ">> Copying Patch Linux Script and Making it Executable"
+          cp "${PATCH_DIR}/patch_linux" .
+          chmod +x patch_linux
+
+          echo ">> Applying Linux Patch"
+          ./patch_linux
+
+          echo ">> Replacing Image with Patched Version"
+          rm -f Image
+          mv oImage Image
+
+          echo ">> Copying Patched Image Back to AnyKernel3"
+          cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
+
+          echo "✅ Linux Patch Applied and Image Replaced Successfully"
+
