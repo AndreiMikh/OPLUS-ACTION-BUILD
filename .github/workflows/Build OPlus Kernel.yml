@@ -430,35 +430,68 @@ jobs:
 
           echo "Manifest Parsing Complete"    
           
-      - name: Debug Show Selected Inputs
+      - name: Debug – Show Selected Inputs
+        shell: bash
         run: |
-          echo "-----------------------"
-          echo "Selected CPU: ${{ env.CPU }}"
-          echo "Selected CPUD: ${{ env.CPUD }}"
-          echo "Selected ANDROID_VERSION: ${{ env.ANDROID_VERSION }}"
-          echo "Selected BUILD_METHOD: ${{ env.BUILD_METHOD }}"
-          echo "Selected FILE: ${{ github.event.inputs.FILE }}"
-          echo "Selected KPM: ${{ github.event.inputs.KPM }}"
-          echo "Selected MANAGER_SOURCE: ${{ github.event.inputs.MANAGER_SOURCE }}"
-          echo "Custom SUSFS_META: ${{ github.event.inputs.SUSFS_META }}"
-          echo "Custom KSU_META: ${{ github.event.inputs.KSU_META }}"
-          echo "Selected ZRAM: ${{ github.event.inputs.ZRAM }}"
-          echo "Custom BUILD_TIME: ${{ github.event.inputs.BUILD_TIME }}"
-          echo -n "BUILD_TIME Unicode: "
-          python3 -c "import unicodedata; print(''.join(f'\033[31mU+{ord(c):04X}\033[0m ' if c.isspace() or unicodedata.category(c)=='Cf' else f'U+{ord(c):04X} ' for c in '''${{ github.event.inputs.BUILD_TIME }}'''))"
-          echo "Custom SUFFIX: ${{ github.event.inputs.SUFFIX }}"
-          echo -n "SUFFIX Unicode: "
-          python3 -c "import unicodedata; print(''.join(f'\033[31mU+{ord(c):04X}\033[0m ' if c.isspace() or unicodedata.category(c)=='Cf' else f'U+{ord(c):04X} ' for c in '''${{ github.event.inputs.SUFFIX }}'''))"
-          echo "Selected LSM: ${{ github.event.inputs.LSM }}"
-          echo "Selected NETFILTER: ${{ github.event.inputs.NETFILTER }}"
-          echo "Selected BBR_ECN: ${{ github.event.inputs.BBR_ECN }}"
-          echo "Selected SUSFS_DEV: ${{ github.event.inputs.SUSFS_DEV }}"
-          echo "Selected FAST_BUILD: ${{ github.event.inputs.FAST_BUILD }}"
-          echo "Selected SCHED: ${{ github.event.inputs.SCHED }}"
-          echo "Selected UNICODE_BYPASS: ${{ github.event.inputs.UNICODE_BYPASS }}"
-          echo "Selected XUS_FIX: ${{ github.event.inputs.XUS_FIX }}"
-          echo "-----------------------"
+          set -euo pipefail
 
+          echo "DEBUG INPUTS"
+
+           # Helper: Print Unicode Codepoints
+           print_unicode() {
+             local LABEL="$1"
+             local VALUE="$2"
+
+             echo -n "$LABEL Unicode: "
+
+             python3 <<EOF
+          import unicodedata
+          value = """$VALUE"""
+          output = []
+          for c in value:
+              code = f"U+{ord(c):04X}"
+              if c.isspace() or unicodedata.category(c) == "Cf":
+                  output.append(f"\033[31m{code}\033[0m")
+              else:
+                  output.append(code)
+          print(" ".join(output))
+          EOF
+                echo
+              }
+
+              # ENV Variables (Parsed from Manifest)
+              
+              echo "Manifest Parsed Values"
+              echo "CPU               : ${CPU:-<empty>}"
+              echo "CPUD              : ${CPUD:-<empty>}"
+              echo "ANDROID_VERSION   : ${ANDROID_VERSION:-<empty>}"
+              echo "BUILD_METHOD      : ${BUILD_METHOD:-<empty>}"
+
+              # GitHub Action Inputs
+              
+              echo "GitHub Action Inputs"
+              echo "FILE              : ${{ github.event.inputs.FILE }}"
+              echo "KPM               : ${{ github.event.inputs.KPM }}"
+              echo "MANAGER_SOURCE    : ${{ github.event.inputs.MANAGER_SOURCE }}"
+              echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
+              echo "KSU_META          : ${{ github.event.inputs.KSU_META }}"
+              echo "ZRAM              : ${{ github.event.inputs.ZRAM }}"
+              echo "BUILD_TIME        : ${{ github.event.inputs.BUILD_TIME }}"
+              echo "SUFFIX            : ${{ github.event.inputs.SUFFIX }}"
+              echo "LSM               : ${{ github.event.inputs.LSM }}"
+              echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
+              echo "BBR_ECN           : ${{ github.event.inputs.BBR_ECN }}"
+              echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
+              echo "FAST_BUILD        : ${{ github.event.inputs.FAST_BUILD }}"
+              echo "SCHED             : ${{ github.event.inputs.SCHED }}"
+              echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
+              echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
+
+              # Unicode Inspection (Whitespace / Hidden Char Detection)
+
+              print_unicode "BUILD_TIME" "${{ github.event.inputs.BUILD_TIME }}"
+              print_unicode "SUFFIX" "${{ github.event.inputs.SUFFIX }}"
+                                  
       - name: Check Disk Space
         run: df -h
 
