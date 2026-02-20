@@ -1,7 +1,9 @@
 name: Cleanup Old Workflow Runs
 
 on:
-  workflow_dispatch: # manually triggerable
+  workflow_dispatch:       # manual trigger
+  schedule:
+    - cron: '0 3 * * *'   # daily at 3:00 UTC
 
 jobs:
   cleanup:
@@ -10,15 +12,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Clean Old Workflow Runs
+      - name: Cleanup Old Workflow Runs
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}   # Your PAT with 'workflow' scope
           REPO: ${{ github.repository }}
           KEEP_LAST: 10
         run: |
           echo "Cleaning old workflow runs in repository $REPO..."
           
-          # Get all workflow IDs in the repo
+          # Fetch all workflow IDs
           workflow_ids=$(gh api repos/$REPO/actions/workflows | jq -r '.workflows[].id')
           
           for wf_id in $workflow_ids; do
@@ -27,15 +29,15 @@ jobs:
             # List all runs for this workflow, newest first
             runs=$(gh api repos/$REPO/actions/workflows/$wf_id/runs --paginate | jq -r '.workflow_runs[].id')
             
-            # Keep only the last $KEEP_LAST runs
             count=0
             for run_id in $runs; do
               count=$((count+1))
               if [ $count -le $KEEP_LAST ]; then
                 echo "Keeping run $run_id"
               else
-                echo "Deleting run $run_id"
-                gh api -X DELETE repos/$REPO/actions/runs/$run_id
+                echo "Attempting to delete run $run_id..."
+                # Delete run, suppress errors (like 403) so workflow continues
+                gh api -X DELETE repos/$REPO/actions/runs/$run_id || echo "⚠️ Could not delete run $run_id (skipping)"
               fi
             done
           done
