@@ -10,35 +10,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Cleanup Workflow Runs
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}   # Your PAT with 'workflow' scope
+          GH_PAT: ${{ secrets.GH_PAT }}   # Your PAT with 'workflow' scope
           REPO: ${{ github.repository }}
           KEEP_LAST: 10
         run: |
-          echo "Cleaning Workflow Runs in Repository $REPO..."
-          
+          # Export token so gh CLI picks it up
+          export GH_TOKEN="$GH_PAT"
+
+          echo "Cleaning workflow runs in repository $REPO..."
+
           # Fetch all workflow IDs
           workflow_ids=$(gh api repos/$REPO/actions/workflows | jq -r '.workflows[].id')
-          
+
           for wf_id in $workflow_ids; do
             echo "Processing workflow ID: $wf_id"
-            
+
             # List all runs for this workflow, newest first
             runs=$(gh api repos/$REPO/actions/workflows/$wf_id/runs --paginate | jq -r '.workflow_runs[] | "\(.id) \(.status) \(.conclusion)"')
-            
+
             count=0
             while read -r run_id status conclusion; do
-              # Increment counter only for completed/successful runs
+              # Count only successful completed runs for KEEP_LAST logic
               if [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
                 count=$((count+1))
               fi
 
-              # Delete runs that are either:
-              # 1. Older than last $KEEP_LAST successful runs
-              # 2. Cancelled or failed
+              # Decide whether to delete
               if [ "$status" = "completed" ] && [ "$conclusion" = "success" ] && [ $count -le $KEEP_LAST ]; then
                 echo "Keeping successful run $run_id"
               else
