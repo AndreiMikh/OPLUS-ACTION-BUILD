@@ -1,4 +1,4 @@
-name: Cleanup Old and Failed/Cancelled Workflow Runs
+name: Cleanup Workflow Runs
 
 on:
   workflow_dispatch:       # manual trigger
