@@ -6,11 +6,11 @@ on:
       BATCH:
         description: "Choose batch (1–4)"
         required: true
-        default: "1"
+        default: "4"
       CONFIRMATION:
-        description: "Confirm you Understand the Workflow Risks (YES/NO)"
+        description: "Confirm you understand the workflow risks (YES/NO)"
         required: true
-        default: "NO"
+        default: "YES"
       ROOT_MANAGER:
         description: "Select Root Manager(s) to Build (Comma-Separated, e.g., ReSukiSU, SukiSU-Ultra, KernelSU-Next, WildKSU)"
         required: true
@@ -26,21 +26,20 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Check User Confirmation
+      - name: Confirm Workflow Understanding
         run: |
-          CONFIRM="${{ github.event.inputs.CONFIRMATION }}"
-          if [[ "$CONFIRM" != "YES" ]]; then
-            echo "❌ Invalid input: You must select YES to confirm workflow risks."
+          if [[ "${{ github.event.inputs.CONFIRMATION }}" != "YES" ]]; then
+            echo "❌ You must confirm workflow risks by selecting YES."
             exit 1
           fi
 
-      - name: Set Matrix from FILE List and Root Manager
+      - name: Build Matrix from Batch & Root Manager
         id: set-matrix
         run: |
           BATCH="${{ github.event.inputs.BATCH }}"
           ROOT_MANAGERS="${{ github.event.inputs.ROOT_MANAGER }}"
-
-          # Define files per batch
+          
+          # Define devices per batch
           case "$BATCH" in
             1)
               FILE_LIST=( "oneplus_nord_ce4_lite_5g_v" "oneplus_nord_ce4_v" "oneplus_nord_4_v" "oneplus_ace_3v_v" "oneplus_10_pro_v" "oneplus_10t_v" "oneplus_11r_v" "oneplus_ace2_v" "oneplus_ace_pro_v" )
@@ -52,15 +51,14 @@ jobs:
               FILE_LIST=( "oneplus_pad_pro_v" "oneplus_pad2_v" "oneplus_nord_5" "oneplus_ace5_pro" "oneplus_ace5_pro_b" "oneplus_13" "oneplus_13_b" "oneplus_13t" "oneplus_13t_b" )
               ;;
             4)
-              FILE_LIST=( "oneplus_13_global" "oneplus_13s" "oneplus_13s_b" "oneplus_pad_2_pro" "oneplus_pad_3" "oneplus_ace5_ultra" "oneplus_ace_6" "oneplus_15" )
+              FILE_LIST=( "oneplus_13_b" "oneplus_13s_b" "oneplus_pad_2_pro" "oneplus_pad_3" "oneplus_ace5_ultra" "oneplus_ace_6" "oneplus_15" )
               ;;
             *)
-              echo "❌ Invalid BATCH value: $BATCH"
+              echo "❌ Invalid BATCH: $BATCH"
               exit 1
               ;;
           esac
 
-          # Build matrix JSON combining devices and selected managers
           MATRIX_JSON="[]"
           IFS=',' read -ra MANAGERS <<< "$ROOT_MANAGERS"
 
@@ -72,13 +70,14 @@ jobs:
                 ENABLE_SCHED=true
                 ;;
             esac
+
             for MANAGER in "${MANAGERS[@]}"; do
               ENTRY=$(jq -n \
                 --arg file "$FILE" \
                 --arg file_short "$SHORT" \
-                --arg enable_sched "$ENABLE_SCHED" \
+                --argjson enable_sched "$ENABLE_SCHED" \
                 --arg manager "$MANAGER" \
-                '{file: $file, file_short: $file_short, enable_sched: ($enable_sched|test("true")), root_manager: $manager}')
+                '{file: $file, file_short: $file_short, enable_sched: $enable_sched, root_manager: $manager}')
               MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ". + [$ENTRY]")
             done
           done
@@ -93,18 +92,18 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
-      - name: Call Child Workflow (Unified Build)
+      - name: Dispatch Child Workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: Build All OnePlus Kernels
+          workflow: Unified KSU Meta
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: |
             {
               "FILE": "${{ matrix.file }}",
-              "SUSFS_CI": "NoN",
-              "KSU_META": "susfs-main/Numbersf/",
+              "SUSFS_CI": "None",
+              "KSU_META": "susfs-main/AndreiMikh/",
               "BUILD_TIME": "F",
-              "SUFFIX": "",
+              "SUFFIX": "8-andreimikhail-4k",
               "FAST_BUILD": "true",
               "HOOK": "manual",
               "LSM": "true",
@@ -113,44 +112,42 @@ jobs:
               "ROOT_MANAGER": "${{ matrix.root_manager }}"
             }
 
-      - name: Wait for Builds to Finish or Exit Early
+      - name: Wait for Artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           FILE="${{ matrix.file_short }}"
           MANAGER="${{ matrix.root_manager }}"
-          echo "Waiting for build artifact for $FILE ($MANAGER)..."
+          echo "⏳ Waiting for artifact for $FILE ($MANAGER)..."
 
           SECONDS=0
-          MAX_TIME=$((35 * 60))
+          MAX_TIME=$((35*60))
           sleep 600
 
           while (( SECONDS < MAX_TIME )); do
             echo "Checking uploaded artifacts (waited $SECONDS sec)..."
             ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
-
             if echo "$ALL_ARTIFACTS" | grep -E "$FILE.*$MANAGER"; then
-              echo "✅ Found matching artifact: $(echo "$ALL_ARTIFACTS" | grep -E "$FILE.*$MANAGER" | head -n1)"
+              echo "✅ Found artifact: $(echo "$ALL_ARTIFACTS" | grep -E "$FILE.*$MANAGER" | head -n1)"
               exit 0
             fi
-
             echo "Artifact not found yet, sleeping 5 min..."
             sleep 300
           done
 
-          echo "❌ Timeout waiting for artifact $FILE ($MANAGER)."
+          echo "❌ Timeout waiting for artifact $FILE ($MANAGER)"
           exit 1
 
-      - name: Clean ccache After Build
+      - name: Clean ccache
         run: |
           echo "Cleaning ccache for $HOME/.ccache_${{ matrix.file }}_${{ matrix.root_manager }} ..."
           rm -rf "$HOME/.ccache_${{ matrix.file }}_${{ matrix.root_manager }}"
 
-  wait-and-download:
+  combine-artifacts:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
       - name: Setup gh CLI
@@ -158,16 +155,15 @@ jobs:
           sudo apt update && sudo apt install -y gh zip curl jq
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: List Matching Artifacts for Current Batch
-        id: list-artifacts
+      - name: List & Download Artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Finding artifacts for batch ${{ github.event.inputs.BATCH }}..."
           mkdir -p all_artifacts
-
-          # Determine FILE_LIST again
           BATCH="${{ github.event.inputs.BATCH }}"
+          MANAGERS=$(echo "${{ github.event.inputs.ROOT_MANAGER }}" | tr ',' ' ')
+          
+          # Define files per batch
           case "$BATCH" in
             1)
               FILE_LIST=( "oneplus_nord_ce4_lite_5g_v" "oneplus_nord_ce4_v" "oneplus_nord_4_v" "oneplus_ace_3v_v" "oneplus_10_pro_v" "oneplus_10t_v" "oneplus_11r_v" "oneplus_ace2_v" "oneplus_ace_pro_v" )
@@ -179,12 +175,11 @@ jobs:
               FILE_LIST=( "oneplus_pad_pro_v" "oneplus_pad2_v" "oneplus_nord_5" "oneplus_ace5_pro" "oneplus_ace5_pro_b" "oneplus_13" "oneplus_13_b" "oneplus_13t" "oneplus_13t_b" )
               ;;
             4)
-              FILE_LIST=( "oneplus_13_global" "oneplus_13s" "oneplus_13s_b" "oneplus_pad_2_pro" "oneplus_pad_3" "oneplus_ace5_ultra" "oneplus_ace_6" "oneplus_15" )
+              FILE_LIST=( "oneplus_13_b" "oneplus_13s_b" "oneplus_pad_2_pro" "oneplus_pad_3" "oneplus_ace5_ultra" "oneplus_ace_6" "oneplus_15" )
               ;;
           esac
 
           SHORT_LIST=()
-          MANAGERS=$(echo "${{ github.event.inputs.ROOT_MANAGER }}" | tr ',' ' ')
           for FILE in "${FILE_LIST[@]}"; do
             SHORT=$(echo "$FILE" | sed -E 's/_[a-z]$//' | sed -E 's/_v$//')
             for MANAGER in $MANAGERS; do
@@ -193,7 +188,6 @@ jobs:
           done
 
           ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
-
           MATCHED_ARTIFACTS=()
           for FILE in "${SHORT_LIST[@]}"; do
             for ART in $ALL_ARTIFACTS; do
@@ -204,39 +198,24 @@ jobs:
           done
 
           if [[ "${#MATCHED_ARTIFACTS[@]}" -eq 0 ]]; then
-            echo "❌ No matching artifacts found, stopping."
+            echo "❌ No artifacts found for batch $BATCH"
             exit 1
           fi
 
-          ARTIFACT_NAMES=$(IFS=";"; echo "${MATCHED_ARTIFACTS[*]}")
-          echo "ARTIFACT_NAMES=$ARTIFACT_NAMES" >> "$GITHUB_OUTPUT"
-
-      - name: Download All Matched Artifacts as ZIP
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p all_artifacts
-          IFS=';' read -ra NAMES <<< "${{ steps.list-artifacts.outputs.ARTIFACT_NAMES }}"
-          for NAME in "${NAMES[@]}"; do
-            echo "Looking up artifact $NAME ID..."
-            ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/artifacts --jq ".artifacts[] | select(.name==\"$NAME\") | .id")
-            if [[ -n "$ARTIFACT_ID" ]]; then
-              echo "Downloading $NAME (ID: $ARTIFACT_ID)..."
-              curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                   -o "all_artifacts/${NAME}.zip" \
-                   "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
-            else
-              echo "❌ Artifact ID not found for $NAME, skipping"
-            fi
+          for ART in "${MATCHED_ARTIFACTS[@]}"; do
+            ART_ID=$(gh api repos/${{ github.repository }}/actions/artifacts --jq ".artifacts[] | select(.name==\"$ART\") | .id")
+            curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -o "all_artifacts/${ART}.zip" \
+                 "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ART_ID}/zip"
           done
 
-      - name: Create Final ZIP from Extracted ZIPS
+      - name: Combine All Artifacts
         run: |
           cd all_artifacts
-          zip -r ../All-AnyKernel3-MultiRootManagers-${{ github.event.inputs.BATCH }}.zip ./*
-
-      - name: Upload Combined ZIP Artifact
+          zip -r ../All-AnyKernel3-MultiRootManagers-Batch${{ github.event.inputs.BATCH }}.zip ./*
+      
+      - name: Upload Combined ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: All-AnyKernel3-MultiRootManagers-${{ github.event.inputs.BATCH }}
-          path: All-AnyKernel3-MultiRootManagers-${{ github.event.inputs.BATCH }}.zip
+          name: All-AnyKernel3-MultiRootManagers-Batch${{ github.event.inputs.BATCH }}
+          path: All-AnyKernel3-MultiRootManagers-Batch${{ github.event.inputs.BATCH }}.zip
