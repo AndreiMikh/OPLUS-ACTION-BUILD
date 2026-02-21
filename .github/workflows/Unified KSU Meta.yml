@@ -1070,7 +1070,7 @@ jobs:
             HIDE_PATCH="./60_hide_stuff.patch"
 
             # Download Patch
-            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/60_hide_stuff.patch -O "$HIDE_PATCH" || exit 1
+            wget -q https://githubusercontent.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/60_hide_stuff.patch -O "$HIDE_PATCH" || exit 1
 
             if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$HIDE_PATCH" > /dev/null 2>&1; then
               patch -p1 -N -F 3 -d "$TARGET_DIR" < "$HIDE_PATCH"
