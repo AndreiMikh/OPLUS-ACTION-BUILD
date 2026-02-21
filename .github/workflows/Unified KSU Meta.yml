@@ -827,9 +827,13 @@ jobs:
               BRANCH="canary"
               ARTIFACT="manager"
               ;;
-            ReSukiSU-Main|*)
+            ReSukiSU-Main)
               BRANCH="main"
               ARTIFACT="Manager-release"
+              ;;
+            *)
+              echo "Unknown Manager Source: $MANAGER_SOURCE"
+              exit 1
               ;;
           esac
 
