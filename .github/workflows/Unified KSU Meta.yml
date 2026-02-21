@@ -1681,7 +1681,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.FILE }}-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})-R${{ github.run_number }}
+          name: AK3-${{ github.event.inputs.FILE }}-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})(${{ env.TKERNEL_VERSION }})
           path: ./AnyKernel3/*
 
       - name: Extract & Process ZRAM Module
