@@ -1008,7 +1008,7 @@ jobs:
             echo "No built-in KSU Meta Selected, Skipping..."
           fi
 
-      - name: Apply Patches
+      - name: Apply Patches to Selected KSU Meta
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -1032,7 +1032,7 @@ jobs:
                 git checkout "$SUSFS_META"
               fi
             else
-              echo "SUSFS_META is empty, using latest upstream SUSFS"
+              echo "SUSFS Meta is Empty, Using Latest Upstream SUSFS"
             fi
 
             cd ..
@@ -1164,7 +1164,7 @@ jobs:
 
             # Optional XUS Fix
             if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
-              cp ../../Action-Build/patches/No_5uS.patch ./
+              cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
             fi
           fi
