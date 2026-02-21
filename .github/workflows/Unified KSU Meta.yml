@@ -1081,31 +1081,7 @@ jobs:
 
             rm -f "$HIDE_PATCH"
           fi
-
-          # Apply 10 Enable SUSFS Patch to KernelSU-Next & WildKSU
-          # Re-Solve Target Directory
-          if [[ "${{ github.event.inputs.SUSFS_META }}" != "-1" && "$KSU_META" =~ ^(KernelSU-Next|WildKSU)$ ]]; then
-
-            case "$KSU_META" in
-              KernelSU-Next) TARGET_DIR="./KernelSU-Next" ;;
-              WildKSU)       TARGET_DIR="./Wild_KSU" ;;
-            esac
-
-            echo "Target Directory: $TARGET_DIR"
-          fi
-
-          if [[ -n "$TARGET_DIR" ]]; then
-            echo "Checking $KSU_META SUSFS Patch..."
-
-            PATCH_FILE="../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
-
-            # Apply Patch Safely (Non-Interactive, Ignore Failure)
-            patch -p1 -d "$TARGET_DIR" --batch --forward < "$PATCH_FILE" || true
-            echo "10 Enable SUSFS Patch Process Finished"
-          else
-            echo "10 Enable SUSFS Patch Skipped"
-          fi
-            
+          
           # ==============================
           # Apply ZRAM Patch
           # ==============================
