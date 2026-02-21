@@ -1,6 +1,6 @@
-# -----------------------
+# ===========================
 # OnePlus Kernel Action Build
-# -----------------------
+# ===========================
 name: Unified KSU Meta
 on:
   workflow_dispatch:
@@ -170,13 +170,13 @@ jobs:
      ${{
       format(
        '{0}{1}{2}{3}{4}{5}-{6} {7}',
-       github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '',
-       contains(github.event.inputs.FILE, '_aosp') && ' [AOSP]' || '',
-       github.event.inputs.KPM == 'KPM' && ' [KPM]' ||
-       github.event.inputs.KPM == 'KPN' && ' [KPN]' || '',
-       github.event.inputs.LSM == 'true' && ' [LSM]' || '',
-       github.event.inputs.SCHED == 'true' && ' [SCHED]' || '',
-       startsWith(github.event.inputs.ZRAM, '1/') && ' [ZRAM]' || '',
+       github.event.inputs.FAST_BUILD == 'true' && ' FAST' || '',
+       contains(github.event.inputs.FILE, '_aosp') && ' AOSP' || '',
+       github.event.inputs.KPM == 'KPM' && ' KPM' ||
+       github.event.inputs.KPM == 'KPN' && ' KPN' || '',
+       github.event.inputs.LSM == 'true' && ' BBG' || '',
+       github.event.inputs.SCHED == 'true' && ' SCHED' || '',
+       startsWith(github.event.inputs.ZRAM, '1/') && ' ZRAM' || '',
        github.event.inputs.FILE,
        github.event.inputs.SUFFIX
        )
@@ -1096,7 +1096,7 @@ jobs:
             echo "trusty_exists=$TRUSTY_EXISTS" >> $GITHUB_OUTPUT
 
             if [[ "$TRUSTY_EXISTS" == "false" ]]; then
-              echo "Fixing missing TrustyOS in 6.6.0–6.6.30 source/manifest"
+              echo "Fixing Missing TrustyOS in 6.6.0–6.6.30 Source/Manifest"
               sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
               sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
             fi
@@ -1135,7 +1135,7 @@ jobs:
             # Android12 / Android13 fix
             if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ]; then
               if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
-                echo "VMA Pages Not Found, applying Compatibility Fix"
+                echo "VMA Pages Not Found, Applying Compatibility Fix"
                 fake_patched=1
               fi
             fi
@@ -1336,11 +1336,11 @@ jobs:
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
 
-          # TMPFS Configuration (Mountify)*
+          # TMPFS Configuration (Mountify)
           echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
           echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
 
-          # BBR & ECN Configuration*
+          # BBR & ECN Configuration
           if [ "${{ github.event.inputs.BBR_ECN }}" = "true" ]; then
             echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
             echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
@@ -1354,7 +1354,7 @@ jobs:
             echo "CONFIG_IP_NF_TARGET_ECN=y" >> "$CONFIG_FILE"
           fi
 
-          # ZRAM Configuration*
+          # ZRAM Configuration
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
@@ -1364,12 +1364,12 @@ jobs:
             echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
           fi
 
-          # LSM Configuration*
+          # LSM BBG Configuration
           if [ "${{ github.event.inputs.LSM }}" = "true" ]; then
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
-          # IPSET & IPV6 NAT Configuration*
+          # IPSET & IPV6 NAT Configuration
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
@@ -1476,7 +1476,7 @@ jobs:
             [[ -n "$CLANG_PREBUILT_BIN" ]] && break
           done
           if [[ -z "$CLANG_PREBUILT_BIN" ]]; then
-            echo "⚠️ Clang Prebuilt Bin was Not Found in build.config.common, Revert to Official Build Script"
+            echo "Clang Prebuilt Bin was Not Found in build.config.common, Revert to Official Build Script"
             echo "fallback=true" >> "$GITHUB_OUTPUT"
             echo "Consider Disabling Fast Kernel Build & Submit an Issue"
             exit 0
@@ -1506,12 +1506,12 @@ jobs:
           # Get Parent Directory Name of Clang Prebuilt Bin & Assign it to Clang Path
           CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
-          echo "-----------------------"
+          echo "======================="
           echo "CLANG_VERSION=$CLANG_VERSION"
           echo "CLANG_DIR=$CLANG_DIR"
           echo "CLANG_PATH=$CLANG_PATH"
           echo "USE_LLVM_IAS=$USE_LLVM_IAS"
-          echo "-----------------------"
+          echo "======================="
 
           set +u
           source "$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/build/kernel/_setup_env.sh" 2>/dev/null || true
@@ -1593,21 +1593,21 @@ jobs:
           if [ -d "./kernel_workspace/kernel_platform/common/out/" ]; then
             image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
             if [ -n "$image_path" ]; then
-              echo "✅ Unified Path Used by Make for Compilation Successfully Located the Image File"
+              echo "Unified Path Used by Make for Compilation Successfully Located the Image File"
             fi
           fi
           if [ -z "$image_path" ] && [ -d "./kernel_workspace/kernel_platform/out/" ]; then
             image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
             if [ -n "$image_path" ]; then
-              echo "✅ Image File Successfully Found After Compiling Using Official Script"
+              echo "Image File Successfully Found After Compiling Using Official Script"
             fi
           fi
           if [ -z "$image_path" ]; then
-            echo "❌ Image File Not Found, Build Failed" >&2
+            echo "Image File Not Found, Build Failed" >&2
             exit 1
           fi
           if [ -f "$image_path" ]; then
-            echo "✅ Image File Finally Located at: $image_path"
+            echo "Image File Finally Located at: $image_path"
             cp "$image_path" ./AnyKernel3/Image
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
@@ -1634,11 +1634,11 @@ jobs:
           BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
           ARTIFACT="${{ steps.manager.outputs.MANAGER_ARTIFACT }}"
 
-          echo "======= KSU Manager Downloader ======="
+          echo "==== KSU Manager Downloader ===="
           echo "Repository:       $REPO"
           echo "Branch:           $BRANCH"
           echo "Artifact:         $ARTIFACT"
-          echo "======================================="
+          echo "================================="
 
           mkdir -p ./AnyKernel3
 
@@ -1741,7 +1741,7 @@ jobs:
         if: startsWith(github.event.inputs.ZRAM, '1/') && steps.zram_find.outputs.upload != 'false'
         uses: actions/upload-artifact@v4
         with:
-          name: ZRAM-Module-${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
+          name: ZRAM-${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
           path: ZRAM-Module/*
 
       - name: Post-build Disk Check
