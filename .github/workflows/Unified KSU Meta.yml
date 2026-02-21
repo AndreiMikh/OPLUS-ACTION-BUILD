@@ -1420,14 +1420,30 @@ jobs:
 
       - name: Fix task_mmu.c Compile Error (6.12)
         run: |
-          FILE=kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c
+          echo "Detected CPU: $CPU"
 
-          # Fix undeclared file variable
-          sed -i 's/dentry = file->f_path.dentry;/struct file *file = vma->vm_file;\n\tdentry = file->f_path.dentry;/' $FILE
+          if [[ "$CPU" != "sm8850" ]]; then
+            echo "CPU is Not sm8850, Skipping Task_MMU.C Fix"
+            exit 0
+          fi
 
-          # Remove broken gotos if they exist
-          sed -i 's/goto done;//' $FILE
-          sed -i 's/goto bypass;//' $FILE
+          FILE="kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c"
+
+          if [ ! -f "$FILE" ]; then
+            echo "task_mmu.c not found. Skipping."
+            exit 0
+          fi
+
+          echo "Applying Task_MMU.C Fix for sm8850..."
+
+          # Fix Undeclared File Variable
+          sed -i 's/dentry = file->f_path.dentry;/struct file *file = vma->vm_file;\n\tdentry = file->f_path.dentry;/' "$FILE"
+
+          # Remove Broken Gotos if they Exist
+          sed -i 's/goto done;//' "$FILE"
+          sed -i 's/goto bypass;//' "$FILE"
+
+          echo "Fix Applied Successfully"
       
       - name: Build Kernel (Fast)
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
