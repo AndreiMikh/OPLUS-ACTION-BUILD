@@ -1,4 +1,28 @@
+steps:
+      - uses: actions/checkout@v4
+
       - name: Disable SUS_MAP for OnePlus 12 CI Build
+        run: |
+          echo "Checking CPU for SUS_MAP patch..."
+
+          if [[ "$CPU" == "sm8450" ]]; then
+            echo "Applying SUS_MAP patch for OnePlus 12..."
+            BASE_C_FILE="kernel_workspace/kernel_platform/common/fs/proc/base.c"
+
+            if [ -f "$BASE_C_FILE" ]; then
+              sed -i '/AS_FLAGS_SUS_MAP/ s/^/\/\/ [CI_PATCH] /' "$BASE_C_FILE"
+              echo "SUS_MAP disabled successfully for CI"
+            else
+              echo "Warning: $BASE_C_FILE not found"
+            fi
+          else
+            echo "CPU ($CPU) does not require SUS_MAP patch"
+          fi
+
+
+
+
+- name: Disable SUS_MAP for OnePlus 12 CI Build
         run: |
           echo "Checking CPU for SUS_MAP patch..."
     
