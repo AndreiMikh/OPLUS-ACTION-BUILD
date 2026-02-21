@@ -1354,25 +1354,37 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Disable SUS_MAP for OnePlus 12 CI Build
+      - name: Fix task_mmu.c Compile Error (6.12 sm8650 Only)
         run: |
-          echo "Checking CPU for SUS_MAP patch..."
-          echo "Detected CPU: $CPU"
+          echo "CPU: $CPU"
+          echo "Kernel: $KERNEL_VERSION"
 
-          if [[ "$CPU" != "sm8650" ]]; then
-            echo "CPU is Not sm8650, Skipping SUS_MAP Patch"
+          if [[ "$CPU" != "sm8650" || "$KERNEL_VERSION" != "6.12" ]]; then
+            echo "Not sm8650 + 6.12. Skipping Fix"
             exit 0
           fi
 
-          BASE_C_FILE="kernel_workspace/kernel_platform/common/fs/proc/base.c"
+          FILE="kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c"
 
-          if [ -f "$BASE_C_FILE" ]; then
-            echo "Disabling SUS_MAP in $BASE_C_FILE"
-            sed -i '/AS_FLAGS_SUS_MAP/ s/^/\/\/ [CI_PATCH] /' "$BASE_C_FILE"
-            echo "SUS_MAP Disabled Successfully"
-          else
-            echo "Warning: $BASE_C_FILE Not Found"
+          if [ ! -f "$FILE" ]; then
+            echo "task_mmu.c Not Found"
+            exit 0
           fi
+
+          echo "Applying Safe task_mmu Fix..."
+
+          # Only Modify if Problematic Pattern Exists
+          if grep -q 'dentry = file->f_path.dentry;' "$FILE"; then
+            sed -i '/dentry = file->f_path.dentry;/i\
+            struct file *file = vma->vm_file;\
+            if (!file) return 0;' "$FILE"
+          fi
+
+          # Remove Broken Gotos Safely
+          sed -i '/goto done;/d' "$FILE"
+          sed -i '/goto bypass;/d' "$FILE"
+
+          echo "Fix Applied"
 
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
