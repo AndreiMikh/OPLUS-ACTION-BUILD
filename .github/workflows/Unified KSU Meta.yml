@@ -29,7 +29,6 @@ on:
           - oneplus_ace3_b
           - oneplus_open_b
           - oneplus_nord_ce4_b
-          - oneplus_12_b
           - oneplus_pad_go_2_b
           - oneplus_nord_ce4_lite_5g_v
           - oneplus_nord_4_b
@@ -1354,38 +1353,6 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix Task_mmu.c Compile Error (6.1 SM8650 Only)
-        run: |
-          echo "CPU: $CPU"
-          echo "Kernel: $KERNEL_VERSION"
-
-          if [[ "$CPU" != "sm8650" || "$KERNEL_VERSION" != "6.1" ]]; then
-            echo "Not sm8650 + 6.1, Skipping Fix"
-            exit 0
-          fi
-
-          FILE="kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c"
-
-          if [ ! -f "$FILE" ]; then
-            echo "Task_mmu.c Not Found"
-            exit 0
-          fi
-
-          echo "Applying Safe Task_mmu Fix..."
-
-          # Only Modify if Problematic Pattern Exists
-          if grep -q 'dentry = file->f_path.dentry;' "$FILE"; then
-            sed -i '/dentry = file->f_path.dentry;/i\
-            struct file *file = vma->vm_file;\
-            if (!file) return 0;' "$FILE"
-          fi
-
-          # Remove Broken Gotos Safely
-          sed -i '/goto done;/d' "$FILE"
-          sed -i '/goto bypass;/d' "$FILE"
-
-          echo "Fix Applied"
-
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
@@ -1430,23 +1397,23 @@ jobs:
           echo "Disabling GPUEB for MTK kernel v5.10"
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
-      - name: Fix task_mmu.c Compile Error (6.12)
+      - name: Fix TaskMMUCC Compile Error v6.1 & 6.12
         run: |
           echo "Detected CPU: $CPU"
 
-          if [[ "$CPU" != "sm8850" ]]; then
-            echo "CPU is Not sm8850, Skipping Task_MMU.C Fix"
+          if [[ "$CPU" != "sm8850" && "$CPU" != "sm8650" ]]; then
+            echo "CPU is Not sm8650/8850, Skipping TaskMMUC Fix"
             exit 0
           fi
 
           FILE="kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c"
 
           if [ ! -f "$FILE" ]; then
-            echo "task_mmu.c not found. Skipping."
+            echo "TaskMMUC Not Found, Skipping"
             exit 0
           fi
 
-          echo "Applying Task_MMU.C Fix for sm8850..."
+          echo "Applying TaskMMUC Fix for OPlus sm8650/8850..."
 
           # Fix Undeclared File Variable
           sed -i 's/dentry = file->f_path.dentry;/struct file *file = vma->vm_file;\n\tdentry = file->f_path.dentry;/' "$FILE"
