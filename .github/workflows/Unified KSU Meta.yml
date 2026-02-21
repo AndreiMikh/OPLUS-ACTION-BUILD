@@ -173,12 +173,12 @@ jobs:
   build:
     name: >
        ${{
-       (github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '') +
-       (contains(github.event.inputs.FILE, '_aosp') && ' [AOSP]' || '') +
-       (github.event.inputs.KPM == 'KPM' && ' [KPM]' ||
-        github.event.inputs.KPM == 'KPN' && ' [KPN]' || '') +
-       (github.event.inputs.LSM == 'true' && ' [LSM]' || '') +
-       (github.event.inputs.SCHED == 'true' && ' [SCHED]' || '') +
+       (github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '')
+       (contains(github.event.inputs.FILE, '_aosp') && ' [AOSP]' || '')
+       (github.event.inputs.KPM == 'KPM' && ' [KPM]' || '')
+       (github.event.inputs.KPM == 'KPN' && ' [KPN]' || '')
+       (github.event.inputs.LSM == 'true' && ' [LSM]' || '')
+       (github.event.inputs.SCHED == 'true' && ' [SCHED]' || '')
        (startsWith(github.event.inputs.ZRAM, '1/') && ' [ZRAM]' || '')
        }}-${{ github.event.inputs.FILE }} ${{ github.event.inputs.SUFFIX }}
 
