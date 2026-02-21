@@ -129,7 +129,7 @@ on:
         type: boolean
         description: "Enable Network Feature Extensions (Netfilter)?"
         required: true
-        default: false
+        default: true
       BBR_ECN:
         type: boolean
         description: "Enable Network Optimization Algorithm (BBR+ECN)?"
