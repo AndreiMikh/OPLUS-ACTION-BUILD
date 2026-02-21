@@ -2,7 +2,7 @@
         run: |
           echo "Checking CPU for SUS_MAP patch..."
     
-          if [[ "$CPU" == "sm8450" ]]; then
+          if [[ "$CPU" == "oneplus/sm8450" ]]; then
             echo "Applying SUS_MAP patch for OnePlus 12..."
             BASE_C_FILE="kernel_workspace/kernel_platform/common/fs/proc/base.c"
       
