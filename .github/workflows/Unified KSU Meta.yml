@@ -1008,106 +1008,163 @@ jobs:
             echo "No built-in KSU Meta Selected, Skipping..."
           fi
 
-      - name: Apply Patches to KSU Meta
+      - name: Apply Patches
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
-          set -e
+          cd kernel_workspace
 
-          cd kernel_workspace || exit 1
-
-          SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
-          ZRAM="${{ github.event.inputs.ZRAM }}"
-          XUS_FIX="${{ github.event.inputs.XUS_FIX }}"
-          SUSFS_DEV="${{ github.event.inputs.SUSFS_DEV }}"
-          GKI_VERSION="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
-
-          # Determine SUSFS branch suffix
-          DEV_SUFFIX=""
-          if [[ "$SUSFS_DEV" == "true" ]]; then
-            DEV_SUFFIX="-dev"
-          fi
-
+          # ==============================
           # Clone SUSFS (If Enabled)
-          if [[ "$SUSFS_META" != "-1" ]]; then
-            echo "Cloning SUSFS..."
+          # ==============================
+          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
+            SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
+
             git clone https://gitlab.com/simonpunk/susfs4ksu.git \
-              -b "gki-${GKI_VERSION}${DEV_SUFFIX}"
+              -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
 
-            cd susfs4ksu || exit 1
+            cd susfs4ksu
 
-            if [[ -n "$SUSFS_META" ]]; then
+            if [ -n "$SUSFS_META" ]; then
               if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
-                git checkout "HEAD~$SUSFS_META"
+                git checkout HEAD~$SUSFS_META
               else
                 git checkout "$SUSFS_META"
               fi
+            else
+              echo "SUSFS_META is empty, using latest upstream SUSFS"
             fi
 
             cd ..
           fi
 
+          # ==============================
           # Clone Patch Repositories
+          # ==============================
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
+ 
+          cd kernel_platform
 
-          cd kernel_platform || exit 1
-
-          # Extract SUSFS Files
-          if [[ "$SUSFS_META" != "-1" ]]; then
-            echo "Extracting SUSFS Patches..."
-
-            curl -fsSL \
-              https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch \
-              -o ./common/69_hide_stuff.patch
-
-            cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${GKI_VERSION}.patch ./common/
-            cp -r ../susfs4ksu/kernel_patches/fs/* ./common/fs/
-            cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          # ==============================
+          # Apply SUSFS Base Files
+          # ==============================
+          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
+            echo "Pulling SUSFS Patches"
+            cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
+            cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
+            cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
 
-          # Extract ZRAM (If Enabled)
-          if [[ "$ZRAM" == 1* ]]; then
-            echo "Extracting ZRAM Patches..."
+          # ==============================
+          # Apply ZRAM Patch
+          # ==============================
+          if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
+            echo "Applying ZRAM Patch"
             cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
             cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
             cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto/
             cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
           fi
 
-          cd common || exit 1
+          cd ./common
 
+          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
-          # Fix Kernel v5.15 Legacy Bug
-          if [[ "$GKI_VERSION" == "android13-5.15" && "$SUBLEVEL" -lt 123 ]]; then
-            echo "Applying 5.15 legacy fix..."
-            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+          # ==============================
+          # Fix Legacy 5.15 C Library Issue
+          # ==============================
+          if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
+            echo "Fixing 5.15.0–5.15.123 Legacy Libc Compatibility Issues"
+            cp ../../Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
+            echo "5.15 Legacy Patch Applied"
           fi
 
-          # Trusty Fix for Kernel v6.6
-          if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "$SUSFS_META" != "-1" ]]; then
-            if ! grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
-              echo "Applying Trusty Compatibility Fix..."
-              sed -i 's/-32,12 +32,38/-32,11 +32,37/g' \
-                50_add_susfs_in_gki-${GKI_VERSION}.patch
-              sed -i '/#include <trace\/hooks\/fs.h>/d' \
-                50_add_susfs_in_gki-${GKI_VERSION}.patch
+          # ==============================
+          # Fix 6.6.0–6.6.30 Missing TrustyOS
+          # ==============================
+          if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
+
+            TRUSTY_EXISTS="false"
+
+            if grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
+              TRUSTY_EXISTS="true"
+            fi
+
+            echo "trusty_exists=$TRUSTY_EXISTS" >> $GITHUB_OUTPUT
+
+            if [[ "$TRUSTY_EXISTS" == "false" ]]; then
+              echo "Fixing missing TrustyOS in 6.6.0–6.6.30 source/manifest"
+              sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
+              sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
             fi
           fi
 
-          # Apply SUSFS Patches
-          if [[ "$SUSFS_META" != "-1" ]]; then
-            echo "Applying SUSFS Patch..."
-            patch -p1 < 50_add_susfs_in_gki-${GKI_VERSION}.patch || true
+          # ==============================
+          # Apply SUSFS Main Patch
+          # ==============================
+          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
 
-            echo "Applying Hide Stuff Patch..."
-            patch -p1 -F3 < 69_hide_stuff.patch || true
+            fake_patched=0
+
+            # Android15-6.6 Fix
+            if [ "$GKI_V" = "android15-6.6" ]; then
+              if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
+                echo "NR Subpages Not Found, Applying Temporary Fix"
+                sed -i -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' \
+                       -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t \*res = NULL;' \
+                       ./fs/proc/task_mmu.c
+                fake_patched=1
+              fi
+            fi
+
+            # Android14-6.1 Fix
+            if [ "$GKI_V" = "android14-6.1" ]; then
+              if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
+                echo "VMA Pages Not Found, Applying Compatibility Fix"
+                fake_patched=1
+              fi
+              if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+                echo "Missing DMA-BUF Header, Adding it"
+                sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
+              fi
+            fi
+
+            # Android12 / Android13 fix
+            if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ]; then
+              if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
+                echo "VMA Pages Not Found, applying Compatibility Fix"
+                fake_patched=1
+              fi
+            fi
+
+            echo "Applying SUSFS Patch"
+            patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
+            echo "SUSFS Patch Applied"
+
+            # ==============================
+            # Revert Temporary Fixes
+            # ==============================
+            if [ "$fake_patched" = 1 ]; then
+              if [ "$GKI_V" = "android15-6.6" ]; then
+                sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' \
+                       -e '/pagemap_entry_t \*res = NULL;/d' \
+                       ./fs/proc/task_mmu.c
+              fi
+
+              if [ "$GKI_V" = "android12-5.10" ] || \
+                 [ "$GKI_V" = "android13-5.15" ] || \
+                 [ "$GKI_V" = "android14-6.1" ] || \
+                 [ "$GKI_V" = "android16-6.12" ]; then
+                 sed -i 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c || true
+              fi
+            fi
 
             # Optional XUS Fix
-            if [[ "$XUS_FIX" == "true" ]]; then
-              cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
+            if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
+              cp ../../Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
             fi
           fi
@@ -1115,25 +1172,25 @@ jobs:
       - name: Apply Conversion
         if: ${{ fromJSON(env.KV1) >= 6 && fromJSON(env.KV2) >= 66 && github.event.inputs.SCHED == 'false' }}
         run: |
-          set -e
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Action-Build/patches"
 
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
-          cd kernel_workspace/kernel_platform/common || exit 1
+          cd kernel_workspace/kernel_platform/common
 
+          # If it Already Exists, Skip
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
-            if [ -d "$p" ]; then
-              echo "Fengchi Code Already Exists, Skipping Conversion"
+            [ -d "$p" ] && {
+              echo "HMBIRD Source Already Exists, Skipping Conversion"
               exit 0
-            fi
+            }
           done
 
           sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
 
-          echo "Applying OGKI → GKI Conversion Patch..."
-          patch -p1 -F3 < "${PATCH_DIR}/hmbird_patch.patch" || true
-         
-          echo "Conversion Complete"
-          
+          echo "Applying OGKI → GKI Conversion Patch"
+          patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
+
+          echo "Conversion Completed"
+      
       - name: Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
@@ -1202,19 +1259,19 @@ jobs:
           done
 
           if [ -z "${CPU:-}" ]; then
-            echo "❌ CPU Branch Not Specified"
+            echo "CPU Branch Not Specified"
             exit 11
           fi
 
           git clone https://github.com/AndreiMikh/Kernel-Hmbird-Patch.git -b "$CPU" || {
-            echo "❌ CPU Branch Does Not Exist"
+            echo "CPU Branch Does Not Exist"
             exit 11
           }
 
           PATCH_FILE="fengchi_${FILE}.patch"
 
           if [ ! -f "./Kernel-Hmbird-Patch/${PATCH_FILE}" ]; then
-            echo "❌ Patch File Not Found"
+            echo "Patch File Not Found"
             exit 12
           fi
 
@@ -1249,7 +1306,7 @@ jobs:
           cd kernel_workspace/kernel_platform/common
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
-          MANAGER_BRANCH="${{ steps.manager.outputs.manager_branch }}"
+          MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
 
           # KSU Meta Configuration
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
@@ -1395,34 +1452,7 @@ jobs:
         if: ${{ env.KERNEL_VERSION == '5.10' && startsWith(env.CPU, 'mt') }}
         run: |
           echo "Disabling GPUEB for MTK kernel v5.10"
-          sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
-
-      - name: Fix TaskMMUCC Compile Error v6.1 & 6.12
-        run: |
-          echo "Detected CPU: $CPU"
-
-          if [[ "$CPU" != "sm8850" && "$CPU" != "sm8650" ]]; then
-            echo "CPU is Not sm8650/8850, Skipping TaskMMUC Fix"
-            exit 0
-          fi
-
-          FILE="kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c"
-
-          if [ ! -f "$FILE" ]; then
-            echo "TaskMMUC Not Found, Skipping"
-            exit 0
-          fi
-
-          echo "Applying TaskMMUC Fix for OPlus sm8650/8850..."
-
-          # Fix Undeclared File Variable
-          sed -i 's/dentry = file->f_path.dentry;/struct file *file = vma->vm_file;\n\tdentry = file->f_path.dentry;/' "$FILE"
-
-          # Remove Broken Gotos if they Exist
-          sed -i 's/goto done;//' "$FILE"
-          sed -i 's/goto bypass;//' "$FILE"
-
-          echo "Fix Applied Successfully"
+          sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile     
       
       - name: Build Kernel (Fast)
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
