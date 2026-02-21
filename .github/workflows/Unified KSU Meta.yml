@@ -1077,7 +1077,7 @@ jobs:
           # ==============================
           if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Fixing 5.15.0–5.15.123 Legacy Libc Compatibility Issues"
-            cp ../../Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
             echo "5.15 Legacy Patch Applied"
           fi
