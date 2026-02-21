@@ -1097,13 +1097,14 @@ jobs:
           if [[ -n "$TARGET_DIR" ]]; then
             echo "Checking $KSU_META SUSFS Patch..."
 
-            cp ../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./$TARGET_DIR/
-            cd ./$TARGET_DIR
-            patch -p1 < 10_enable_susfs_for_ksu.patch || true
-            echo "10 Enable SUSFS Patch Applied"
+            PATCH_FILE="../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+
+            # Apply Patch Safely (Non-Interactive, Ignore Failure)
+            patch -p1 -d "$TARGET_DIR" --batch --forward < "$PATCH_FILE" || true
+            echo "10 Enable SUSFS Patch Process Finished"
           else
-            echo "10 Enable SUSFS Patch Already Applied or Cannot be Applied"
-          fi        
+            echo "10 Enable SUSFS Patch Skipped"
+          fi
             
           # ==============================
           # Apply ZRAM Patch
