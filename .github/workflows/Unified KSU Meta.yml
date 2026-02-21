@@ -1354,6 +1354,26 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
+      - name: Disable SUS_MAP for OnePlus 12 CI Build
+        run: |
+          echo "Checking CPU for SUS_MAP patch..."
+          echo "Detected CPU: $CPU"
+
+          if [[ "$CPU" != "sm8650" ]]; then
+            echo "CPU is Not sm8650, Skipping SUS_MAP Patch"
+            exit 0
+          fi
+
+          BASE_C_FILE="kernel_workspace/kernel_platform/common/fs/proc/base.c"
+
+          if [ -f "$BASE_C_FILE" ]; then
+            echo "Disabling SUS_MAP in $BASE_C_FILE"
+            sed -i '/AS_FLAGS_SUS_MAP/ s/^/\/\/ [CI_PATCH] /' "$BASE_C_FILE"
+            echo "SUS_MAP Disabled Successfully"
+          else
+            echo "Warning: $BASE_C_FILE Not Found"
+          fi
+
       - name: Fix IPV6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
