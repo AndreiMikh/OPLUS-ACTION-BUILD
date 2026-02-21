@@ -1316,7 +1316,7 @@ jobs:
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
           fi
-          if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
+          if [[ "${{ github.event.inputs.KPM }}" == "KPM" && ( "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ) ]]; then
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
           fi
 
