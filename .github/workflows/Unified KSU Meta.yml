@@ -172,16 +172,20 @@ on:
 jobs:
   build:
     name: >
-       ${{
-       (github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '')
-       (contains(github.event.inputs.FILE, '_aosp') && ' [AOSP]' || '')
-       (github.event.inputs.KPM == 'KPM' && ' [KPM]' || '')
-       (github.event.inputs.KPM == 'KPN' && ' [KPN]' || '')
-       (github.event.inputs.LSM == 'true' && ' [LSM]' || '')
-       (github.event.inputs.SCHED == 'true' && ' [SCHED]' || '')
-       (startsWith(github.event.inputs.ZRAM, '1/') && ' [ZRAM]' || '')
-       }}-${{ github.event.inputs.FILE }} ${{ github.event.inputs.SUFFIX }}
-
+     ${{
+      format(
+       '{0}{1}{2}{3}{4}{5}-{6} {7}',
+       github.event.inputs.FAST_BUILD == 'true' && ' [FAST]' || '',
+       contains(github.event.inputs.FILE, '_aosp') && ' [AOSP]' || '',
+       github.event.inputs.KPM == 'KPM' && ' [KPM]' ||
+       github.event.inputs.KPM == 'KPN' && ' [KPN]' || '',
+       github.event.inputs.LSM == 'true' && ' [LSM]' || '',
+       github.event.inputs.SCHED == 'true' && ' [SCHED]' || '',
+       startsWith(github.event.inputs.ZRAM, '1/') && ' [ZRAM]' || '',
+       github.event.inputs.FILE,
+       github.event.inputs.SUFFIX
+       )
+      }}
     runs-on: ubuntu-latest
     env:
       CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
