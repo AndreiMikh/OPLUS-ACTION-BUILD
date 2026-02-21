@@ -1063,7 +1063,7 @@ jobs:
           fi
 
           # Apply Hide Stuff Patch to SM8650 / SM8750
-          if [[ "$CPU" =~ ^sm(8650|8750)$ ]]; then
+          if [[ "${{ github.event.inputs.SUSFS_META }}" != "-1" && "$CPU" =~ ^sm(8650|8750)$ ]]; then
             echo "Checking Hide Stuff Patch"
 
             TARGET_DIR="./common"
@@ -1083,12 +1083,15 @@ jobs:
           fi
 
           # Apply 10 Enable SUSFS Patch to KernelSU-Next & WildKSU
-          if [[ "$KSU_META" == "KernelSU-Next" ]]; then
-            TARGET_DIR="./KernelSU-Next"
-          elif [[ "$KSU_META" == "WildKSU" ]]; then
-            TARGET_DIR="./Wild_KSU"
-          else
-            TARGET_DIR=""
+          # Re-Solve Target Directory
+          if [[ "${{ github.event.inputs.SUSFS_META }}" != "-1" && "$KSU_META" =~ ^(KernelSU-Next|WildKSU)$ ]]; then
+
+            case "$KSU_META" in
+              KernelSU-Next) TARGET_DIR="./KernelSU-Next" ;;
+              WildKSU)       TARGET_DIR="./Wild_KSU" ;;
+            esac
+
+            echo "Target Directory: $TARGET_DIR"
           fi
 
           if [[ -n "$TARGET_DIR" ]]; then
