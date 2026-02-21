@@ -1097,14 +1097,10 @@ jobs:
           if [[ -n "$TARGET_DIR" ]]; then
             echo "Checking $KSU_META SUSFS Patch..."
 
-            PATCH_FILE="./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./$TARGET_DIR/"
-
-            if patch -p1 -d "$TARGET_DIR" --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
-              patch -p1 -d "$TARGET_DIR" < "$PATCH_FILE"
-              echo "$KSU_META 10 Enable SUSFS Patch Applied"
-            else
-              echo "$KSU_META 10 Enable SUSFS Patch Already Applied or Cannot be Applied"
-            fi
+            cp ../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./$TARGET_DIR/"
+            cd ./$TARGET_DIR
+            patch -p1 < 10_enable_susfs_for_ksu.patch || true
+            echo "10 Enable SUSFS Patch Applied"
           fi        
             
           # ==============================
