@@ -1049,7 +1049,7 @@ jobs:
           # ==============================
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
- 
+          
           cd kernel_platform
 
           # ==============================
@@ -1062,29 +1062,24 @@ jobs:
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
 
+          # Apply Hide Stuff Patch to SM8650 / SM8750
           if [[ "$CPU" =~ ^sm(8650|8750)$ ]]; then
-            echo "Checking SUSFS & Hide Stuff Patches"
+            echo "Checking Hide Stuff Patch"
 
             TARGET_DIR="./common"
+            HIDE_PATCH="./60_hide_stuff.patch"
 
-            SUSFS_PATCH="../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${KANDROID_VERSION}-${KERNEL_VERSION}.patch"
-            HIDE_PATCH="../../OPlus-Action-Build/patches/69_hide_stuff.patch"
+            # Download Patch
+            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/60_hide_stuff.patch -O "$HIDE_PATCH" || exit 1
 
-            # Apply SUSFS Patch*
-            if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$SUSFS_PATCH" > /dev/null 2>&1; then
-              patch -p1 -N -F 3 -d "$TARGET_DIR" < "$SUSFS_PATCH"
-              echo "SUSFS Patch Applied"
-            else
-              echo "SUSFS Patch Already Applied or Cannot be Applied"
-            fi
-
-            # Apply Hide Stuff Patch*
             if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$HIDE_PATCH" > /dev/null 2>&1; then
               patch -p1 -N -F 3 -d "$TARGET_DIR" < "$HIDE_PATCH"
               echo "Hide Stuff Patch Applied"
             else
               echo "Hide Stuff Patch Already Applied or Cannot be Applied"
             fi
+
+            rm -f "$HIDE_PATCH"
           fi
 
           # Apply 10 Enable SUSFS Patch to KernelSU-Next & WildKSU
