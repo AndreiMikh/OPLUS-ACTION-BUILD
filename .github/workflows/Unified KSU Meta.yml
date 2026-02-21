@@ -1398,6 +1398,17 @@ jobs:
           echo "Disabling GPUEB for MTK kernel v5.10"
           sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile
 
+      - name: Fix task_mmu.c Compile Error (6.12)
+        run: |
+          FILE=kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c
+
+          # Fix undeclared file variable
+          sed -i 's/dentry = file->f_path.dentry;/struct file *file = vma->vm_file;\n\tdentry = file->f_path.dentry;/' $FILE
+
+          # Remove broken gotos if they exist
+          sed -i 's/goto done;//' $FILE
+          sed -i 's/goto bypass;//' $FILE
+      
       - name: Build Kernel (Fast)
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
