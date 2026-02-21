@@ -54,7 +54,8 @@ on:
           - oneplus_ace_6
           - oneplus_ace_6t
           - oneplus_ace_6t_aosp
-          - oneplus_15_temp
+          - oneplus_15_t_aosp
+          - oneplus_15_wild
       KPM:
         type: choice
         description: "Kernel Module Implementation Methods"
