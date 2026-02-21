@@ -1354,24 +1354,24 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix task_mmu.c Compile Error (6.12 sm8650 Only)
+      - name: Fix Task_mmu.c Compile Error (6.1 SM8650 Only)
         run: |
           echo "CPU: $CPU"
           echo "Kernel: $KERNEL_VERSION"
 
-          if [[ "$CPU" != "sm8650" || "$KERNEL_VERSION" != "6.12" ]]; then
-            echo "Not sm8650 + 6.12. Skipping Fix"
+          if [[ "$CPU" != "sm8650" || "$KERNEL_VERSION" != "6.1" ]]; then
+            echo "Not sm8650 + 6.1, Skipping Fix"
             exit 0
           fi
 
           FILE="kernel_workspace/kernel_platform/common/fs/proc/task_mmu.c"
 
           if [ ! -f "$FILE" ]; then
-            echo "task_mmu.c Not Found"
+            echo "Task_mmu.c Not Found"
             exit 0
           fi
 
-          echo "Applying Safe task_mmu Fix..."
+          echo "Applying Safe Task_mmu Fix..."
 
           # Only Modify if Problematic Pattern Exists
           if grep -q 'dentry = file->f_path.dentry;' "$FILE"; then
