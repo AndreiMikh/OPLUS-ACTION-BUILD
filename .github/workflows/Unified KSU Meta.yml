@@ -1067,16 +1067,16 @@ jobs:
             echo "Checking Hide Stuff Patch"
 
             TARGET_DIR="./common"
-            HIDE_PATCH="./60_hide_stuff.patch"
+            HIDE_PATCH="./69_hide_stuff.patch"
 
             # Download Patch
-            wget -q https://githubusercontent.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/60_hide_stuff.patch -O "$HIDE_PATCH" || exit 1
+            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch -O "$HIDE_PATCH" || exit 1
 
             if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$HIDE_PATCH" > /dev/null 2>&1; then
               patch -p1 -N -F 3 -d "$TARGET_DIR" < "$HIDE_PATCH"
-              echo "Hide Stuff Patch Applied"
+              echo "69 Hide Stuff Patch Applied"
             else
-              echo "Hide Stuff Patch Already Applied or Cannot be Applied"
+              echo "69 Hide Stuff Patch Already Applied or Cannot be Applied"
             fi
 
             rm -f "$HIDE_PATCH"
