@@ -905,7 +905,7 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s builtin
 
-            cd KernelSU || exit 1
+            cd ./KernelSU || exit 1
 
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
             echo "Current Commit Hash: $GIT_COMMIT_HASH"
@@ -941,7 +941,7 @@ jobs:
 
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
 
-            cd KernelSU || exit 1
+            cd ./KernelSU || exit 1
 
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -955,7 +955,7 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s dev_susfs
 
-            cd KernelSU-Next || exit 1
+            cd ./KernelSU-Next || exit 1
 
             KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -970,7 +970,7 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-            # Apply patches
+            # Apply Patches
             cd ../common/drivers/kernelsu || exit 1
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
@@ -995,7 +995,7 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s "$MANAGER_BRANCH"
 
-            cd Wild_KSU || exit 1
+            cd ./Wild_KSU || exit 1
 
             KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -1062,6 +1062,53 @@ jobs:
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
 
+          if [[ "$CPU" =~ ^sm(8650|8750)$ ]]; then
+            echo "Checking SUSFS & Hide Stuff Patches"
+
+            TARGET_DIR="./common"
+
+            SUSFS_PATCH="../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${KANDROID_VERSION}-${KERNEL_VERSION}.patch"
+            HIDE_PATCH="../../OPlus-Action-Build/patches/69_hide_stuff.patch"
+
+            # Apply SUSFS Patch*
+            if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$SUSFS_PATCH" > /dev/null 2>&1; then
+              patch -p1 -N -F 3 -d "$TARGET_DIR" < "$SUSFS_PATCH"
+              echo "SUSFS Patch Applied"
+            else
+              echo "SUSFS Patch Already Applied or Cannot be Applied"
+            fi
+
+            # Apply Hide Stuff Patch*
+            if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$HIDE_PATCH" > /dev/null 2>&1; then
+              patch -p1 -N -F 3 -d "$TARGET_DIR" < "$HIDE_PATCH"
+              echo "Hide Stuff Patch Applied"
+            else
+              echo "Hide Stuff Patch Already Applied or Cannot be Applied"
+            fi
+          fi
+
+          # Apply 10 Enable SUSFS Patch to KernelSU-Next & WildKSU
+          if [[ "$KSU_META" == "KernelSU-Next" ]]; then
+            TARGET_DIR="./KernelSU-Next"
+          elif [[ "$KSU_META" == "WildKSU" ]]; then
+            TARGET_DIR="./Wild_KSU"
+          else
+            TARGET_DIR=""
+          fi
+
+          if [[ -n "$TARGET_DIR" ]]; then
+            echo "Checking $KSU_META SUSFS Patch..."
+
+            PATCH_FILE="./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+
+            if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$PATCH_FILE" > /dev/null 2>&1; then
+              patch -p1 -N -F 3 -d "$TARGET_DIR" < "$PATCH_FILE"
+              echo "$KSU_META 10 Enable SUSFS Patch Applied"
+            else
+              echo "$KSU_META 10 Enable SUSFS Patch Already Applied or Cannot be Applied"
+            fi
+          fi        
+            
           # ==============================
           # Apply ZRAM Patch
           # ==============================
