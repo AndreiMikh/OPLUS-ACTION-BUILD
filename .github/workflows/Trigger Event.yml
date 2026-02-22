@@ -6,7 +6,7 @@ on:
       PLATFORM:
         description: "Select platform group (sm8550 / sm8650 / sm8750 / sm8850)"
         required: true
-        default: "sm8550"
+        default: "sm8750"
 
       KSU_META:
         type: choice
@@ -83,15 +83,13 @@ jobs:
             )
           elif [[ "$PLATFORM" == "sm8750" ]]; then
             FILE_LIST=(
-              "oneplus_pad_pro_v"
-              "oneplus_pad2_v"
-              "oneplus_nord_5"
-              "oneplus_ace5_pro"
-              "oneplus_ace5_pro_b"
-              "oneplus_13"
               "oneplus_13_b"
-              "oneplus_13t"
+              "oneplus_13s_b"
               "oneplus_13t_b"
+              "oneplus_ace5_pro_b"
+              "oneplus_ace_6"
+              "oneplus_pad_2_pro_b"
+              "oneplus_pad_3_b"
             )
           elif [[ "$PLATFORM" == "sm8850" ]]; then
             FILE_LIST=(
@@ -115,13 +113,13 @@ jobs:
               file: .,
               file_short: (sub("_[a-z]$"; "")),
               enable_sched: (
-                . == "oneplus_pad_2_pro" or
-                . == "oneplus_13" or
-                . == "oneplus_13_global" or
-                . == "oneplus_13t" or
-                . == "oneplus_13s" or
-                . == "oneplus_ace5_ultra" or
-                . == "oneplus_ace5_pro"
+                . == "oneplus_13_b" or
+                . == "oneplus_13s_b" or
+                . == "oneplus_13t_b" or
+                . == "oneplus_ace5_pro_b" or
+                . == "oneplus_ace_6" or
+                . == "oneplus_pad_2_pro_b" or
+                . == "oneplus_pad_3_b"
               )
             })
           ')
