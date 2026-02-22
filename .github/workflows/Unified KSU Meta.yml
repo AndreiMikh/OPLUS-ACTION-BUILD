@@ -1418,16 +1418,39 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Apply IPV6 NAT Compatibility Patch
+      - name: Fix IPv6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
-          cd kernel_workspace/kernel_platform/common
+          set -euo pipefail
 
-          if [[ "${CPU}" == sm* ]]; then
-            echo "Fix Potential False Alarms from Selected Devices After Enabling IPV6 NAT..."
-            patch -p1 -F 3 < ../../OPlus-Action-Build/patches/IPv6_NAT_FIX.patch
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
+          TARGET_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
+          PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
+
+          echo "NETFILTER Enabled — Checking IPV6 NAT Compatibility..."
+
+          # Ensure Target Directory Exists
+          if [ ! -d "$TARGET_DIR" ]; then
+            echo "Target Directory Not Found: $TARGET_DIR"
+            exit 1
+          fi
+
+          cd "$TARGET_DIR"
+
+          # Only Apply on Supported CPU
+          if [[ "${CPU:-}" == sm* ]]; then
+            echo "Applying IPV6 NAT compatibility fix..."
+
+            if [ ! -f "$PATCH_FILE" ]; then
+              echo "Patch File Not Found: $PATCH_FILE"
+              exit 1
+            fi
+
+            patch -p1 -F 3 < "$PATCH_FILE"
+
+            echo "IPV6 NAT Fix Applied Successfully"
           else
-            echo "Device Selected does Not Support IPV6 NAT, Skipping Step"
+            echo "Device Does Not Support IPv6 NAT — Skipping"
           fi
 
       # Custom Kernel Build Time, Without Adding #1 SMP PREEMPT
