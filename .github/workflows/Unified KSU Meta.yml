@@ -416,23 +416,6 @@ jobs:
             echo "WARNING: README Missing or Empty"
           fi
 
-          # Auto Detection of Kernel Repository
-          echo "Auto Detecting Kernel Repository..."
-
-          KERNEL_REPOS=""
-
-          KERNEL_REPOS_PATH=$(find . -type f -name "build.config*" | head -n 1)
-  
-          if [[ -n "$KERNEL_REPOS_PATH" ]]; then
-            KERNEL_REPOS=$(echo "${KERNEL_REPOS_PATH#./}" | cut -d/ -f2)
-
-            echo "Detected Kernel Repository: $KERNEL_REPOS"
-            echo "KERNEL_REPOS=$KERNEL_REPOS" >> "$GITHUB_ENV"
-          else
-            echo "ERROR: build.config.msm.common not found"
-            exit 1
-          fi
-
           # Export Combined Output Value
           echo "value=${FILE_BASE}_Android${ANDROID_VERSION}" >> "$GITHUB_OUTPUT"
 
@@ -608,7 +591,27 @@ jobs:
           echo "Syncing Repository..."
           repo sync -c -j$(nproc) --no-clone-bundle --no-tags --force-sync
 
-          echo "Cleaning up BUILD.bazel Files & Protected Exports..."
+          echo "Auto Detecting Kernel Repository..."
+
+          KERNEL_REPOS=""
+
+          KERNEL_REPOS_PATH=$(find . -type f -name "build.config*" | grep -v "abi" | head -n 1)
+
+          if [[ -n "$KERNEL_REPOS_PATH" ]]; then
+            echo "Found build config at: $KERNEL_REPOS_PATH"
+
+            # Extract Top-Level Kernel Folder
+            KERNEL_REPOS=$(echo "${KERNEL_REPOS_PATH#./}" | cut -d/ -f1)
+
+            echo "Detected Kernel Repository: $KERNEL_REPOS"
+            echo "KERNEL_REPOS=$KERNEL_REPOS" >> "$GITHUB_ENV"
+          else
+            echo "ERROR: No build.config file found after repo sync!"
+            find . -name "build.config*" || true
+            exit 1
+          fi          
+
+          echo "Cleaning up Build Bazel Files & Protected Exports..."
           for dir in kernel_platform/common kernel_platform/msm-kernel; do
             if [ -e "$dir/BUILD.bazel" ]; then
               sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' "$dir/BUILD.bazel"
