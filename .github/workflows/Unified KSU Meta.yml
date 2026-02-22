@@ -1010,50 +1010,81 @@ jobs:
             echo "No built-in KSU Meta Selected, Skipping..."
           fi
 
-      - name: Apply Patches KSU Meta
+      - name: Apply Patches SukiSU Ultra
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
           set -e
           cd kernel_workspace
 
+          # =====================================================
+          # SUSFS INTEGRATION (All OnePlus Devices)
+          # =====================================================
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
-            SUSFS_BRANCH="gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}"
+            echo "========================================"
+            echo "            SUSFS ENABLED"
+            echo "========================================"
 
-            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "${SUSFS_BRANCH}"
+            GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+            SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
+            SUSFS_BRANCH="gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+
+            echo "Kernel: $GKI_V"
+            echo "SUSFS Branch: $SUSFS_BRANCH"
+
+            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b "$SUSFS_BRANCH"
             cd susfs4ksu
 
-            if [ -n "$SUSFS_META" ]; then
-              if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
-                git checkout "HEAD~$SUSFS_META"
-              else
-                git checkout "$SUSFS_META"
-              fi
-            else
-              echo "SUSFS_META is empty, using latest upstream SUSFS"
-            fi
+            # Only Allow Override for 5.x Kernels
+            case "$GKI_V" in
+              android12-5.10|android13-5.15)
+                if [ -n "$SUSFS_META" ]; then
+                  if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
+                    git checkout "HEAD~$SUSFS_META"
+                  else
+                    git checkout "$SUSFS_META"
+                  fi
+                fi
+                ;;
+              android*-6.*)
+                echo "Modern 6.x Detected — Ignoring SUSFS Meta Override"
+                ;;
+            esac
 
             cd ..
           fi
 
+          # =====================================================
+          # Clone Extra Patch Repos
+          # =====================================================
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
 
           cd kernel_platform
 
+          # =====================================================
+          # Copy SUSFS Files
+          # =====================================================
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            echo "Pulling SUSFS Patch"
+            echo "Copying SUSFS Patch Files"
 
             SUSFS_PATCH="50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch"
 
-            cp ../susfs4ksu/kernel_patches/${SUSFS_PATCH} ./common/
-            cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
-            cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+            if [ ! -f "../susfs4ksu/kernel_patches/${SUSFS_PATCH}" ]; then
+              echo "ERROR: SUSFS Patch Not Found!"
+              exit 1
+            fi
+
+            cp "../susfs4ksu/kernel_patches/${SUSFS_PATCH}" ./common/
+            cp -r ../susfs4ksu/kernel_patches/fs/* ./common/fs/ 2>/dev/null || true
+            cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/ 2>/dev/null || true
           fi
 
+          # =====================================================
+          # ZRAM Patch
+          # =====================================================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
-            echo "Pulling ZRAM Patch"
+            echo "Applying ZRAM patch"
 
             cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
             cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
@@ -1062,19 +1093,23 @@ jobs:
           fi
 
           cd common
- 
+
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
+          # =====================================================
+          # 5.15 Legacy Fix
+          # =====================================================
           if [ "$GKI_V" = "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
-            echo "Fixing Compatibility Issues for Kernel 5.15.0~5.15.123 (Legacy C Library Support)"
+            echo "Applying 5.15 Legacy Compatibility Fix"
 
             cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
-
-            echo "Fix 5.15 Patch Completed"
           fi
 
+          # =====================================================
+          # Trusty Fix (6.6 Early Sources)
+          # =====================================================
           if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
             TRUSTY_EXISTS="false"
 
@@ -1082,10 +1117,8 @@ jobs:
               TRUSTY_EXISTS="true"
             fi
 
-            echo "trusty_exists=$TRUSTY_EXISTS" >> $GITHUB_OUTPUT
-
             if [ "$TRUSTY_EXISTS" = "false" ]; then
-              echo "Fixing SUSFS Error Caused by Missing TrustyOS in Kernel 6.6.0~6.6.30 Sources/Manifests"
+              echo "Applying Trusty Compatibility Fix"
 
               sed -i 's/-32,12 +32,38/-32,11 +32,37/g' \
                 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
@@ -1095,64 +1128,28 @@ jobs:
             fi
           fi
 
+          # =====================================================
+          # Apply SUSFS Patch (NO SILENT FAILURE)
+          # =====================================================
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            fake_patched=0
 
-            case "$GKI_V" in
-              android15-6.6)
-                if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
-                  echo "Applying Temporary Pagemap Compatibility Fix for Android15-6.6"
-
-                  sed -i \
-                    -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages = __PAGE_SIZE \/ PAGE_SIZE;' \
-                    -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t *res = NULL;' \
-                    ./fs/proc/task_mmu.c
-
-                  fake_patched=1
-                fi
-                ;;
-              android14-6.1)
-                if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
-                  fake_patched=1
-                fi
-
-                if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
-                  echo "Adding Missing DMA-Buf Header"
-                  sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' \
-                    ./fs/proc/base.c
-                fi
-                ;;
-              android12-5.10|android13-5.15)
-                if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
-                  fake_patched=1
-                fi
-                ;;
-            esac
-
-            echo "Applying SUSFS Patch"
-            patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
-            echo "SUSFS Patch Completed"
-
-            if [ "$fake_patched" = 1 ]; then
-              case "$GKI_V" in
-                android15-6.6)
-                  sed -i \
-                    -e '/unsigned int nr_subpages = __PAGE_SIZE \/ PAGE_SIZE;/d' \
-                    -e '/pagemap_entry_t \*res = NULL;/d' \
-                    ./fs/proc/task_mmu.c
-                  ;;
-                android12-5.10|android13-5.15|android14-6.1)
-                  sed -i 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c || true
-                  ;;
-              esac
+            if [ ! -f "./include/linux/susfs.h" ]; then
+              echo "ERROR: SUSFSH Missing!"
+              exit 1
             fi
 
+            echo "Applying SUSFS Patch"
+            patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch
+
+            echo "SUSFS Patch Applied Successfully"
+
+            # Optional XUS fix
             if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
               cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
             fi
-          fi         
-      
+          fi
+            
       - name: Apply Conversion
         if: ${{ env.KERNEL_VERSION == '6.6' && github.event.inputs.SCHED == 'false' }}
         run: |
