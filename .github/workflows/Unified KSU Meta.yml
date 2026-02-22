@@ -1035,7 +1035,7 @@ jobs:
             echo "No built-in KSU Meta Selected, Skipping..."
           fi
 
-      - name: Apply SUSFS (OKI)
+      - name: Apply SUSFS (GKI / OKI) & Other Patches
         if: ${{ github.event.inputs.SUSFS_META != '-1' }}
         run: |
           set -e
@@ -1053,7 +1053,7 @@ jobs:
           echo "Kernel:  ${{ env.KERNEL_VERSION }}"
           echo "======================================="
 
-          # Detect correct common directory (OKI layout safety)
+          # Detect Correct Common Directory (OKI Layout Safety)
           if [ -d "./kernel_platform/common" ]; then
             KDIR="./kernel_platform/common"
           elif [ -d "./common" ]; then
@@ -1081,10 +1081,6 @@ jobs:
           fi
           cd ..
 
-          # Download Extra Hide Patch
-          wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch \
-            -O $KDIR/69_hide_stuff.patch
-
           # Auto-Detect Correct SUSFS Patch
           SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
@@ -1104,12 +1100,31 @@ jobs:
           cp -r ./susfs4ksu/kernel_patches/fs/* $KDIR/fs/
           cp -r ./susfs4ksu/kernel_patches/include/linux/* $KDIR/include/linux/
 
-          # Apply Patches
           cd $KDIR
-          patch -p1 < "$(basename $SUS_PATCH)"
-          patch -p1 -N -F 3 < 69_hide_stuff.patch || true
-          cd - >/dev/null
 
+          # Detect Kernel GKI / OKI Version
+          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+          echo "Detected GKI / OKI Version: $GKI_V"
+
+          # Apply Main SUSFS Patches
+          patch -p1 < "$(basename $SUS_PATCH)"
+
+          # Conditionally Download + Apply Hide Patch
+          if [[ "$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" ]]; then
+
+            echo "Applying Hide Patch"
+
+            wget https://raw.githubusercontent.com/AndreiMikh/OPlus-Action-Build/LiquidAndrei/patches/69_hide_stuff.patch \
+              -O 69_hide_stuff.patch
+
+            patch -p1 -N -F 3 < 69_hide_stuff.patch || true
+
+          else
+            echo "Skipping Hide Stuffs Patch"
+          fi
+
+          cd - >/dev/null
+          
           echo "===== SUSFS Applied Successfully ====="
           
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
