@@ -1,0 +1,251 @@
+name: Multi-Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      PLATFORM:
+        description: "Select platform group (sm8550 / sm8650 / sm8750 / sm8850)"
+        required: true
+        default: "sm8550"
+
+      KSU_META:
+        type: choice
+        description: "KSU Meta"
+        required: true
+        default: "ReSukiSU"
+        options:
+          - ReSukiSU
+          - SukiSU-Ultra
+          - KernelSU-Next
+          - WildKSU
+
+      MANAGER_SOURCE:
+        type: choice
+        description: "KSU Meta Branch (Download Manager Artifact)"
+        required: true
+        default: "ReSukiSU-Main"
+        options:
+          - ReSukiSU-Main
+          - ReSukiSU-Main-Spoofed
+          - SukiSU-Ultra-Main
+          - SukiSU-Main-Spoofed
+          - KernelSU-Next-Dev
+          - KernelSU-Next-Dev-Spoofed
+          - WildKSU-Stable
+          - WildKSU-Stable-Spoofed
+          - WildKSU-Canary
+          - WildKSU-Canary-Spoofed
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+
+# =========================
+# Generate Device Matrix
+# =========================
+
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+    steps:
+      - name: Generate Matrix from Platform
+        id: set-matrix
+        run: |
+          PLATFORM="${{ github.event.inputs.PLATFORM }}"
+
+          if [[ "$PLATFORM" == "sm8550" ]]; then
+            FILE_LIST=(
+              "oneplus_nord_ce4_lite_5g_v"
+              "oneplus_nord_ce4_v"
+              "oneplus_nord_4_v"
+              "oneplus_ace_3v_v"
+              "oneplus_10_pro_v"
+              "oneplus_10t_v"
+              "oneplus_11r_v"
+              "oneplus_ace2_v"
+              "oneplus_ace_pro_v"
+            )
+          elif [[ "$PLATFORM" == "sm8650" ]]; then
+            FILE_LIST=(
+              "oneplus_11_v"
+              "oneplus_12r_v"
+              "oneplus_ace2_pro_v"
+              "oneplus_ace3_v"
+              "oneplus_open_v"
+              "oneplus_12_v"
+              "oneplus_13r"
+              "oneplus_ace3_pro_v"
+              "oneplus_ace5"
+            )
+          elif [[ "$PLATFORM" == "sm8750" ]]; then
+            FILE_LIST=(
+              "oneplus_pad_pro_v"
+              "oneplus_pad2_v"
+              "oneplus_nord_5"
+              "oneplus_ace5_pro"
+              "oneplus_ace5_pro_b"
+              "oneplus_13"
+              "oneplus_13_b"
+              "oneplus_13t"
+              "oneplus_13t_b"
+            )
+          elif [[ "$PLATFORM" == "sm8850" ]]; then
+            FILE_LIST=(
+              "oneplus_13_global"
+              "oneplus_13s"
+              "oneplus_13s_b"
+              "oneplus_pad_2_pro"
+              "oneplus_pad_3"
+              "oneplus_ace5_ultra"
+              "oneplus_ace_6"
+              "oneplus_15"
+            )
+          else
+            echo "Invalid PLATFORM"
+            exit 1
+          fi
+
+          MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
+            split("\n")[:-1] |
+            map({
+              file: .,
+              file_short: (sub("_[a-z]$"; "")),
+              enable_sched: (
+                . == "oneplus_pad_2_pro" or
+                . == "oneplus_13" or
+                . == "oneplus_13_global" or
+                . == "oneplus_13t" or
+                . == "oneplus_13s" or
+                . == "oneplus_ace5_ultra" or
+                . == "oneplus_ace5_pro"
+              )
+            })
+          ')
+
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+
+
+# =========================
+# Trigger Device Builds
+# =========================
+
+  build:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+
+    steps:
+
+      - name: Trigger Original Build Workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Unified KSU Meta
+          token: ${{ secrets.GITHUB_TOKEN }}
+          inputs: |
+            {
+              "FILE": "${{ matrix.file }}",
+              "KPM": "false",
+              "MANAGER_SOURCE": "${{ github.event.inputs.MANAGER_SOURCE }}",
+              "SUSFS_META": "susfs-main/Numbersf/",
+              "KSU_META": "${{ github.event.inputs.KSU_META }}",
+              "ZRAM": "false",
+              "BUILD_TIME": "F",
+              "SUFFIX": "",
+              "LSM": "true",
+              "NETFILTER": "true",
+              "BBR_ECN": "false",
+              "SUSFS_DEV": "false",
+              "FAST_BUILD": "true",
+              "SCHED": "${{ matrix.enable_sched }}",
+              "UNICODE_BYPASS": "false",
+              "XUS_FIX": "false"
+            }
+
+      - name: Wait for Artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILE="${{ matrix.file_short }}"
+          echo "Waiting for artifact: $FILE"
+
+          SECONDS=0
+          MAX_TIME=$((35 * 60))
+          sleep 600
+
+          while (( SECONDS < MAX_TIME )); do
+            ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
+
+            if echo "$ALL_ARTIFACTS" | grep -q "$FILE"; then
+              echo "Artifact found for $FILE"
+              exit 0
+            fi
+
+            sleep 300
+          done
+
+          echo "Timeout waiting for $FILE"
+          exit 1
+
+      - name: Clean ccache
+        run: rm -rf "$HOME/.ccache_${{ matrix.file }}"
+
+
+# =========================
+# Download + Package Final ZIP
+# =========================
+
+  wait-and-package:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Tools
+        run: |
+          sudo apt update
+          sudo apt install -y gh zip unzip curl jq
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Download All Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p all_artifacts
+          ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
+
+          for ART in $ALL_ARTIFACTS; do
+            ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/artifacts \
+              --jq ".artifacts[] | select(.name==\"$ART\") | .id")
+
+            curl -L -H "Authorization: token $GH_TOKEN" \
+              -o "all_artifacts/${ART}.zip" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+          done
+
+      - name: Extract All ZIPs
+        run: |
+          mkdir -p extracted
+          cd all_artifacts
+          for f in *.zip; do
+            unzip -oq "$f" -d ../extracted
+          done
+
+      - name: Create Final AnyKernel3 ZIP
+        run: |
+          cd extracted
+          FINAL_NAME="All-AnyKernel3-${{ github.event.inputs.KSU_META }}-${{ github.event.inputs.PLATFORM }}.zip"
+          zip -r "../$FINAL_NAME" ./*
+
+      - name: Upload Final ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-${{ github.event.inputs.PLATFORM }}
+          path: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-${{ github.event.inputs.PLATFORM }}.zip
