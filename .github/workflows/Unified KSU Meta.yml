@@ -1102,6 +1102,9 @@ jobs:
           grep '^VERSION' Makefile
           grep '^PATCHLEVEL' Makefile
           grep '^SUBLEVEL' Makefile
+
+          echo "===== BASE.C AROUND 101 ====="
+          sed -n '70,140p' fs/proc/base.c
           echo "========================"
 
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
