@@ -1022,7 +1022,7 @@ jobs:
             git clone --depth=1 https://github.com/AndreiMikh/susfs4oki.git \
               -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
            
-            cd susfs4ksu
+            cd susfs4oki
 
             if [ -n "$SUSFS_META" ]; then
               if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
