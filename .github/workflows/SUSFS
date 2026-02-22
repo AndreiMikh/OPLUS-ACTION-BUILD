@@ -5,6 +5,12 @@
 
           cd kernel_workspace
 
+          echo "===== Clone  Patch ====="
+          git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
+          git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
+          echo "Patch Cloned"
+          echo "========================"
+
           echo "===== Adding SUSFS ====="
           echo "Android: ${{ env.KANDROID_VERSION }}"
           echo "Kernel:  ${{ env.KERNEL_VERSION }}"
