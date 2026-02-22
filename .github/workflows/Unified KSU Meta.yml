@@ -1010,40 +1010,76 @@ jobs:
             echo "No built-in KSU Meta Selected, Skipping..."
           fi
 
-      - name: Apply Patches KSU Meta
-        env:
-          FILE: ${{ github.event.inputs.FILE }}
+      - name: Apply SUSFS (OKI)
+        if: ${{ github.event.inputs.SUSFS_META != '-1' }}
         run: |
+          set -e
+
           cd kernel_workspace
 
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            echo "Adding SUSFS (OKI Version)..."
+          echo "===== Adding SUSFS (OKI Version) ====="
+          echo "Android: ${{ env.KANDROID_VERSION }}"
+          echo "Kernel:  ${{ env.KERNEL_VERSION }}"
+          echo "======================================="
 
-            # Clone OKI SUSFS Branch
-            git clone --depth=1 \
-              https://github.com/cctv18/susfs4oki.git susfs4ksu \
-              -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
-
-            # Download Extra Hide Patch
-            wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch \
-              -O ./kernel_platform/common/69_hide_stuff.patch
-
-            # Copy OKI Patch
-            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./kernel_platform/common/
-
-            # Copy Required SUSFS Source Files
-            cp -r ./susfs4ksu/kernel_patches/fs/* ./kernel_platform/common/fs/
-            cp -r ./susfs4ksu/kernel_patches/include/linux/* ./kernel_platform/common/include/linux/
- 
-            # Apply Patches
-            cd ./kernel_platform/common
-            patch -p1 < 50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
-            patch -p1 -N -F 3 < 69_hide_stuff.patch || true
-            cd ..
-
+          # Detect correct common directory (OKI layout safety)
+          if [ -d "./kernel_platform/common" ]; then
+            KDIR="./kernel_platform/common"
+          elif [ -d "./common" ]; then
+            KDIR="./common"
           else
-            echo "SUSFS Disabled (SUSFS_META = -1). Skipping SUSFS Setup..."
+            echo "ERROR: Cannot Find Kernel Common Directory!"
+            exit 1
           fi
+
+          echo "Using Kernel Directory: $KDIR"
+
+          # Clone SUSFS OKI Repository
+          git clone --depth=1 \
+            https://github.com/cctv18/susfs4oki.git susfs4ksu \
+            -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+
+          # Handle SUSFS Meta Checkout
+          cd susfs4ksu
+          if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
+            if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
+              git checkout HEAD~${{ github.event.inputs.SUSFS_META }}
+            else
+              git checkout "${{ github.event.inputs.SUSFS_META }}"
+            fi
+          fi
+          cd ..
+
+          # Download Extra Hide Patch
+          wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch \
+            -O $KDIR/69_hide_stuff.patch
+
+          # Auto-Detect Correct SUSFS Patch
+          SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
+
+          if [ -z "$SUS_PATCH" ]; then
+            echo "ERROR: SUSFS Patch Not Found for OKI-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+            echo "Available Patches:"
+            ls ./susfs4ksu/kernel_patches/
+            exit 1
+          fi
+
+          echo "Using SUSFS Patch: $SUS_PATCH"
+
+          # Copy Patch
+          cp "$SUS_PATCH" $KDIR/
+
+          # Copy SUSFS Source Files
+          cp -r ./susfs4ksu/kernel_patches/fs/* $KDIR/fs/
+          cp -r ./susfs4ksu/kernel_patches/include/linux/* $KDIR/include/linux/
+
+          # Apply Patches
+          cd $KDIR
+          patch -p1 < "$(basename $SUS_PATCH)"
+          patch -p1 -N -F 3 < 69_hide_stuff.patch || true
+          cd - >/dev/null
+
+          echo "===== SUSFS Applied Successfully ====="
           
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "Pull ZRAM Patches"
