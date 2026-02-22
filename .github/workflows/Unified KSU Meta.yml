@@ -643,7 +643,7 @@ jobs:
           fi
 
           if [ -n "$BRANCH" ]; then
-            echo "ANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
+            echo "KANDROID_VERSION=${BRANCH%-*}" >> $GITHUB_ENV
             echo "KERNEL_VERSION=${BRANCH#*-}" >> $GITHUB_ENV
             echo "Branch found: $BRANCH"
           else
@@ -1017,34 +1017,32 @@ jobs:
           cd kernel_workspace
 
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
+            echo "Adding SUSFS (OKI Version)..."
 
-            if [ -n "$SUSFS_META" ]; then
-              if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
-                git checkout HEAD~$SUSFS_META
-              else
-                git checkout "$SUSFS_META"
-              fi
-            else
-              echo "SUSFS Meta is Empty, Using Latest Upstream SUSFS"
-            fi
+            # Clone OKI SUSFS Branch
+            git clone --depth=1 \
+              https://github.com/cctv18/susfs4oki.git susfs4ksu \
+              -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
 
+            # Download Extra Hide Patch
+            wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch \
+              -O ./common/69_hide_stuff.patch
+
+            # Copy OKI Patch
+            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
+
+            # Copy Required SUSFS Source Files
+            cp -r ./susfs4ksu/kernel_patches/fs/* ./common/fs/
+            cp -r ./susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+ 
+            # Apply Patches
+            cd ./common
+            patch -p1 < 50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
+            patch -p1 -N -F 3 < 69_hide_stuff.patch || true
             cd ..
-          fi
 
-          git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
-
-          cd kernel_platform
-
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            echo "Pull SUSFS Patches"
-
-            git clone --depth=1 https://github.com/cctv18/susfs4oki.git susfs4ksu -b oki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
-            wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch -O ./common/69_hide_stuff.patch
-            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
-            cp ./susfs4ksu/kernel_patches/fs/* ./common/fs/
-            cp ./susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          else
+            echo "SUSFS Disabled (SUSFS_META = -1). Skipping SUSFS Setup..."
           fi
           
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
@@ -1058,7 +1056,7 @@ jobs:
 
           cd ./common
 
-          GKI_V="${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
           # 5.15 Legacy C Library Compatibility Fix
