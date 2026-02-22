@@ -416,36 +416,21 @@ jobs:
             echo "WARNING: README Missing or Empty"
           fi
 
-          # Parse XML to Obtain PATH_2
-          echo "Searching PATH_2"
+          # Auto Detection of Kernel Repository
+          echo "Auto Detecting Kernel Repository..."
 
-          PATH_2=""
+          KERNEL_REPOS=""
 
-          if [[ "$CPU" == sm* ]]; then
-            COUNT_MATCH=0
+          KERNEL_REPOS_PATH=$(find . -type f -name "build.config.msm.common" | head -n 1)
 
-            while IFS= read -r LINE; do
-              REV=$(grep -oP 'revision="\K[^"]+' <<< "$LINE" || true)
-              PATH_VAL=$(grep -oP 'path="\K[^"]+' <<< "$LINE" || true)
+          if [[ -n "$KERNEL_REPOS_PATH" ]]; then
+            KERNEL_REPOS=$(echo "${KERNEL_REPOS_PATH#./}" | cut -d/ -f2)
 
-              [[ -z "$REV" || -z "$PATH_VAL" ]] && continue
-
-              if [[ "$REV" =~ ^(oneplus|oppo)/ ]] || [[ "$REV" == "master" ]]; then
-                COUNT_MATCH=$((COUNT_MATCH + 1))
-
-                if [[ $COUNT_MATCH -eq 2 ]]; then
-                  PATH_2="${PATH_VAL#kernel_platform/}"
-                  break
-                fi
-              fi
-            done < <(grep "<project " "$XML_PATH" || true)
-          fi
-
-          if [[ -n "$PATH_2" ]]; then
-            echo "PATH_2=$PATH_2"
-            echo "PATH_2=$PATH_2" >> "$GITHUB_ENV"
+            echo "Detected Kernel Repository: $KERNEL_REPOS"
+            echo "KERNEL_REPOS=$KERNEL_REPOS" >> "$GITHUB_ENV"
           else
-            echo "No Valid PATH_2 Found (May Not Apply to this Device)"
+            echo "ERROR: build.config.msm.common not found"
+            exit 1
           fi
 
           # Export Combined Output Value
