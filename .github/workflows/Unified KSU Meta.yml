@@ -933,7 +933,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s sync-susfs
+              | bash -s main
 
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
 
