@@ -370,7 +370,7 @@ jobs:
           ANDROID_VERSION=$(echo "$REVISION" | grep -oE '[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?' | head -n1 || true)
 
           if [[ -z "$CPU" || -z "$ANDROID_VERSION" ]]; then
-            echo "ERROR: Failed to extract CPU or Android version"
+            echo "ERROR: Failed to Extract CPU or Android Vqersion"
             exit 1
           fi
 
@@ -1060,26 +1060,6 @@ jobs:
             cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-          fi
-
-          # Apply Hide Stuff Patch to SM8650 / SM8750
-          if [[ "${{ github.event.inputs.SUSFS_META }}" != "-1" && "$CPU" =~ ^sm(8650|8750)$ ]]; then
-            echo "Checking Hide Stuff Patch"
-
-            TARGET_DIR="./common"
-            HIDE_PATCH="./69_hide_stuff.patch"
-
-            # Download Patch
-            wget -q https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch -O "$HIDE_PATCH" || exit 1
-
-            if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$HIDE_PATCH" > /dev/null 2>&1; then
-              patch -p1 -N -F 3 -d "$TARGET_DIR" < "$HIDE_PATCH"
-              echo "69 Hide Stuff Patch Applied"
-            else
-              echo "69 Hide Stuff Patch Already Applied or Cannot be Applied"
-            fi
-
-            rm -f "$HIDE_PATCH"
           fi
           
           # ==============================
