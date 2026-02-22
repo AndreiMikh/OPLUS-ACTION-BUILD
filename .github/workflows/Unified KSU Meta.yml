@@ -1408,7 +1408,7 @@ jobs:
             echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
           fi
 
-          # Fix Build Issues
+          # Apply Build Issues Fix
           if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
@@ -1420,14 +1420,14 @@ jobs:
           # Remove Build Review
           sed -i 's/check_defconfig//' ./build.config.gki
 
-      - name: Fix IPV6 NAT Error
+      - name: Apply IPV6 NAT Compatibility Patch
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           cd kernel_workspace/kernel_platform/common
+
           if [[ "${CPU}" == sm* ]]; then
             echo "Fix Potential False Alarms from Selected Devices After Enabling IPV6 NAT..."
-            patch -p1 -F 3 < "${PATCH_DIR}/IPv6_NAT_FIX.patch"
+            patch -p1 -F 3 < ../../OPlus-Action-Build/patches/IPv6_NAT_FIX.patch
           else
             echo "Device Selected does Not Support IPV6 NAT, Skipping Step"
           fi
