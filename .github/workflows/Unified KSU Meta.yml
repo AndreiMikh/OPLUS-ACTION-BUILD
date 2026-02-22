@@ -1167,11 +1167,6 @@ jobs:
               fi
             fi
 
-            echo "Apply SUSFS Patch"
-            patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
-            patch -p1 -N -F 3 < 69_hide_stuff.patch || true
-            echo "SUSFS Patch Applied Successfully"
-
             # Revert Temporary Fake Patch
             if [ "$fake_patched" = 1 ]; then
 
