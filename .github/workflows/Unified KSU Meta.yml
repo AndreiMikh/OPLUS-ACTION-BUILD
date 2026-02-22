@@ -628,8 +628,8 @@ jobs:
             [ -f "$f" ] && BRANCH=$(grep -m1 '^BRANCH=' "$f" | cut -d= -f2) && [ -n "$BRANCH" ] && break
           done
 
-          if [[ -z "$BRANCH" && -n "$PATH_2" ]]; then
-            BRANCH=$(sed -n '2p' "./$PATH_2/android/ACK_SHA" | awk -F'-' '{print $1"-"$2}')
+          if [[ -z "$BRANCH" && -n "$KERNEL_REPOS" ]]; then
+            BRANCH=$(sed -n '2p' "./$KERNEL_REPOS/android/ACK_SHA" | awk -F'-' '{print $1"-"$2}')
           fi
 
           if [ -n "$BRANCH" ]; then
@@ -1615,7 +1615,7 @@ jobs:
 
           # Read Clang Prebuilt Bin from Build Config Common
           CLANG_PREBUILT_BIN=""
-          for f in ./common/build.config.common ./"$PATH_2"/build.config.common; do
+          for f in ./common/build.config.common ./"$KERNEL_REPOS"/build.config.common; do
             [[ -f "$f" ]] || continue
             CLANG_PREBUILT_BIN=$(grep '^CLANG_PREBUILT_BIN=' "$f" | cut -d'=' -f2)
             [[ -n "$CLANG_PREBUILT_BIN" ]] && break
