@@ -1017,6 +1017,12 @@ jobs:
 
           cd kernel_workspace
 
+          echo "===== Cloning Patch Repositories ====="
+          git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
+          git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
+          echo "Patch Repositories Cloned"
+          echo "======================================"
+
           echo "===== Adding SUSFS (OKI Version) ====="
           echo "Android: ${{ env.KANDROID_VERSION }}"
           echo "Kernel:  ${{ env.KERNEL_VERSION }}"
