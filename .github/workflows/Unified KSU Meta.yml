@@ -1085,10 +1085,40 @@ jobs:
 
           else
 
-              echo "Using Official SUSFS Fallback Repository"
+              echo "Using SimonPunk SUSFS Fallback Repository"
 
-              git clone --depth=1 \
-                https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu
+              # ==============================
+              # SimonPunk SUSFS Clone (Smart Fallback)
+              # ==============================
+
+              BASE_BRANCH="gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+              DEV_BRANCH="${BASE_BRANCH}-dev"
+              USE_DEV="${{ github.event.inputs.SUSFS_DEV }}"
+
+              echo "Base branch: $BASE_BRANCH"
+              echo "Dev branch:  $DEV_BRANCH"
+              echo "SUSFS_DEV:   $USE_DEV"
+
+              if [[ "$USE_DEV" == "true" ]]; then
+                echo "Checking if DEV Branch Exists..."
+
+                if git ls-remote --heads https://gitlab.com/simonpunk/susfs4ksu.git "$DEV_BRANCH" | grep -q "$DEV_BRANCH"; then
+                  echo "DEV Branch Found, Cloning $DEV_BRANCH"
+                  git clone --depth=1 -b "$DEV_BRANCH" \
+                    https://gitlab.com/simonpunk/susfs4ksu.git \
+                    susfs4ksu
+                else
+                  echo "DEV Branch Not Found, Falling Back to $BASE_BRANCH"
+                  git clone --depth=1 -b "$BASE_BRANCH" \
+                    https://gitlab.com/simonpunk/susfs4ksu.git \
+                    susfs4ksu
+                fi
+              else
+                echo "Cloning Normal Branch $BASE_BRANCH"
+                git clone --depth=1 -b "$BASE_BRANCH" \
+                  https://gitlab.com/simonpunk/susfs4ksu.git \
+                  susfs4ksu
+              fi
 
           fi
 
