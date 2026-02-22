@@ -1081,9 +1081,9 @@ jobs:
             # Apply Hide Stuff Patch*
             if patch -p1 -N -F 3 -d "$TARGET_DIR" --dry-run < "$HIDE_PATCH" > /dev/null 2>&1; then
               patch -p1 -N -F 3 -d "$TARGET_DIR" < "$HIDE_PATCH"
-              echo "Hide Stuff Patch Applied"
+              echo "69 Hide Stuff Patch Applied"
             else
-              echo "Hide Stuff Patch Already Applied or Cannot be Applied"
+              echo "69 Hide Stuff Patch Already Applied or Cannot be Applied"
             fi
           fi
 
