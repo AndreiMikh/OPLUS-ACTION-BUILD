@@ -1067,7 +1067,7 @@ jobs:
           # Clone Required Patch Repositories
           # =====================================================
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          git clone https://github.com/Numbersf/Action-Build.git
+          git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
 
           cd kernel_platform
 
