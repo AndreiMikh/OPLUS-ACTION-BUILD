@@ -54,8 +54,7 @@ on:
           - oneplus_ace_6
           - oneplus_ace_6t
           - oneplus_ace_6t_aosp
-          - oneplus_15_t_aosp
-          - oneplus_15_wild
+          - oneplus_15_temp
       KPM:
         type: choice
         description: "Kernel Module Implementation Methods"
@@ -129,7 +128,7 @@ on:
         type: boolean
         description: "Enable Network Feature Extensions (Netfilter)?"
         required: true
-        default: true
+        default: false
       BBR_ECN:
         type: boolean
         description: "Enable Network Optimization Algorithm (BBR+ECN)?"
@@ -370,7 +369,7 @@ jobs:
           ANDROID_VERSION=$(echo "$REVISION" | grep -oE '[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?' | head -n1 || true)
 
           if [[ -z "$CPU" || -z "$ANDROID_VERSION" ]]; then
-            echo "ERROR: Failed to Extract CPU or Android Vqersion"
+            echo "ERROR: Failed to extract CPU or Android version"
             exit 1
           fi
 
@@ -828,13 +827,9 @@ jobs:
               BRANCH="canary"
               ARTIFACT="manager"
               ;;
-            ReSukiSU-Main)
+            ReSukiSU-Main|*)
               BRANCH="main"
               ARTIFACT="Manager-release"
-              ;;
-            *)
-              echo "Unknown Manager Source: $MANAGER_SOURCE"
-              exit 1
               ;;
           esac
 
@@ -905,7 +900,7 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s builtin
 
-            cd ./KernelSU || exit 1
+            cd KernelSU || exit 1
 
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
             echo "Current Commit Hash: $GIT_COMMIT_HASH"
@@ -941,7 +936,7 @@ jobs:
 
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
 
-            cd ./KernelSU || exit 1
+            cd KernelSU || exit 1
 
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -955,7 +950,7 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s dev_susfs
 
-            cd ./KernelSU-Next || exit 1
+            cd KernelSU-Next || exit 1
 
             KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -970,7 +965,7 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-            # Apply Patches
+            # Apply patches
             cd ../common/drivers/kernelsu || exit 1
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
@@ -995,7 +990,7 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s "$MANAGER_BRANCH"
 
-            cd ./Wild_KSU || exit 1
+            cd Wild_KSU || exit 1
 
             KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -1049,7 +1044,7 @@ jobs:
           # ==============================
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
-          
+ 
           cd kernel_platform
 
           # ==============================
@@ -1061,7 +1056,7 @@ jobs:
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
-          
+
           # ==============================
           # Apply ZRAM Patch
           # ==============================
@@ -1138,8 +1133,8 @@ jobs:
               fi
             fi
 
-            # Android12 / 13 Fix
-            if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ]; then
+            # Android12 / 13 / 16 Fix
+            if [ "$GKI_V" = "android12-5.10" ] || [ "$GKI_V" = "android13-5.15" ] || [ "$GKI_V" = "android16-6.12" ]; then
               if ! grep -qxF $'\tif (!vma_pages(vma))' ./fs/proc/task_mmu.c; then
                 echo "VMA Pages Not Found, Applying Compatibility Fix"
                 fake_patched=1
@@ -1162,7 +1157,8 @@ jobs:
 
               if [ "$GKI_V" = "android12-5.10" ] || \
                  [ "$GKI_V" = "android13-5.15" ] || \
-                 [ "$GKI_V" = "android14-6.1" ]; then
+                 [ "$GKI_V" = "android14-6.1" ] || \
+                 [ "$GKI_V" = "android16-6.12" ]; then
                  sed -i 's/goto show_pad;/return 0;/' ./fs/proc/task_mmu.c || true
               fi
             fi
@@ -1184,7 +1180,7 @@ jobs:
           # If it Already Exists, Skip
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
-              echo "Source Already Exists, Skipping Conversion"
+              echo "HMBIRD Source Already Exists, Skipping Conversion"
               exit 0
             }
           done
@@ -1321,7 +1317,7 @@ jobs:
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
           fi
-          if [[ "${{ github.event.inputs.KPM }}" == "KPM" && ( "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ) ]]; then
+          if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
           fi
 
@@ -1686,7 +1682,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.FILE }}-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})(${{ env.TKERNEL_VERSION }})
+          name: AK3-${{ github.event.inputs.FILE }}-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})-R${{ github.run_number }}
           path: ./AnyKernel3/*
 
       - name: Extract & Process ZRAM Module
