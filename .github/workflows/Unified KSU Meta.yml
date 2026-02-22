@@ -97,10 +97,15 @@ on:
         default: ReSukiSU-Main
         options:
          - ReSukiSU-Main
+         - ReSukiSU-Main-Spoofed
          - SukiSU-Ultra-Main
+         - SukiSU-Main-Spoofed
          - KernelSU-Next-Dev
+         - KernelSU-Next-Dev-Spoofed
          - WildKSU-Stable
+         - WildKSU-Stable-Spoofed
          - WildKSU-Canary
+         - WildKSU-Canary-Spoofed
       ZRAM:
         type: string
         description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
@@ -810,27 +815,47 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
-          # Resolve Branch + Artifact
+          # Re-Solve KSU Meta Downloader Branch + Artifact
           case "$MANAGER_SOURCE" in
             SukiSU-Ultra-Main)
               BRANCH="main"
               ARTIFACT="Manager"
               ;;
+            SukiSU-Ultra-Main-Spoofed)
+              BRANCH="main"
+              ARTIFACT="Spoofed-Manager"
+              ;;
             KernelSU-Next-Dev)
               BRANCH="dev"
               ARTIFACT="manager"
+              ;;
+            KernelSU-Next-Dev-Spoofed)
+              BRANCH="dev"
+              ARTIFACT="manager-spoofed"
               ;;
             WildKSU-Stable)
               BRANCH="stable"
               ARTIFACT="manager"
               ;;
+            WildKSU-Stable-Spoofed)
+              BRANCH="stable"
+              ARTIFACT="manager-spoofed"
+              ;;
             WildKSU-Canary)
               BRANCH="canary"
               ARTIFACT="manager"
               ;;
-            ReSukiSU-Main|*)
+            WildKSU-Canary-Spoofed)
+              BRANCH="stable"
+              ARTIFACT="manager-spoofed"
+              ;;
+            ReSukiSU-Main)
               BRANCH="main"
               ARTIFACT="Manager-release"
+              ;;
+            ReSukiSU-Main-Spoofed|*)
+              BRANCH="stable"
+              ARTIFACT="Spoofed-Manager-release"
               ;;
           esac
 
