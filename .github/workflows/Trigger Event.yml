@@ -149,21 +149,21 @@ jobs:
           inputs: |
             {
               "FILE": "${{ matrix.file }}",
-              "KPM": "false",
+              "KPM": "KPN",
               "MANAGER_SOURCE": "${{ github.event.inputs.MANAGER_SOURCE }}",
-              "SUSFS_META": "susfs-main/AndreiMikh/",
+              "SUSFS_META": "",
               "KSU_META": "${{ github.event.inputs.KSU_META }}",
-              "ZRAM": "false",
-              "BUILD_TIME": "F",
+              "ZRAM": "0/1z4kd/8589934592",
+              "BUILD_TIME": "",
               "SUFFIX": "",
-              "LSM": "true",
-              "NETFILTER": "true",
-              "BBR_ECN": "true",
-              "SUSFS_DEV": "false",
-              "FAST_BUILD": "true",
-              "SCHED": "${{ matrix.enable_sched }}",
-              "UNICODE_BYPASS": "true",
-              "XUS_FIX": "true"
+              "LSM": true,
+              "NETFILTER": true,
+              "BBR_ECN": true,
+              "SUSFS_DEV": false,
+              "FAST_BUILD": true,
+              "SCHED": ${{ matrix.enable_sched }},
+              "UNICODE_BYPASS": true,
+              "XUS_FIX": true
             }
 
       - name: Wait for Artifact
