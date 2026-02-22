@@ -1061,7 +1061,7 @@ jobs:
             -O $KDIR/69_hide_stuff.patch
 
           # Auto-Detect Correct SUSFS Patch
-          SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
+          SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
           if [ -z "$SUS_PATCH" ]; then
             echo "ERROR: SUSFS Patch Not Found for OKI-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
