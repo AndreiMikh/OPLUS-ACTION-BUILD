@@ -1168,8 +1168,17 @@ jobs:
             # Optional XUS Fix
             if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
               echo "Applying Optional XUS Fix"
-              cp ../../Oplus-Action-Build/patches/No_5uS.patch .
-              patch -p1 < No_5uS.patch || true
+
+              PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Oplus-Action-Build/patches"
+              PATCH_FILE="${PATCH_DIR}/No_5uS.patch"
+
+              if [ -f "$PATCH_FILE" ]; then
+                cp "$PATCH_FILE" .
+                patch -p1 < No_5uS.patch
+                echo "XUS Fix Applied Successfully"
+              else
+                echo "Patch File Not Found — Skipping XUS Fix"
+              fi
             fi
 
             echo "SUSFS Patch Complete"
