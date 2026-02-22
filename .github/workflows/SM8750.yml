@@ -1,13 +1,8 @@
-name: Multi-Builder
+name: Multi-Builder (SM8750)
 
 on:
   workflow_dispatch:
     inputs:
-      PLATFORM:
-        description: "Select platform group (sm8550 / sm8650 / sm8750 / sm8850)"
-        required: true
-        default: "sm8750"
-
       KSU_META:
         type: choice
         description: "KSU Meta"
@@ -43,7 +38,7 @@ permissions:
 jobs:
 
 # =========================
-# Generate Device Matrix
+# Generate sm8750 Matrix
 # =========================
 
   generate-matrix:
@@ -52,75 +47,25 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
     steps:
-      - name: Generate Matrix from Platform
+      - name: Generate sm8750 Device Matrix
         id: set-matrix
         run: |
-          PLATFORM="${{ github.event.inputs.PLATFORM }}"
-
-          if [[ "$PLATFORM" == "sm8550" ]]; then
-            FILE_LIST=(
-              "oneplus_nord_ce4_lite_5g_v"
-              "oneplus_nord_ce4_v"
-              "oneplus_nord_4_v"
-              "oneplus_ace_3v_v"
-              "oneplus_10_pro_v"
-              "oneplus_10t_v"
-              "oneplus_11r_v"
-              "oneplus_ace2_v"
-              "oneplus_ace_pro_v"
-            )
-          elif [[ "$PLATFORM" == "sm8650" ]]; then
-            FILE_LIST=(
-              "oneplus_11_v"
-              "oneplus_12r_v"
-              "oneplus_ace2_pro_v"
-              "oneplus_ace3_v"
-              "oneplus_open_v"
-              "oneplus_12_v"
-              "oneplus_13r"
-              "oneplus_ace3_pro_v"
-              "oneplus_ace5"
-            )
-          elif [[ "$PLATFORM" == "sm8750" ]]; then
-            FILE_LIST=(
-              "oneplus_13_b"
-              "oneplus_13s_b"
-              "oneplus_13t_b"
-              "oneplus_ace5_pro_b"
-              "oneplus_ace_6"
-              "oneplus_pad_2_pro_b"
-              "oneplus_pad_3_b"
-            )
-          elif [[ "$PLATFORM" == "sm8850" ]]; then
-            FILE_LIST=(
-              "oneplus_13_global"
-              "oneplus_13s"
-              "oneplus_13s_b"
-              "oneplus_pad_2_pro"
-              "oneplus_pad_3"
-              "oneplus_ace5_ultra"
-              "oneplus_ace_6"
-              "oneplus_15"
-            )
-          else
-            echo "Invalid PLATFORM"
-            exit 1
-          fi
+          FILE_LIST=(
+            "oneplus_13_b"
+            "oneplus_13s_b"
+            "oneplus_13t_b"
+            "oneplus_ace5_pro_b"
+            "oneplus_ace_6"
+            "oneplus_pad_2_pro_b"
+            "oneplus_pad_3_b"
+          )
 
           MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
             split("\n")[:-1] |
             map({
               file: .,
               file_short: (sub("_[a-z]$"; "")),
-              enable_sched: (
-                . == "oneplus_13_b" or
-                . == "oneplus_13s_b" or
-                . == "oneplus_13t_b" or
-                . == "oneplus_ace5_pro_b" or
-                . == "oneplus_ace_6" or
-                . == "oneplus_pad_2_pro_b" or
-                . == "oneplus_pad_3_b"
-              )
+              enable_sched: true
             })
           ')
 
@@ -141,7 +86,7 @@ jobs:
 
     steps:
 
-      - name: Trigger Original Build Workflow
+      - name: Trigger Unified KSU Meta
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: Unified KSU Meta
@@ -161,7 +106,7 @@ jobs:
               "BBR_ECN": true,
               "SUSFS_DEV": false,
               "FAST_BUILD": true,
-              "SCHED": ${{ matrix.enable_sched }},
+              "SCHED": true,
               "UNICODE_BYPASS": true,
               "XUS_FIX": true
             }
@@ -191,12 +136,9 @@ jobs:
           echo "Timeout waiting for $FILE"
           exit 1
 
-      - name: Clean ccache
-        run: rm -rf "$HOME/.ccache_${{ matrix.file }}"
-
 
 # =========================
-# Download + Package Final ZIP
+# Package Final ZIP
 # =========================
 
   wait-and-package:
@@ -239,11 +181,11 @@ jobs:
       - name: Create Final AnyKernel3 ZIP
         run: |
           cd extracted
-          FINAL_NAME="All-AnyKernel3-${{ github.event.inputs.KSU_META }}-${{ github.event.inputs.PLATFORM }}.zip"
+          FINAL_NAME="All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750.zip"
           zip -r "../$FINAL_NAME" ./*
 
       - name: Upload Final ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-${{ github.event.inputs.PLATFORM }}
-          path: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-${{ github.event.inputs.PLATFORM }}.zip
+          name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750
+          path: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750.zip
