@@ -421,8 +421,8 @@ jobs:
 
           KERNEL_REPOS=""
 
-          KERNEL_REPOS_PATH=$(find . -type f -name "build.config.msm.common" | head -n 1)
-
+          KERNEL_REPOS_PATH=$(find . -type f -name "build.config*" | head -n 1)
+  
           if [[ -n "$KERNEL_REPOS_PATH" ]]; then
             KERNEL_REPOS=$(echo "${KERNEL_REPOS_PATH#./}" | cut -d/ -f2)
 
