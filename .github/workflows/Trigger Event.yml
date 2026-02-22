@@ -37,7 +37,7 @@ on:
           - WildKSU-Canary-Spoofed
 
 permissions:
-  actions: read
+  actions: write
   contents: read
 
 jobs:
