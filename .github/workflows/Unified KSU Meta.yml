@@ -1032,33 +1032,35 @@ jobs:
             echo "Cloning SUSFS Repository..."
 
             git clone https://gitlab.com/simonpunk/susfs4ksu.git \
-              -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
+              -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.event.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
 
             cd susfs4ksu
 
             case "$SUSFS_VERSION" in
-              "" )
+              "")
                 echo "Using Latest Upstream SUSFS"
                 ;;
 
-              [0-9]* )
-                echo "Checking Out HEAD~$SUSFS_VERSION"
-                git checkout HEAD~"$SUSFS_VERSION"
-                ;;
-
-              v[0-9]*.[0-9]*.[0-9]* )
+              v[0-9]*.[0-9]*.[0-9]*)
                 echo "Checking Out Release Tag $SUSFS_VERSION"
                 git fetch --tags
                 git checkout "tags/$SUSFS_VERSION"
                 ;;
 
-              * )
+              [0-9]*)
+                echo "Checking Out HEAD~$SUSFS_VERSION"
+                git checkout HEAD~"$SUSFS_VERSION"
+                ;;
+
+              *)
                 echo "Checking Out Ref $SUSFS_VERSION"
                 git checkout "$SUSFS_VERSION"
                 ;;
             esac
 
             cd ..
+          else
+            echo "SUSFS Disabled"
           fi
 
           # =====================================================
@@ -1072,14 +1074,12 @@ jobs:
           # =====================================================
           # Copy SUSFS Base Files
           # =====================================================
-          if [[ "$SUSFS_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [ "$SUSFS_VERSION" != "-1" ]; then
             echo "Copying SUSFS Base Files..."
 
             cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
             cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
             cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-          else
-            echo "SUSFS Not a Release Tag — Skipping Base Patch Copy"
           fi
 
           # =====================================================
@@ -1103,15 +1103,14 @@ jobs:
           # =====================================================
           if [ "$GKI_V" = "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Applying Legacy Fix for 5.15.0–5.15.123"
-            cp ../../Oplus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
           fi
 
           # =====================================================
-          # TrustyOS Missing Fix (6.6.0–6.6.30)
+          # TrustyOS Compatibility Fix (6.6.0–6.6.30)
           # =====================================================
           if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "$SUSFS_VERSION" != "-1" ]]; then
-
             if ! grep -q 'common-modules/trusty' "$GITHUB_WORKSPACE/.repo/manifests_fallback/${FILE}.xml"; then
               echo "TrustyOS missing — applying compatibility fix"
 
@@ -1124,9 +1123,9 @@ jobs:
           fi
 
           # =====================================================
-          # Apply SUSFS Main Patch (Release Tags Only)
+          # Apply SUSFS Main Patch
           # =====================================================
-          if [[ "$SUSFS_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [ "$SUSFS_VERSION" != "-1" ]; then
 
             echo "Applying SUSFS Main Patch..."
             fake_patched=0
@@ -1142,13 +1141,13 @@ jobs:
                   fake_patched=1
                 fi
                 ;;
-
+        
               android14-6.1)
                 if ! grep -qxF '#include <linux/dma-buf.h>' fs/proc/base.c; then
                   sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' fs/proc/base.c
                 fi
                 ;;
-
+        
               android12-5.10|android13-5.15)
                 fake_patched=1
                 ;;
@@ -1168,17 +1167,16 @@ jobs:
 
             # Optional XUS Fix
             if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
-              echo "Applying optional XUS fix"
-              cp ../../OPlus-Action-Build/patches/No_5uS.patch .
+              echo "Applying Optional XUS Fix"
+              cp ../../Oplus-Action-Build/patches/No_5uS.patch .
               patch -p1 < No_5uS.patch || true
             fi
 
             echo "SUSFS Patch Complete"
-
           else
-            echo "SUSFS Not a Valid Release Tag — Main Patch Skipped"
+            echo "SUSFS Disabled — Main Patch Skipped"
           fi
-
+      
       - name: Apply Conversion
         if: ${{ env.KERNEL_VERSION == '6.6' && github.event.inputs.SCHED == 'false' }}
         run: |
