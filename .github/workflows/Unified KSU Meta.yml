@@ -1103,8 +1103,17 @@ jobs:
           # =====================================================
           if [ "$GKI_V" = "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Applying Legacy Fix for 5.15.0–5.15.123"
-            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
-            patch -p1 < fix_5.15.legacy.patch
+
+            PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/Oplus-Action-Build/patches"
+            PATCH_FILE="${PATCH_DIR}/fix_5.15.legacy"
+
+            if [ -f "$PATCH_FILE" ]; then
+              cp "$PATCH_FILE" ./fix_5.15.legacy.patch
+              patch -p1 < fix_5.15.legacy.patch
+              echo "Legacy 5.15 Fix Applied Successfully"
+            else
+              echo "Patch File Not Found — Skipping"
+            fi
           fi
 
           # =====================================================
