@@ -1019,11 +1019,6 @@ jobs:
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
 
-            git clone --depth=1 https://github.com/AndreiMikh/susfs4oki.git \
-              -b gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}${{ github.inputs.SUSFS_DEV == 'true' && '-dev' || '' }}
-           
-            cd susfs4oki
-
             if [ -n "$SUSFS_META" ]; then
               if [[ "$SUSFS_META" =~ ^[0-9]+$ ]]; then
                 git checkout HEAD~$SUSFS_META
@@ -1045,13 +1040,13 @@ jobs:
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "Pull SUSFS Patches"
 
-            wget https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches/69_hide_stuff.patch -O ./common/69_hide_stuff.patch
-            cp ./susfs4oki/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
-            cp ./susfs4oki/kernel_patches/fs/* ./common/fs/
-            cp ./susfs4oki/kernel_patches/include/linux/* ./common/include/linux/
-            cp ./susfs4oki/kernel_patches/include/linux/* ./common/include/linux/
+            git clone --depth=1 https://github.com/cctv18/susfs4oki.git susfs4ksu -b oki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+            wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch -O ./common/69_hide_stuff.patch
+            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.ANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
+            cp ./susfs4ksu/kernel_patches/fs/* ./common/fs/
+            cp ./susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           fi
-
+          
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "Pull ZRAM Patches"
 
