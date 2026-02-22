@@ -1164,6 +1164,21 @@ jobs:
 
             patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
 
+            # Injecting Missing SUSFS Header into fs/proc/base.c
+            if ! grep -q "susfs.h" fs/proc/base.c; then
+              echo "Injecting Missing SUSFS Header into fs/proc/base.c"
+
+              if sed -i '/#include <linux\/.*>/a #include <linux/susfs.h>' fs/proc/base.c; then
+                echo "SUSFS Header Injected Successfully"
+              else
+                echo "Failed to Inject SUSFS Header"
+                exit 1
+              fi
+
+            else
+              echo "susfs.h Already Present — Skipping Injection"
+            fi
+            
             # Revert Temporary Edits
             if [ "$fake_patched" = 1 ]; then
               sed -i \
@@ -1173,7 +1188,7 @@ jobs:
 
               sed -i 's/goto show_pad;/return 0;/' fs/proc/task_mmu.c || true
             fi
-
+            
             # Optional XUS Fix
             if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
               echo "Applying Optional XUS Fix"
