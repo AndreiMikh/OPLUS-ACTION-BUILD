@@ -1026,17 +1026,17 @@ jobs:
 
             # Download Extra Hide Patch
             wget https://github.com/cctv18/oppo_oplus_realme_sm8650/raw/refs/heads/main/other_patch/69_hide_stuff.patch \
-              -O ./common/69_hide_stuff.patch
+              -O ./kernel_platform/common/69_hide_stuff.patch
 
             # Copy OKI Patch
-            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./common/
+            cp ./susfs4ksu/kernel_patches/50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch ./kernel_platform/common/
 
             # Copy Required SUSFS Source Files
-            cp -r ./susfs4ksu/kernel_patches/fs/* ./common/fs/
-            cp -r ./susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+            cp -r ./susfs4ksu/kernel_patches/fs/* ./kernel_platform/common/fs/
+            cp -r ./susfs4ksu/kernel_patches/include/linux/* ./kernel_platform/common/include/linux/
  
             # Apply Patches
-            cd ./common
+            cd ./kernel_platform/common
             patch -p1 < 50_add_susfs_in_oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
             patch -p1 -N -F 3 < 69_hide_stuff.patch || true
             cd ..
