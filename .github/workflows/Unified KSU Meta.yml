@@ -1096,7 +1096,7 @@ jobs:
             cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
           fi
 
-          cd ./common
+          cd ./kernel_platform/common
 
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
