@@ -1038,14 +1038,14 @@ jobs:
 
             case "$GKI_V" in
 
-              android14-6.1|android15-6.6|android16-6.12)
-                echo "Modern GKI Detected ($GKI_V) — forcing branch, ignoring tags"
+              android*-6.*)
+                echo "Modern GKI Detected ($GKI_V) — Forcing Branch, Ignoring Tags"
                 ;;
 
               android12-5.10|android13-5.15)
                 case "$SUSFS_VERSION" in
                   "")
-                    echo "Using latest upstream (branch default)"
+                    echo "Using Latest Upstream (Branch Default)"
                     ;;
 
                   v[0-9]*.[0-9]*.[0-9]*)
