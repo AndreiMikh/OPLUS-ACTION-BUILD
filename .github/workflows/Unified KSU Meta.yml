@@ -1017,13 +1017,13 @@ jobs:
           set -e
           cd kernel_workspace
 
-          # =====================================================
+          # =================================================
           # SUSFS INTEGRATION (All OnePlus Devices)
-          # =====================================================
+          # =================================================
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
-            echo "========================================"
-            echo "            SUSFS ENABLED"
-            echo "========================================"
+            echo "===================================="
+            echo "          SUSFS ENABLED"
+            echo "===================================="
 
             GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
             SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
@@ -1054,17 +1054,17 @@ jobs:
             cd ..
           fi
 
-          # =====================================================
+          # =================================================
           # Clone Extra Patch Repos
-          # =====================================================
+          # =================================================
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
           git clone https://github.com/AndreiMikh/OPlus-Action-Build.git
 
           cd kernel_platform
 
-          # =====================================================
+          # =================================================
           # Copy SUSFS Files
-          # =====================================================
+          # =================================================
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "Copying SUSFS Patch Files"
 
@@ -1080,9 +1080,9 @@ jobs:
             cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/ 2>/dev/null || true
           fi
 
-          # =====================================================
+          # =================================================
           # ZRAM Patch
-          # =====================================================
+          # =================================================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "Applying ZRAM patch"
 
@@ -1095,11 +1095,19 @@ jobs:
           cd common
 
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
-          SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
-          # =====================================================
+          echo "===== KERNEL INFO ====="
+          echo "ANDROID: ${{ env.KANDROID_VERSION }}"
+          echo "KERNEL:  ${{ env.KERNEL_VERSION }}"
+          grep '^VERSION' Makefile
+          grep '^PATCHLEVEL' Makefile
+          grep '^SUBLEVEL' Makefile
+          echo "========================"
+
+          SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
+          # =================================================
           # 5.15 Legacy Fix
-          # =====================================================
+          # =================================================
           if [ "$GKI_V" = "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Applying 5.15 Legacy Compatibility Fix"
 
@@ -1107,9 +1115,9 @@ jobs:
             patch -p1 < fix_5.15.legacy.patch
           fi
 
-          # =====================================================
+          # =================================================
           # Trusty Fix (6.6 Early Sources)
-          # =====================================================
+          # =================================================
           if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
             TRUSTY_EXISTS="false"
 
@@ -1128,9 +1136,9 @@ jobs:
             fi
           fi
 
-          # =====================================================
+          # =================================================
           # Apply SUSFS Patch (NO SILENT FAILURE)
-          # =====================================================
+          # =================================================
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
 
             if [ ! -f "./include/linux/susfs.h" ]; then
