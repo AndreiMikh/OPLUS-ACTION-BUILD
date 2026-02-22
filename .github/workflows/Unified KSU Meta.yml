@@ -1035,25 +1035,29 @@ jobs:
             echo "No built-in KSU Meta Selected, Skipping..."
           fi
 
-      - name: Apply SUSFS (GKI / OKI) & Other Patches
+      - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
         if: ${{ github.event.inputs.SUSFS_META != '-1' }}
         run: |
           set -e
 
           cd kernel_workspace
 
-          echo "===== Cloning Patch Repositories ====="
+          echo "===== Clone  Patch ====="
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
           git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
-          echo "Patch Repositories Cloned"
-          echo "======================================"
+          echo "Patch Cloned"
+          echo "========================"
 
-          echo "===== Adding SUSFS (OKI Version) ====="
+          echo "===== Adding SUSFS ====="
           echo "Android: ${{ env.KANDROID_VERSION }}"
           echo "Kernel:  ${{ env.KERNEL_VERSION }}"
-          echo "======================================="
+          echo "========================"
 
-          # Detect Correct Common Directory (OKI Layout Safety)
+          # Detect Kernel Base
+          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+          echo "Detected GKI Version: $GKI_V"
+
+          # Detect Correct Kernel Common Directory
           if [ -d "./kernel_platform/common" ]; then
             KDIR="./kernel_platform/common"
           elif [ -d "./common" ]; then
@@ -1065,13 +1069,41 @@ jobs:
 
           echo "Using Kernel Directory: $KDIR"
 
-          # Clone SUSFS OKI Repository
-          git clone --depth=1 \
-            https://github.com/cctv18/susfs4oki.git susfs4ksu \
-            -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+          # ==============================
+          # Clone Correct SUSFS Repository
+          # ==============================
 
-          # Handle SUSFS Meta Checkout
+          if [[ "$GKI_V" == "android14-6.1" || \
+                "$GKI_V" == "android15-6.6" || \
+                "$GKI_V" == "android16-6.12" ]]; then
+
+              echo "Using SUSFS (OKI) Repository"
+
+              git clone --depth=1 \
+                https://github.com/cctv18/susfs4oki.git susfs4ksu \
+                -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+
+          else
+
+              echo "Using Official SUSFS Fallback Repository"
+
+              git clone --depth=1 \
+                https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu
+
+          fi
+
+          # Validate Repository Structure
+          if [ ! -d "susfs4ksu" ]; then
+            echo "ERROR: SUSFS Repository Failed to Clone!"
+            exit 1
+          fi
+
+          # ==============================
+          # Optional SUSFS Meta Checkout
+          # ==============================
+
           cd susfs4ksu
+
           if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
             if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
               git checkout HEAD~${{ github.event.inputs.SUSFS_META }}
@@ -1079,53 +1111,58 @@ jobs:
               git checkout "${{ github.event.inputs.SUSFS_META }}"
             fi
           fi
+
           cd ..
 
-          # Auto-Detect Correct SUSFS Patch
+          # ==============================
+          # Detect SUSFS Patch File
+          # ==============================
+
           SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
           if [ -z "$SUS_PATCH" ]; then
-            echo "ERROR: SUSFS Patch Not Found for OKI-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
-            echo "Available Patches:"
-            ls ./susfs4ksu/kernel_patches/
+            echo "ERROR: SUSFS Patch Not Found for $GKI_V"
+            echo "Available patches:"
+            ls ./susfs4ksu/kernel_patches/ || true
             exit 1
           fi
 
           echo "Using SUSFS Patch: $SUS_PATCH"
 
-          # Copy Patch
+          # Copy Patch + Source Files
           cp "$SUS_PATCH" $KDIR/
-
-          # Copy SUSFS Source Files
           cp -r ./susfs4ksu/kernel_patches/fs/* $KDIR/fs/
           cp -r ./susfs4ksu/kernel_patches/include/linux/* $KDIR/include/linux/
 
           cd $KDIR
 
-          # Detect Kernel Base (GKI / OKI Version)
-          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
-          echo "Detected GKI / OKI Version: $GKI_V"
+          # ==============================
+          # Apply SUSFS Patch
+          # ==============================
 
-          # Apply Main SUSFS Patches
           patch -p1 < "$(basename $SUS_PATCH)"
 
-          # Conditionally Download + Apply Hide Patch for Supported Kernel Bases
+          # ==============================
+          # Hide Patch (Only Supported Bases)
+          # ==============================
+
           if [[ "$GKI_V" == "android14-6.1" || \
-            "$GKI_V" == "android15-6.1" || \
-            "$GKI_V" == "android15-6.6" ]]; then
-            echo "Applying Hide Patch"
+                "$GKI_V" == "android15-6.1" || \
+                "$GKI_V" == "android15-6.6" ]]; then
 
-            wget -q https://raw.githubusercontent.com/AndreiMikh/OPlus-Action-Build/LiquidAndrei/patches/69_hide_stuff.patch \
-              -O 69_hide_stuff.patch
+              echo "Applying Hide Patch"
 
-            patch -p1 -N -F 3 < 69_hide_stuff.patch || true
+              wget -q https://raw.githubusercontent.com/AndreiMikh/OPlus-Action-Build/LiquidAndrei/patches/69_hide_stuff.patch \
+                -O 69_hide_stuff.patch
+
+              patch -p1 -N -F 3 < 69_hide_stuff.patch || true
 
           else
-            echo "Skipping Hide Patch (Unsupported Kernel $GKI_V)"
+            echo "Skipping Hide Patch (Unsupported Base)"
           fi
 
           cd - >/dev/null
-          
+
           echo "===== SUSFS Applied Successfully ====="
           
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
