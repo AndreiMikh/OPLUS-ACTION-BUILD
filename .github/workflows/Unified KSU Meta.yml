@@ -1036,32 +1036,40 @@ jobs:
 
             cd susfs4ksu
 
-            case "$SUSFS_VERSION" in
-              "")
-                echo "Using Latest Upstream SUSFS"
+            case "$GKI_V" in
+
+              android14-6.1|android15-6.6|android16-6.12)
+                echo "Modern GKI Detected ($GKI_V) — forcing branch, ignoring tags"
                 ;;
 
-              v[0-9]*.[0-9]*.[0-9]*)
-                echo "Checking Out Release Tag $SUSFS_VERSION"
-                git fetch --tags
-                git checkout "tags/$SUSFS_VERSION"
-                ;;
+              android12-5.10|android13-5.15)
+                case "$SUSFS_VERSION" in
+                  "")
+                    echo "Using latest upstream (branch default)"
+                    ;;
 
-              [0-9]*)
-                echo "Checking Out HEAD~$SUSFS_VERSION"
-                git checkout HEAD~"$SUSFS_VERSION"
+                  v[0-9]*.[0-9]*.[0-9]*)
+                    echo "Checking Out Release Tag $SUSFS_VERSION"
+                    git fetch --tags
+                    git checkout "tags/$SUSFS_VERSION"
+                    ;;
+
+                  [0-9]*)
+                    echo "Checking Out HEAD~$SUSFS_VERSION"
+                    git checkout HEAD~"$SUSFS_VERSION"
+                    ;;
+
+                  *)
+                    echo "Checking Out Ref $SUSFS_VERSION"
+                    git checkout "$SUSFS_VERSION"
+                    ;;
+                esac
                 ;;
 
               *)
-                echo "Checking Out Ref $SUSFS_VERSION"
-                git checkout "$SUSFS_VERSION"
+                echo "Unknown GKI Version — Using Branch Default"
                 ;;
             esac
-
-            cd ..
-          else
-            echo "SUSFS Disabled"
-          fi
 
           # =====================================================
           # Clone Required Patch Repositories
@@ -1142,12 +1150,16 @@ jobs:
             case "$GKI_V" in
 
               android15-6.6)
-                if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' fs/proc/task_mmu.c; then
-                  sed -i \
-                    -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' \
-                    -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t \*res = NULL;' \
-                    fs/proc/task_mmu.c
-                  fake_patched=1
+                if grep -q "int ret = 0, copied = 0;" fs/proc/task_mmu.c; then
+                  if ! grep -q "nr_subpages" fs/proc/task_mmu.c; then
+                    echo "Applying 6.6 task_mmu Compatibility Patch"
+                    sed -i \
+                      -e '/int ret = 0, copied = 0;/a \\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' \
+                      -e '/int ret = 0, copied = 0;/a \\tpagemap_entry_t *res = NULL;' \
+                      fs/proc/task_mmu.c
+                  else
+                    echo "6.6 Compatibility Already Applied — Skipping"
+                  fi
                 fi
                 ;;
         
@@ -1163,21 +1175,6 @@ jobs:
             esac
 
             patch -p1 < 50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}.patch || true
-
-            # Injecting Missing SUSFS Header into fs/proc/base.c
-            if ! grep -q "susfs.h" fs/proc/base.c; then
-              echo "Injecting Missing SUSFS Header into fs/proc/base.c"
-
-              if sed -i '/#include <linux\/.*>/a #include <linux/susfs.h>' fs/proc/base.c; then
-                echo "SUSFS Header Injected Successfully"
-              else
-                echo "Failed to Inject SUSFS Header"
-                exit 1
-              fi
-
-            else
-              echo "susfs.h Already Present — Skipping Injection"
-            fi
             
             # Revert Temporary Edits
             if [ "$fake_patched" = 1 ]; then
