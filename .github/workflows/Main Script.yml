@@ -800,8 +800,6 @@ jobs:
       - name: Resolve KSU Meta Source
         id: manager
         run: |
-          set -euo pipefail
-
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
@@ -887,8 +885,6 @@ jobs:
            
       - name: Add Selected KSU Meta
         run: |
-          set -euo pipefail
-
           cd kernel_workspace/kernel_platform || exit 1
 
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
@@ -947,6 +943,7 @@ jobs:
               echo "Configuring ReSukiSU..."
               REPO="ReSukiSU/ReSukiSU"
               curl -fsSL "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s main
+              echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-Andrei($KSUVER)"' >> ./common/arch/arm64/configs/gki_defconfig
               cd ./KernelSU || exit 1
 
               # Commit-Based Version
@@ -1002,20 +999,6 @@ jobs:
               ;;
           esac
 
-      - name: Inject KernelSU Full Name Format (ReSukiSU)
-        if: ${{ github.event.inputs.KSU_META == 'ReSukiSU' }}
-        run: |
-          set -euo pipefail
-
-          DEFCONFIG="kernel_workspace/kernel_platform/common/arch/arm64/configs/gki_defconfig"
-
-          echo "Injecting KernelSU Version: $KSUVER"
-
-          if [ -z "${KSUVER:-}" ]; then
-            echo "ERROR: KSUVER is Empty!"
-            exit 1
-          fi
-
           # Remove Old Config Line if Exists
           sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
           echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME% ($KSUVER)\"" >> "$DEFCONFIG"
@@ -1023,12 +1006,13 @@ jobs:
           echo "✅ KernelSU Full Name Format Injected Successfully"
 
 
-      - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
-        if: ${{ github.event.inputs.SUSFS_META != '-1' }}
+      - name: Apply SUSFS Patches Auto Official & Fallback
+        env:
+          FILE: ${{ github.event.inputs.FILE }}
         run: |
-          set -e
-
           cd kernel_workspace
+          
+          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
 
           echo "===== Clone  Patch ====="
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
@@ -1319,8 +1303,6 @@ jobs:
       - name: Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
-          set -euo pipefail
-
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
 
           cd kernel_workspace/kernel_platform/common || exit 1
@@ -1334,8 +1316,6 @@ jobs:
       - name: ZRAM
         if: startsWith(github.event.inputs.ZRAM, '1/')
         run: |
-          set -euo pipefail
-
           ZRAM="${{ github.event.inputs.ZRAM }}"
 
           # Count "/" safely
@@ -1371,8 +1351,6 @@ jobs:
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
-          set -euo pipefail
-
           cd kernel_workspace/kernel_platform/common || exit 1
 
           # Check if Fengchi Already Exists
@@ -1410,8 +1388,6 @@ jobs:
       - name: LSM BBG
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
-          set -euo pipefail
-
           cd kernel_workspace/kernel_platform/common || exit 1
 
           echo "Enabling Kernel-Level Baseband Protection..."
