@@ -999,14 +999,14 @@ jobs:
           # ==============================
           # ReSukiSU (Enhanced Slash Parser)
           # Format:
-          # ReSukiSU/Branch/Custom Tag(Optional)/Commit Hash(Optional)
+          # ReSukiSU/branch/custom_tag(optional)/commit_hash(optional)
           # ==============================
           elif [[ "$KSU_META" == ReSukiSU* ]]; then
             echo "Configuring ReSukiSU..."
 
             if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 1 ]]; then
               echo "ERROR: Invalid ReSukiSU Format"
-              echo "Expected: ReSukiSU/Branch/Custom Tag(Optional)/Commit Hash(Optional)"
+              echo "Expected: ReSukiSU/branch/custom_tag(optional)/commit_hash(optional)"
               exit 10
             fi
 
