@@ -1007,12 +1007,13 @@ jobs:
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s "$BRANCH_NAME"
-                  
-            cd ./KernelSU || exit 1
 
-            if [[ -n "$CUSTOM_TAG" ]]; then
-              echo "CUSTOM_TAG=$CUSTOM_TAG" >> "$GITHUB_ENV"
-            fi
+              if [[ -n "$CUSTOM_TAG" ]]; then
+                echo "CUSTOM_TAG=$CUSTOM_TAG" >> "$GITHUB_ENV"
+                echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%(${{ env.KSUVER }})-${CUSTOM_TAG}"' >> ./common/arch/arm64/configs/gki_defconfig
+              fi
+                        
+            cd ./KernelSU || exit 1
 
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
@@ -1568,10 +1569,6 @@ jobs:
 
           if [[ "$KSU_META" == "ReSukiSU" || "$KSU_META" == "KernelSU-Next" ]]; then
             echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
-
-            if [[ -n "$CUSTOM_TAG" ]]; then
-              echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%(${{ env.KSUVER }})-${CUSTOM_TAG}"' >> "$CONFIG_FILE"
-            fi
           fi
 
           # ==============================
