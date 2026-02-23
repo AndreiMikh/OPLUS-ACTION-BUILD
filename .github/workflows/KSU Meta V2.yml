@@ -1555,8 +1555,13 @@ jobs:
           # ==============================
           # KSU Meta Configuration (ReSukiSU)
           # ==============================
-          if [[ "$KSU_META" == "ReSukiSU" ]]; then
-            echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
+          case "$KSU_META" in
+            ReSukiSU|SukiSU-Ultra|KernelSU-Next|WildKSU)
+              echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
+              ;;
+          esac
+
+          if [[ "$KSU_META" == "ReSukiSU" || "$KSU_META" == "KernelSU-Next" ]]; then
             echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
             if [[ -n "$CUSTOM_TAG" ]]; then
