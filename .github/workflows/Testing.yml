@@ -451,8 +451,6 @@ jobs:
       - name: Debug – Show Selected Inputs
         shell: bash
         run: |
-          set -euo pipefail
-
           echo "--- DEBUG INPUTS ---"
 
            # Helper: Print Unicode Codepoints
@@ -705,7 +703,6 @@ jobs:
 
       - name: Rust Compiler Setup
         run: |
-          set -euo pipefail
           cd kernel_workspace/kernel_platform
 
           echo "🔹 Checking Rust Compiler Version..."
@@ -735,7 +732,6 @@ jobs:
       - name: Inject Custom Kernel Version Suffix
         if: ${{ github.event.inputs.SUFFIX != '' }}
         run: |
-          set -euo pipefail
           cd kernel_workspace
 
           SUFFIX="${{ github.event.inputs.SUFFIX }}"
@@ -795,7 +791,6 @@ jobs:
       - name: Apply Auto-Generated Kernel Suffix
         if: ${{ github.event.inputs.SUFFIX == '' }}
         run: |
-          set -euo pipefail
           cd kernel_workspace
 
           KANDROID_VERSION="${{ env.KANDROID_VERSION }}"
@@ -863,8 +858,6 @@ jobs:
       - name: Resolve KSU Meta Source
         id: manager
         run: |
-          set -euo pipefail
-
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
@@ -950,8 +943,6 @@ jobs:
            
       - name: Add Selected KSU Meta
         run: |
-          set -euo pipefail
-
           cd kernel_workspace/kernel_platform || exit 1
 
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
@@ -1068,8 +1059,6 @@ jobs:
       - name: Inject KernelSU Full Name Format (ReSukiSU)
         if: ${{ github.event.inputs.KSU_META == 'ReSukiSU' }}
         run: |
-          set -euo pipefail
-
           DEFCONFIG="kernel_workspace/kernel_platform/common/arch/arm64/configs/gki_defconfig"
 
           echo "Injecting KernelSU Version: $KSUVER"
@@ -1428,8 +1417,6 @@ jobs:
       - name: Unicode Bypass
         if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
         run: |
-          set -euo pipefail
-
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
 
           cd kernel_workspace/kernel_platform/common || exit 1
@@ -1443,8 +1430,6 @@ jobs:
       - name: ZRAM
         if: startsWith(github.event.inputs.ZRAM, '1/')
         run: |
-          set -euo pipefail
-
           ZRAM="${{ github.event.inputs.ZRAM }}"
 
           # ==============================
@@ -1484,8 +1469,6 @@ jobs:
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
-          set -euo pipefail
-
           cd kernel_workspace/kernel_platform/common || exit 1
 
           # Check if Fengchi Already Exists
@@ -1523,8 +1506,6 @@ jobs:
       - name: LSM BBG
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
-          set -euo pipefail
-
           cd kernel_workspace/kernel_platform/common || exit 1
 
           echo "Enabling Kernel-Level Baseband Protection..."
@@ -1849,7 +1830,6 @@ jobs:
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
         id: fast_build
         run: |
-          set -euo pipefail
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform
 
@@ -1973,7 +1953,6 @@ jobs:
       - name: Build Kernel Fallback
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         run: |
-          set -euo pipefail
           cd kernel_workspace
 
           echo "=========================="
@@ -1997,8 +1976,6 @@ jobs:
 
       - name: Make AnyKernel3
         run: |
-          set -euo pipefail
-
           echo "=========================="
           echo "Cloning AnyKernel3 repository"
           echo "=========================="
@@ -2049,8 +2026,6 @@ jobs:
       - name: Patch Linux & Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
-          set -euo pipefail
-
           echo "=========================="
           echo "Patching Linux Kernel & Replacing Image"
           echo "=========================="
@@ -2137,8 +2112,6 @@ jobs:
       - name: Set Zip Suffix
         id: suffix
         run: |
-          set -euo pipefail
-
           SUFFIX=""
 
           # ==============================
@@ -2195,7 +2168,7 @@ jobs:
         if: startsWith(github.event.inputs.ZRAM, '1/')
         id: zram_find
         run: |
-          set -euo pipefail
+          set -e
 
           echo "=========================="
           echo "ZRAM Module Processing"
