@@ -101,6 +101,8 @@ on:
          - ReSukiSU-Main-Spoofed
          - SukiSU-Ultra-Main
          - SukiSU-Main-Spoofed
+         - KernelSU-Next-Stable
+         - KernelSU-Next-Stable-Spoofed
          - KernelSU-Next-Dev
          - KernelSU-Next-Dev-Spoofed
          - WildKSU-Stable
@@ -826,6 +828,14 @@ jobs:
             SukiSU-Ultra-Main-Spoofed)
               BRANCH="main"
               ARTIFACT="Spoofed-Manager"
+              ;;
+            KernelSU-Next-Stable)
+              BRANCH="stable"
+              ARTIFACT="manager"
+              ;;
+            KernelSU-Next-Stable-Spoofed)
+              BRANCH="stable"
+              ARTIFACT="manager-spoofed"
               ;;
             KernelSU-Next-Dev)
               BRANCH="dev"
