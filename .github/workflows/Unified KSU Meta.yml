@@ -1021,11 +1021,15 @@ jobs:
               curl -fsSL "$PATCH_BASE/$p" -o "$p"
 
               echo "Applying $p..."
-              patch -p2 -N -F3 < "$p" || \
-                echo "⚠ Patch $p may Already be Applied"
+
+              if grep -q WILD_KSU_PACKAGE_NAME kernel/apk_sign.c; then
+                echo "Patch already applied, skipping..."
+              else
+                patch -p1 < "$p"
+              fi
             done
 
-            echo "KernelSU-Next patches Complete"
+            echo "KernelSU-Next Multi-Manager Support Patch Complete"
 
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
