@@ -1060,6 +1060,8 @@ jobs:
       - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
         if: ${{ github.event.inputs.SUSFS_META != '-1' }}
         run: |
+          set -e
+
           cd kernel_workspace
 
           echo "====== Clone  Patch ======"
@@ -1369,7 +1371,7 @@ jobs:
               cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
             fi
-          fi        
+          fi                           
             
       - name: Apply Conversion
         if: ${{ env.KERNEL_VERSION == '6.6' && github.event.inputs.SCHED == 'false' }}
