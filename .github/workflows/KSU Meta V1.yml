@@ -925,7 +925,7 @@ jobs:
           echo "  Repo: $REPO"
           echo "  Branch: $BRANCH"
           echo "  Artifact: $ARTIFACT"
-           
+
       - name: Add Selected KSU Meta
         run: |
           set -e
@@ -935,6 +935,12 @@ jobs:
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
+          echo "Selected KSU_META: $KSU_META"
+          echo "Manager Branch: $MANAGER_BRANCH"
+
+          # ==========================================================
+          # Helper Functions
+          # ==========================================================
           get_commit_count_version() {
             local repo="$1"
             local branch="$2"
@@ -955,6 +961,9 @@ jobs:
               | cut -d'"' -f4
           }
 
+          # ======
+          # ShirkNeko SukiSU-Ultra
+          # ======
           if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
             echo "Configuring SukiSU-Ultra..."
 
@@ -967,11 +976,8 @@ jobs:
             cd ./KernelSU || exit 1
 
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
-            echo "Current Commit Hash: $GIT_COMMIT_HASH"
 
-            # ==============================
             # Get API Version (Retry 3 Times)
-            # ==============================
             for i in {1..3}; do
               KSU_API_VERSION=$(curl -s \
                 "https://raw.githubusercontent.com/${REPO}/builtin/kernel/Kbuild" \
@@ -985,30 +991,63 @@ jobs:
 
             echo "KSU_API_VERSION=$KSU_API_VERSION" >> "$GITHUB_ENV"
 
-            # ==============================
-            # Generate Commit-Based Version
-            # ==============================
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 37185 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
 
             echo "SukiSU-Ultra Version: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}"
 
-          elif [[ "$KSU_META" == "ReSukiSU" ]]; then
+          # ======
+          # ReSukiSU (Enhanced Slash Parser)
+          # Format:
+          # ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)
+          # ======
+          elif [[ "$KSU_META" == ReSukiSU* ]]; then
             echo "Configuring ReSukiSU..."
+
+            if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 1 ]]; then
+              echo "ERROR: Invalid ReSukiSU Format"
+              echo "Expected: ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)"
+              exit 10
+            fi
+
+            META_CONTENT="${KSU_META#ReSukiSU/}"
+            IFS='/' read -r BRANCH_NAME CUSTOM_TAG MANUAL_HASH <<< "$META_CONTENT"
+
+            if [[ -z "$BRANCH_NAME" ]]; then
+              echo "ERROR: Branch Name Cannot be Empty"
+              exit 11
+            fi
+
+            echo "Branch: $BRANCH_NAME"
+            [[ -n "$CUSTOM_TAG" ]] && echo "Custom Tag: $CUSTOM_TAG" || echo "Custom Tag: Disabled"
+            [[ -n "$MANUAL_HASH" ]] && echo "Manual Hash: $MANUAL_HASH" || echo "Manual Hash: Disabled"
 
             REPO="ReSukiSU/ReSukiSU"
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s main
-
-            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
+              | bash -s "$BRANCH_NAME"
 
             cd ./KernelSU || exit 1
+
+            if [[ -n "$MANUAL_HASH" ]]; then
+              git checkout "$MANUAL_HASH"
+            fi
 
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
 
+            if [[ -n "$CUSTOM_TAG" ]]; then
+              sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' \
+                ../common/arch/arm64/configs/gki_defconfig
+
+              echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${CUSTOM_TAG}(${KSU_VERSION})\"" \
+                >> ../common/arch/arm64/configs/gki_defconfig
+            fi
+
+          # =====
+          # KernelSU-Next
+          # =====
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
 
@@ -1033,28 +1072,11 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-            # ==============================
-            # Apply Multi-Manager Patch
-            # ==============================
-            cd ../KernelSU-Next || exit 1
+            echo "KernelSU-Next Configured Successfully"
 
-            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
-
-            for p in multi_manager.patch; do
-              echo "Downloading $p..."
-              curl -fsSL "$PATCH_BASE/$p" -o "$p"
-
-              echo "Applying $p..."
-
-              if grep -q WILD_KSU_PACKAGE_NAME kernel/apk_sign.c; then
-                echo "Patch already applied, skipping..."
-              else
-                patch -p1 < "$p"
-              fi
-            done
-
-            echo "KernelSU-Next Multi-Manager Support Patch Complete"
-
+          # ======
+          # WildKernels WildKSU
+          # ======
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
 
@@ -1079,9 +1101,14 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
+            echo "WildKSU Configured Successfully"
+
+          # ======
+          # None Selected
+          # ======
           else
-            echo "No built-in KSU Meta Selected, Skipping..."
-          fi
+            echo "No supported KSU Meta Selected, Skipping KSU Injection"
+          fi      
 
       - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
         if: ${{ github.event.inputs.SUSFS_META != '-1' }}
