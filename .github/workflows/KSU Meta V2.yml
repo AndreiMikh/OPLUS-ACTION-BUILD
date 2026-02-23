@@ -1022,7 +1022,7 @@ jobs:
             sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
 
             # Add Formatted Name
-            echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-(${KSU_VERSION})-Andrei\"" >> "$DEFCONFIG"
+            echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-Andrei[${KSU_VERSION}]\"" >> "$DEFCONFIG"
 
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
