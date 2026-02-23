@@ -34,7 +34,7 @@
           }
 
           # ==========================================================
-          # SukiSU-Ultra
+          # ShirkNeko SukiSU-Ultra
           # ==========================================================
           if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
             echo "Configuring SukiSU-Ultra..."
@@ -49,7 +49,7 @@
 
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
 
-            # Get API Version (retry 3 times)
+            # Get API Version (Retry 3 Times)
             for i in {1..3}; do
               KSU_API_VERSION=$(curl -s \
                 "https://raw.githubusercontent.com/${REPO}/builtin/kernel/Kbuild" \
@@ -71,14 +71,14 @@
           # ==========================================================
           # ReSukiSU (Enhanced Slash Parser)
           # Format:
-          # ReSukiSU/branch/custom_tag(optional)/commit_hash(optional)
+          # ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)
           # ==========================================================
           elif [[ "$KSU_META" == ReSukiSU* ]]; then
             echo "Configuring ReSukiSU..."
 
             if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 1 ]]; then
-              echo "ERROR: Invalid ReSukiSU format."
-              echo "Expected: ReSukiSU/branch/custom_tag(optional)/commit_hash(optional)"
+              echo "ERROR: Invalid ReSukiSU Format"
+              echo "Expected: ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)"
               exit 10
             fi
 
@@ -86,13 +86,13 @@
             IFS='/' read -r BRANCH_NAME CUSTOM_TAG MANUAL_HASH <<< "$META_CONTENT"
 
             if [[ -z "$BRANCH_NAME" ]]; then
-              echo "ERROR: Branch name cannot be empty."
+              echo "ERROR: Branch Name Cannot be Empty"
               exit 11
             fi
 
             echo "Branch: $BRANCH_NAME"
-            [[ -n "$CUSTOM_TAG" ]] && echo "Custom Tag: $CUSTOM_TAG" || echo "Custom Tag: disabled"
-            [[ -n "$MANUAL_HASH" ]] && echo "Manual Hash: $MANUAL_HASH" || echo "Manual Hash: disabled"
+            [[ -n "$CUSTOM_TAG" ]] && echo "Custom Tag: $CUSTOM_TAG" || echo "Custom Tag: Disabled"
+            [[ -n "$MANUAL_HASH" ]] && echo "Manual Hash: $MANUAL_HASH" || echo "Manual Hash: Disabled"
 
             REPO="ReSukiSU/ReSukiSU"
 
@@ -144,10 +144,10 @@
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-            echo "KernelSU-Next configured successfully."
+            echo "KernelSU-Next Configured Successfully"
 
           # ==========================================================
-          # WildKSU
+          # WildKernels WildKSU
           # ==========================================================
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
@@ -173,11 +173,11 @@
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-            echo "WildKSU configured successfully."
+            echo "WildKSU Configured Successfully"
 
           # ==========================================================
           # None Selected
           # ==========================================================
           else
-            echo "No supported KSU Meta selected. Skipping KSU injection."
+            echo "No supported KSU Meta Selected, Skipping KSU Injection"
           fi
