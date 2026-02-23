@@ -1532,7 +1532,7 @@ jobs:
           echo "Configuring KSU Meta SUSFS Options..."
 
           if [ "$SUSFS_META" != "-1" ]; then
-            echo "Enabling SUSFS in kernel config"
+            echo "Enabling SUSFS in Kernel Configuration"
 
             cat <<EOF >> "$CONFIG_FILE"
           CONFIG_KSU_SUSFS=y
