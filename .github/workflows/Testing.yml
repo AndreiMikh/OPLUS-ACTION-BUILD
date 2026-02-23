@@ -1,7 +1,7 @@
 # ===========================
 # OnePlus Kernel Action Build
 # ===========================
-name: Test
+name: KSU Meta V2
 on:
   workflow_dispatch:
     inputs:
