@@ -1060,10 +1060,7 @@ jobs:
       - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
         if: ${{ github.event.inputs.SUSFS_META != '-1' }}
         run: |
-          set -e
           cd kernel_workspace
-          
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
 
           echo "====== Clone  Patch ======"
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
