@@ -1024,7 +1024,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s dev_susfs
+              | bash -s "$BRANCH_NAME"
 
             cd ./KernelSU-Next || exit 1
 
@@ -1048,20 +1048,25 @@ jobs:
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
 
-            for p in multi_manager.patch; do
+            PATCH_LIST=(
+              multi_manager.patch
+              overwrite_hook_mode.patch
+            )
+
+            for p in "${PATCH_LIST[@]}"; do
               echo "Downloading $p..."
               curl -fsSL "$PATCH_BASE/$p" -o "$p"
-
+            
               echo "Applying $p..."
 
-              if grep -q WILD_KSU_PACKAGE_NAME kernel/apk_sign.c; then
-                echo "Patch already applied, skipping..."
+              if patch -p1 --forward < "$p"; then
+                echo "$p Applied Successfully"
               else
-                patch -p1 < "$p"
+                echo "$p Already Applied or Failed, Skipping..."
               fi
             done
 
-            echo "KernelSU-Next Multi-Manager Support Patch Complete"
+            echo "All KernelSU-Next Patches Processed"
 
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
