@@ -1563,25 +1563,12 @@ jobs:
           # ==============================
           # Apply SUSFS Configuration
           # ==============================
-          if [[ "$SUSFS_META" != "-1" ]]; then
+          echo "Configuring KSU Meta SUSFS Options..."
 
-            # ==============================
-            # Full vs Minimal SUSFS
-            # ==============================
-            if [[ "$GKI_V" == "android14-6.1" || \
-                  "$GKI_V" == "android15-6.6" || \
-                  "$GKI_V" == "android16-6.12" ]]; then
-              SUSFS_CONFIG="FULL"
-              echo "✅ Supported GKI Version Detected: $GKI_V → Using FULL SUSFS"
-            else
-              SUSFS_CONFIG="MINIMAL"
-              echo "⚠ Unsupported GKI Version: $GKI_V → Using Minimal SUSFS"
-            fi
+          if [ "$SUSFS_META" != "-1" ]; then
+            echo "Enabling SUSFS in Kernel Config"
 
-            # ==============================
-            # Base SUSFS Settings (Common)
-            # ==============================
-            cat >> "$CONFIG_FILE" << EOF
+            cat <<EOF >> "$CONFIG_FILE"
           CONFIG_KSU_SUSFS=y
           CONFIG_KSU_SUSFS_SUS_PATH=y
           CONFIG_KSU_SUSFS_SUS_MAP=y
@@ -1594,32 +1581,8 @@ jobs:
           CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
           EOF
 
-            # ==============================
-            # Full SUSFS Additional Settings
-            # ==============================
-            if [[ "$SUSFS_CONFIG" == "FULL" ]]; then
-              cat >> "$CONFIG_FILE" << EOF
-          CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-          CONFIG_KSU_SUSFS_TRY_UMOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
-          EOF
-            fi
-
-            # ==============================
-            # KernelSU-Next Special Handling
-            # ==============================
-            if [[ "$KSU_META" == "KernelSU-Next" ]]; then
-              echo "Detected KernelSU-Next → Disabling KPROBES Hook"
-              echo "CONFIG_KSU_KPROBES_HOOK=n" >> "$CONFIG_FILE"
-            fi
-
           else
-            # ==============================
-            # SUSFS Disabled
-            # ==============================
-            echo "❌ SUSFS Meta Disabled"
+            echo "Disabling SUSFS in Kernel Configuration"
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
           
