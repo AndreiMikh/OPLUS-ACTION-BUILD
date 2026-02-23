@@ -961,9 +961,9 @@ jobs:
               | cut -d'"' -f4
           }
 
-          # ======
+          # ==============================
           # ShirkNeko SukiSU-Ultra
-          # ======
+          # ==============================
           if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
             echo "Configuring SukiSU-Ultra..."
 
@@ -996,11 +996,11 @@ jobs:
 
             echo "SukiSU-Ultra Version: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}"
 
-          # ======
+          # ==============================
           # ReSukiSU (Enhanced Slash Parser)
           # Format:
           # ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)
-          # ======
+          # ==============================
           elif [[ "$KSU_META" == ReSukiSU* ]]; then
             echo "Configuring ReSukiSU..."
 
@@ -1045,9 +1045,9 @@ jobs:
                 >> ../common/arch/arm64/configs/gki_defconfig
             fi
 
-          # =====
+          # ==============================
           # KernelSU-Next
-          # =====
+          # ==============================
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
 
@@ -1074,9 +1074,9 @@ jobs:
 
             echo "KernelSU-Next Configured Successfully"
 
-          # ======
+          # ==============================
           # WildKernels WildKSU
-          # ======
+          # ==============================
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
 
@@ -1103,9 +1103,9 @@ jobs:
 
             echo "WildKSU Configured Successfully"
 
-          # ======
+          # ==============================
           # None Selected
-          # ======
+          # ==============================
           else
             echo "No supported KSU Meta Selected, Skipping KSU Injection"
           fi      
