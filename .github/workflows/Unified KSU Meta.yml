@@ -1243,15 +1243,50 @@ jobs:
 
           echo "===== SUSFS Applied Successfully ====="
           
+          # ==============================
+          # Pull ZRAM Patches
+          # ==============================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
-            echo "Pull ZRAM Patches"
+            echo "Pulling ZRAM Patches..."
 
-            cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux/
-            cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib/
-            cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto/
-            cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
+            SRC_BASE="../SukiSU_patch/other/zram"
+            DEST_BASE="./common"
+
+            # ==============================
+            # Copy Headers
+            # ==============================
+            if [[ -d "$SRC_BASE/lz4k/include/linux" ]]; then
+              cp -r "$SRC_BASE/lz4k/include/linux/" "$DEST_BASE/include/linux/"
+              echo "✅ Copied Linux Headers"
+            fi
+
+            # ==============================
+            # Copy Lib Files
+            # ==============================
+            if [[ -d "$SRC_BASE/lz4k/lib" ]]; then
+              cp -r "$SRC_BASE/lz4k/lib/" "$DEST_BASE/lib/"
+              echo "✅ Copied Lib Files"
+            fi
+
+            # ==============================
+            # Copy Crypto Files
+            # ==============================
+            if [[ -d "$SRC_BASE/lz4k/crypto" ]]; then
+              cp -r "$SRC_BASE/lz4k/crypto/" "$DEST_BASE/crypto/"
+              echo "✅ Copied Crypto Files"
+            fi
+
+            # ==============================
+            # Copy OPlus-Specific Lib
+            # ==============================
+            if [[ -d "$SRC_BASE/lz4k_oplus" ]]; then
+              cp -r "$SRC_BASE/lz4k_oplus/" "$DEST_BASE/lib/"
+              echo "✅ Copied LZ4K OPlus Files"
+            fi
+
+            echo "✅ All ZRAM Patches Applied"
           fi
-
+          
           cd ./kernel_platform/common
 
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
@@ -1526,52 +1561,50 @@ jobs:
           fi
 
           # ==============================
-          # SUSFS Configuration (Full + Fallback)
+          # Apply SUSFS Configuration
           # ==============================
           if [[ "$SUSFS_META" != "-1" ]]; then
 
             # ==============================
-            # Supported GKI Versions
+            # Full vs Minimal SUSFS
             # ==============================
             if [[ "$GKI_V" == "android14-6.1" || \
                   "$GKI_V" == "android15-6.6" || \
                   "$GKI_V" == "android16-6.12" ]]; then
-
-              echo "✅ Supported GKI Version Detected: $GKI_V"
-              echo "Using FULL SUSFS Configuration"
-
               SUSFS_CONFIG="FULL"
-
+              echo "✅ Supported GKI Version Detected: $GKI_V → Using FULL SUSFS"
             else
-              echo "⚠ Unsupported GKI Version: $GKI_V"
-              echo "Using Minimal / Fallback SUSFS Configuration"
-
               SUSFS_CONFIG="MINIMAL"
+              echo "⚠ Unsupported GKI Version: $GKI_V → Using Minimal SUSFS"
             fi
 
             # ==============================
-            # Apply SUSFS Configuration
+            # Base SUSFS Settings (Common)
             # ==============================
-            echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "$CONFIG_FILE"
+            cat >> "$CONFIG_FILE" << EOF
+          CONFIG_KSU_SUSFS=y
+          CONFIG_KSU_SUSFS_SUS_PATH=y
+          CONFIG_KSU_SUSFS_SUS_MAP=y
+          CONFIG_KSU_SUSFS_SUS_MOUNT=y
+          CONFIG_KSU_SUSFS_SUS_KSTAT=y
+          CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+          CONFIG_KSU_SUSFS_ENABLE_LOG=y
+          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+          CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+          EOF
 
             # ==============================
-            # Only Full SUSFS has these
+            # Full SUSFS Additional Settings
             # ==============================
             if [[ "$SUSFS_CONFIG" == "FULL" ]]; then
-              echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "$CONFIG_FILE"
-              echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> "$CONFIG_FILE"
-              echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> "$CONFIG_FILE"
-              echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "$CONFIG_FILE"
-              echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> "$CONFIG_FILE"
+              cat >> "$CONFIG_FILE" << EOF
+          CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+          CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
+          EOF
             fi
 
             # ==============================
@@ -1582,10 +1615,10 @@ jobs:
               echo "CONFIG_KSU_KPROBES_HOOK=n" >> "$CONFIG_FILE"
             fi
 
-          # ==============================
-          # SUSFS Disabled
-          # ==============================
           else
+            # ==============================
+            # SUSFS Disabled
+            # ==============================
             echo "❌ SUSFS Meta Disabled"
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
@@ -1593,37 +1626,55 @@ jobs:
           # ==============================
           # TMPFS Configuration (Mountify)
           # ==============================
-          echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
-          echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
+          echo "Applying TMPFS Configuration..."
+
+          cat >> "$CONFIG_FILE" << EOF
+          CONFIG_TMPFS_XATTR=y
+          CONFIG_TMPFS_POSIX_ACL=y
+          EOF
+
+          echo "✅ TMPFS Configuration Applied"
 
           # ==============================
           # BBR & ECN Configuration
           # ==============================
-          if [ "${{ github.event.inputs.BBR_ECN }}" = "true" ]; then
-            echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
-            echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
-            echo "CONFIG_NET_SCH_FQ=y" >> "$CONFIG_FILE"
-            echo "CONFIG_TCP_CONG_BIC=n" >> "$CONFIG_FILE"
-            echo "CONFIG_TCP_CONG_WESTWOOD=n" >> "$CONFIG_FILE"
-            echo "CONFIG_TCP_CONG_HTCP=n" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_ECN=y" >> "$CONFIG_FILE"
-            echo "CONFIG_TCP_ECN=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IPV6_ECN=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_NF_TARGET_ECN=y" >> "$CONFIG_FILE"
+          if [[ "${{ github.event.inputs.BBR_ECN }}" == "true" ]]; then
+            echo "Enabling BBR Congestion Control & ECN Features..."
+
+            cat >> "$CONFIG_FILE" << EOF
+          CONFIG_TCP_CONG_ADVANCED=y
+          CONFIG_TCP_CONG_BBR=y
+          CONFIG_NET_SCH_FQ=y
+          CONFIG_TCP_CONG_BIC=n
+          CONFIG_TCP_CONG_WESTWOOD=n
+          CONFIG_TCP_CONG_HTCP=n
+          CONFIG_IP_ECN=y
+          CONFIG_TCP_ECN=y
+          CONFIG_IPV6_ECN=y
+          CONFIG_IP_NF_TARGET_ECN=y
+          EOF
+
+            echo "✅ BBR & ECN Configuration Applied"
           fi
 
           # ==============================
           # ZRAM Configuration
           # ==============================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
-            echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4K_OPLUS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
-          fi
+            echo "Enabling ZRAM-Related Kernel Options..."
 
+            cat >> "$CONFIG_FILE" << EOF
+          CONFIG_CRYPTO_LZ4HC=y
+          CONFIG_CRYPTO_LZ4K=y
+          CONFIG_CRYPTO_LZ4KD=y
+          CONFIG_CRYPTO_842=y
+          CONFIG_CRYPTO_LZ4K_OPLUS=y
+          CONFIG_ZRAM_WRITEBACK=y
+          EOF
+
+            echo "✅ ZRAM Configuration Applied"
+          fi
+          
           # ==============================
           # LSM BBG Configuration
           # ==============================
@@ -1635,42 +1686,58 @@ jobs:
           # IPSET & IPV6 NAT Configuration
           # ==============================
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
+
+            # ==============================
+            # BPF Stream Parser for Non-6.12 Kernels
+            # ==============================
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
             fi
-            echo "CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y" >> "$CONFIG_FILE"
-            echo "CONFIG_NETFILTER_XT_SET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_MAX=65534" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_BITMAP_IP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_BITMAP_IPMAC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_BITMAP_PORT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPMARK=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPPORT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPPORTIP=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPPORTNET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_IPMAC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_MAC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETPORTNET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETNET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETPORT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_HASH_NETIFACE=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP_SET_LIST_SET=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP6_NF_NAT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
+
+            # ==============================
+            # NETFILTER & IPSET Core Config
+            # ==============================
+            cat >> "$CONFIG_FILE" << EOF
+          CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
+          CONFIG_NETFILTER_XT_SET=y
+          CONFIG_IP_SET=y
+          CONFIG_IP_SET_MAX=65534
+          CONFIG_IP_SET_BITMAP_IP=y
+          CONFIG_IP_SET_BITMAP_IPMAC=y
+          CONFIG_IP_SET_BITMAP_PORT=y
+          CONFIG_IP_SET_HASH_IP=y
+          CONFIG_IP_SET_HASH_IPMARK=y
+          CONFIG_IP_SET_HASH_IPPORT=y
+          CONFIG_IP_SET_HASH_IPPORTIP=y
+          CONFIG_IP_SET_HASH_IPPORTNET=y
+          CONFIG_IP_SET_HASH_IPMAC=y
+          CONFIG_IP_SET_HASH_MAC=y
+          CONFIG_IP_SET_HASH_NETPORTNET=y
+          CONFIG_IP_SET_HASH_NET=y
+          CONFIG_IP_SET_HASH_NETNET=y
+          CONFIG_IP_SET_HASH_NETPORT=y
+          CONFIG_IP_SET_HASH_NETIFACE=y
+          CONFIG_IP_SET_LIST_SET=y
+          CONFIG_IP6_NF_NAT=y
+          CONFIG_IP6_NF_TARGET_MASQUERADE=y
+          EOF
+
           fi
 
           # ==============================
           # Apply Build Issues Fix
           # ==============================
-          if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
+          # Disable BTF Debug info for MTK 6.1 Kernels
+          if [[ "$KERNEL_VERSION" == "6.1" && "$CPU" == mt* ]]; then
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
+
+          # Enable Rust Support if Requested
           if [[ "$ENABLE_RUST" == "true" ]]; then
-            echo "CONFIG_RUST=y" >> "$CONFIG_FILE"
-            echo "CONFIG_ANDROID_BINDER_IPC_RUST=m" >> "$CONFIG_FILE"
+            cat >> "$CONFIG_FILE" << EOF
+          CONFIG_RUST=y
+          CONFIG_ANDROID_BINDER_IPC_RUST=m
+          EOF
           fi
   
           # ==============================
@@ -1681,19 +1748,19 @@ jobs:
       - name: Fix IPv6 NAT Error
         if: ${{ github.event.inputs.NETFILTER == 'true' }}
         run: |
-          set -euo pipefail
+          set -euxo pipefail
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           TARGET_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
 
-          echo "NETFILTER Enabled — Checking IPV6 NAT Compatibility..."
-          
+          echo "NETFILTER Enabled — Checking IPv6 NAT Compatibility..."
+
           # ==============================
           # Ensure Target Directory Exists
-          # ==============================         
-          if [ ! -d "$TARGET_DIR" ]; then
-            echo "Target Directory Not Found: $TARGET_DIR"
+          # ==============================
+          if [[ ! -d "$TARGET_DIR" ]]; then
+            echo "❌ Target Directory Not Found: $TARGET_DIR"
             exit 1
           fi
 
@@ -1701,25 +1768,31 @@ jobs:
 
           # ==============================
           # Only Apply on Supported CPU
-          # ==============================         
+          # ==============================
           if [[ "${CPU:-}" == sm* ]]; then
-            echo "Applying IPV6 NAT compatibility fix..."
+            echo "Applying IPv6 NAT compatibility fix..."
 
-            if [ ! -f "$PATCH_FILE" ]; then
-              echo "Patch File Not Found: $PATCH_FILE"
+            if [[ ! -f "$PATCH_FILE" ]]; then
+              echo "❌ Patch File Not Found: $PATCH_FILE"
               exit 1
             fi
 
+            # ==============================
+            # Apply Patch with Fuzz Factor 3
+            # ==============================
             patch -p1 -F 3 < "$PATCH_FILE"
 
-            echo "IPV6 NAT Fix Applied Successfully"
+            echo "✅ IPv6 NAT Fix Applied Successfully"
           else
-            echo "Device Does Not Support IPv6 NAT — Skipping"
+            echo "⚠ Device Does Not Support IPv6 NAT — Skipping"
           fi
 
       - name: Custom Build Time
         shell: bash
-        run: |
+        run: |  
+          # ==============================
+          # Determine Build Timestamp
+          # ==============================
           INPUT_TIME="${{ github.event.inputs.BUILD_TIME }}"
           if [[ -n "$INPUT_TIME" && "$INPUT_TIME" != "F" && "$INPUT_TIME" != "f" ]]; then
             DATESTR="$INPUT_TIME"
@@ -1728,25 +1801,55 @@ jobs:
             DATESTR="$(TZ='UTC' date +'%a %b %d %T %Z %Y')"
             echo "Using UTC Time as Fallback: $DATESTR"
           fi
+
+          # ==============================
+          # Export Build Environment Variables
+          # ==============================
           echo "KBUILD_BUILD_TIMESTAMP=${DATESTR}" >> "$GITHUB_ENV"
           echo "KBUILD_BUILD_VERSION=1" >> "$GITHUB_ENV"
+
           cd kernel_workspace/kernel_platform/
-          for f in common/scripts/mkcompile_h msm-kernel/scripts/mkcompile_h; do
-            if [ -f "$f" ]; then
-              echo "Patching MKCompileh with Build Time=$DATESTR"
-              if grep -q 'UTS_VERSION=' "$f"; then
-                perl -pi -e "s{UTS_VERSION=\"\\\$\\(.*?\\)\"}{UTS_VERSION=\"#1 SMP PREEMPT $DATESTR\"}" "$f"
+
+          # ==============================
+          # Patch MKCompile_h Scripts
+          # ==============================
+          for UTC in common/scripts/mkcompile_h msm-kernel/scripts/mkcompile_h; do
+            if [[ -f "$UTC" ]]; then
+              echo "Patching MKCompile_h Script: $UTC with Build Time=$DATESTR"
+
+              # ==============================
+              # If UTS Version Exists, Replace it
+              # ============================== 
+              if grep -q 'UTS_VERSION=' "$UTC"; then
+                perl -pi -e "s{UTS_VERSION=\"\\\$\\(.*?\\)\"}{UTS_VERSION=\"#1 SMP PREEMPT $DATESTR\"}" "$UTC"
               else
-                perl -0777 -pi -e "s{cat <<EOF}{cat <<EOF\n#undef UTS_VERSION\n#define UTS_VERSION \"#1 SMP PREEMPT $DATESTR\" } unless /UTS_VERSION/" "$f"
+
+                # ==============================
+                # Otherwise, Inject UTS Version Definition Safely
+                # ============================== 
+                perl -0777 -pi -e "s{cat <<EOF}{cat <<EOF\n#undef UTS_VERSION\n#define UTS_VERSION \"#1 SMP PREEMPT $DATESTR\" } unless /UTS_VERSION/" "$UTC"
               fi
+
+            else
+              echo "⚠ Script Not Found: $UTC — Skipping"
             fi
           done
 
       - name: Disable GPUEB
         if: ${{ env.KERNEL_VERSION == '5.10' && startsWith(env.CPU, 'mt') }}
         run: |
-          echo "Disabling GPUEB for MTK kernel v5.10"
-          sed -i '/obj-y.*gpueb/d' kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile     
+          # ============================== 
+          # Disable GPUEB for MTK Kernel 5.10
+          # ============================== 
+          GPUEB_MAKEFILE="kernel_workspace/kernel-5.10/drivers/gpu/mediatek/Makefile"
+
+          if [[ -f "$GPUEB_MAKEFILE" ]]; then
+            echo "Disabling GPUEB in $GPUEB_MAKEFILE"
+            sed -i '/obj-y.*gpueb/d' "$GPUEB_MAKEFILE"
+            echo "✅ GPUEB Disabled Successfully"
+          else
+            echo "⚠ Makefile Not Found: $GPUEB_MAKEFILE — Skipping GPUEB Disable"
+          fi
       
       - name: Build Kernel (Fast)
         if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
