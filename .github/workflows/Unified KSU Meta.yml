@@ -1447,7 +1447,11 @@ jobs:
           fi
 
           # SUSFS Configuration
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
+          if [[ ( "$GKI_V" == "android14-6.1" || \
+            "$GKI_V" == "android15-6.6" || \
+            "$GKI_V" == "android16-6.12" ) && \
+            "$SUSFS_META" != "-1" ]]; then
+            echo "Conditions Met"
             echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
