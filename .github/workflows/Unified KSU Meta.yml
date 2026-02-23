@@ -223,7 +223,9 @@ jobs:
 
           echo "Extract Manifest"
 
+          # ==============================
           # Normalize File Name
+          # ==============================
           if [[ "$FILE" =~ ^(.+)_([a-zA-Z])$ ]]; then
             FILE_CONF="${BASH_REMATCH[1]}"
           else
@@ -250,8 +252,10 @@ jobs:
             echo "FILE_CONF=$FILE_CONF"
             echo "FILE_BASE=$FILE_BASE"
             } >> "$GITHUB_ENV"
-          
+
+            # ==============================
             # Repository Priority:
+            # ==============================
             # 1. AndreiMikh/kernel_manifest
             # 2. AndreiMikh/Kernel_Manifest_Appendix
             # 3. User Defined Dynamic Repo
@@ -260,10 +264,15 @@ jobs:
           
             REPOS["AndreiMikh"]="AndreiMikh|kernel_manifest"
             REPOS["Appendix"]="AndreiMikh|Kernel_Manifest_Appendix"
-          
+
+            # ==============================
             # Only Register Dynamic Repository if Input is Not Empty
+            # ==============================
             if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
+             
+              # ==============================
               # Remove https://github.com/ if User Pasted full URL
+              # ==============================
               DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT#https://github.com/}"
               DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT%/}"
               
@@ -294,7 +303,9 @@ jobs:
             
             local API_URL="https://api.github.com/repos/${OWNER}/${REPO_NAME}"
 
+            # ==============================
             # Fetch Branches Safely 
+            # ==============================
             local BRANCHES
             BRANCHES=$(curl -fsSL "${API_URL}/branches" \
               | jq -r '.[]?.name' 2>/dev/null || true)
@@ -313,7 +324,9 @@ jobs:
               if curl -sf --head "$XML_URL" >/dev/null; then
                 echo "Found ${FILE}.xml in ${OWNER}/${REPO_NAME} (Branch: $BRANCH)"
 
+                # ==============================
                 # Download XML & README using GitHub Token
+                # ==============================
                 curl -fsSL -o "$XML_PATH" "$XML_URL"
                 curl -fsSL -o "$README_PATH" "$README_URL" || true
 
@@ -329,7 +342,9 @@ jobs:
             return 1
           }
 
+          # ==============================
           # Ordered Search
+          # ==============================
           for key in AndreiMikh Appendix Dynamic; do
             if [[ -n "${REPOS[$key]}" ]]; then
               if check_repo "${REPOS[$key]}"; then
@@ -338,7 +353,9 @@ jobs:
             fi
           done
 
+          # ==============================
           # Final Validation
+          # ==============================
           if [[ -z "$FOUND_REPO" || ! -s "$XML_PATH" ]]; then
             echo ""
             echo "ERROR: ${FILE}.xml Not Found in Any Configured Repository"
@@ -356,9 +373,10 @@ jobs:
             echo "MANIFEST_REPO_NAME=$FOUND_REPO_NAME"
             echo "MANIFEST_BRANCH=$FOUND_BRANCH"
           } >> "$GITHUB_ENV"
-                 
-          # Parse Revision String
 
+          # ==============================
+          # Parse Revision String
+          # ==============================
           echo "Parsing Manifest"
 
           REVISION=$(grep -oP '<project[^>]+revision="\K[^"]+' "$XML_PATH" | head -n1 || true)
@@ -370,11 +388,15 @@ jobs:
 
           echo "REVISION=$REVISION"
           echo "Parsing CPU & Android Version..."
-
+  
+          # ==============================
           # Extract CPU
+          # ==============================        
           CPU=$(echo "$REVISION" | sed -E 's#^(oneplus|realme|oppo)/([^_]+).*#\2#')
 
+          # ==============================
           # Extract Android Version (e.g. 13.0 or 14.0.1)
+          # ==============================
           ANDROID_VERSION=$(echo "$REVISION" | grep -oE '[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?' | head -n1 || true)
 
           if [[ -z "$CPU" || -z "$ANDROID_VERSION" ]]; then
@@ -394,7 +416,9 @@ jobs:
             echo "ANDROID_SHORT_VERSION=$ANDROID_SHORT_VERSION"
           } >> "$GITHUB_ENV"
 
+          # ==============================
           # Parse README to Obtain CPUD & Build Method
+          # ==============================
           echo "Parsing README"
 
           if [[ -s "$README_PATH" ]]; then
