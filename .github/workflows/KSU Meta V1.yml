@@ -997,53 +997,55 @@ jobs:
             echo "SukiSU-Ultra Version: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}"
 
           # ==============================
-          # ReSukiSU (Enhanced Slash Parser)
-          # Format:
-          # ReSukiSU/branch/custom_tag(optional)/commit_hash(optional)
+          # ReSukiSU
           # ==============================
           elif [[ "$KSU_META" == ReSukiSU* ]]; then
-            echo "Configuring ReSukiSU..."
+          echo "Configuring ReSukiSU..."
 
-            if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 1 ]]; then
-              echo "ERROR: Invalid ReSukiSU Format"
-              echo "Expected: ReSukiSU/branch/custom_tag(optional)/commit_hash(optional)"
-              exit 10
-            fi
+          REPO="ReSukiSU/ReSukiSU"
 
+          # Case 1: Exact Match → Use Default Branch
+          if [[ "$KSU_META" == "ReSukiSU" ]]; then
+            BRANCH_NAME="main"
+            CUSTOM_TAG=""
+            MANUAL_HASH=""
+
+          # Case 2: Custom Format Provided
+          else
             META_CONTENT="${KSU_META#ReSukiSU/}"
             IFS='/' read -r BRANCH_NAME CUSTOM_TAG MANUAL_HASH <<< "$META_CONTENT"
 
             if [[ -z "$BRANCH_NAME" ]]; then
-              echo "ERROR: Branch Name Cannot be Empty"
+              echo "ERROR: Branch name cannot be empty."
               exit 11
             fi
+          fi
 
-            echo "Branch: $BRANCH_NAME"
-            [[ -n "$CUSTOM_TAG" ]] && echo "Custom Tag: $CUSTOM_TAG" || echo "Custom Tag: Disabled"
-            [[ -n "$MANUAL_HASH" ]] && echo "Manual Hash: $MANUAL_HASH" || echo "Manual Hash: Disabled"
+          echo "Branch: $BRANCH_NAME"
+          [[ -n "$CUSTOM_TAG" ]] && echo "Custom Tag: $CUSTOM_TAG" || echo "Custom Tag: disabled"
+          [[ -n "$MANUAL_HASH" ]] && echo "Manual Hash: $MANUAL_HASH" || echo "Manual Hash: disabled"
 
-            REPO="ReSukiSU/ReSukiSU"
+          curl -fsSL \
+            "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
+            | bash -s "$BRANCH_NAME"
 
-            curl -fsSL \
-              "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s "$BRANCH_NAME"
+          cd ./KernelSU || exit 1
 
-            cd ./KernelSU || exit 1
+          if [[ -n "$MANUAL_HASH" ]]; then
+            git checkout "$MANUAL_HASH"
+          fi
 
-            if [[ -n "$MANUAL_HASH" ]]; then
-              git checkout "$MANUAL_HASH"
-            fi
+          KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
+          echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
 
-            KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
-            echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+          # Always Use Andrei
+          sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' \
+            ../common/arch/arm64/configs/gki_defconfig
 
-            if [[ -n "$CUSTOM_TAG" ]]; then
-              sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' \
-                ../common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-Andrei(${KSU_VERSION})\"" \
+            >> ../common/arch/arm64/configs/gki_defconfig
 
-              echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-Andrei(${KSU_VERSION})\"" \
-                >> ../common/arch/arm64/configs/gki_defconfig
-            fi
+          echo "ReSukiSU Configured Successfully"
 
           # ==============================
           # KernelSU-Next
