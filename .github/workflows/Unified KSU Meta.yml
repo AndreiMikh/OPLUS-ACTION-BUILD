@@ -451,16 +451,18 @@ jobs:
                 echo
               }
 
+              # ==============================
               # ENV Variables (Parsed from Manifest)
-              
+              # ==============================               
               echo "--- Manifest Parsed Values ---"
               echo "CPU               : ${CPU:-<empty>}"
               echo "CPUD              : ${CPUD:-<empty>}"
               echo "ANDROID_VERSION   : ${ANDROID_VERSION:-<empty>}"
               echo "BUILD_METHOD      : ${BUILD_METHOD:-<empty>}"
 
+              # ==============================
               # GitHub Action Inputs
-              
+              # ==============================  
               echo "--- GitHub Inputs ---"
               echo "FILE              : ${{ github.event.inputs.FILE }}"
               echo "KPM               : ${{ github.event.inputs.KPM }}"
@@ -478,9 +480,10 @@ jobs:
               echo "SCHED             : ${{ github.event.inputs.SCHED }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
-
+              
+              # ==============================
               # Unicode Inspection (Whitespace / Hidden Character Detection)
-
+              # ==============================
               print_unicode "BUILD_TIME" "${{ github.event.inputs.BUILD_TIME }}"
               print_unicode "SUFFIX" "${{ github.event.inputs.SUFFIX }}"
 
@@ -563,7 +566,9 @@ jobs:
             echo "Ccache Not Installed, Skipping Compiler Cache Setup"
           fi
 
-          # Display Current Ccache sStatistics
+          # ==============================
+          # Display Current Compiler Cache Statistics
+          # ==============================
           ccache -s
 
       - name: Setup Google Repository Tool
@@ -601,7 +606,9 @@ jobs:
           if [[ -n "$KERNEL_REPOS_PATH" ]]; then
             echo "Found build config at: $KERNEL_REPOS_PATH"
 
+            # ==============================
             # Extract Top-Level Kernel Folder
+            # ==============================
             KERNEL_REPOS=$(echo "${KERNEL_REPOS_PATH#./}" | cut -d/ -f1)
 
             echo "Detected Kernel Repository: $KERNEL_REPOS"
@@ -708,7 +715,9 @@ jobs:
             [ -f "$path" ] || continue
             echo "Processing: $path"
 
+            # ==============================
             # Remove -dirty Tags
+            # ==============================
             sed -i 's/ -dirty//g' "$path"
             sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' "$path"
 
@@ -766,7 +775,9 @@ jobs:
             [ -f "$path" ] || continue
             echo "Processing: $path"
 
+            # ==============================
             # Remove -dirty Markers
+            # ==============================
             sed -i 's/ -dirty//g' "$path"
             sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' "$path"
 
@@ -804,7 +815,9 @@ jobs:
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
 
+          # ==============================
           # Re-Solve KSU Meta Downloader Branch + Artifact
+          # ==============================
           case "$MANAGER_SOURCE" in
             SukiSU-Ultra-Main)
               BRANCH="main"
@@ -848,7 +861,9 @@ jobs:
               ;;
           esac
 
-          # Resolve Actual Repository (Critical Fix)
+          # ==============================
+          # Re-Solve Actual Repository (Critical Fix)
+          # ==============================
           case "$KSU_META" in
             SukiSU-Ultra)
               REPO="SukiSU-Ultra/SukiSU-Ultra"
@@ -920,7 +935,9 @@ jobs:
             GIT_COMMIT_HASH=$(git rev-parse --short=8 HEAD)
             echo "Current Commit Hash: $GIT_COMMIT_HASH"
 
+            # ==============================
             # Get API Version (Retry 3 Times)
+            # ==============================
             for i in {1..3}; do
               KSU_API_VERSION=$(curl -s \
                 "https://raw.githubusercontent.com/${REPO}/builtin/kernel/Kbuild" \
@@ -934,7 +951,9 @@ jobs:
 
             echo "KSU_API_VERSION=$KSU_API_VERSION" >> "$GITHUB_ENV"
 
+            # ==============================
             # Generate Commit-Based Version
+            # ==============================
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 37185 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
 
@@ -980,7 +999,9 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-            # Apply patches
+            # ==============================
+            # Apply Patches
+            # ==============================
             cd ../common/drivers/kernelsu || exit 1
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
@@ -1031,22 +1052,26 @@ jobs:
 
           cd kernel_workspace
 
-          echo "===== Clone  Patch ====="
+          echo "====== Clone  Patch ======"
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
           git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
           echo "Patch Cloned"
-          echo "========================"
+          echo "=========================="
 
-          echo "===== Adding SUSFS ====="
+          echo "====== Adding SUSFS ======"
           echo "Android: ${{ env.KANDROID_VERSION }}"
           echo "Kernel:  ${{ env.KERNEL_VERSION }}"
-          echo "========================"
+          echo "=========================="
 
+          # ==============================
           # Detect Kernel Base
+          # ==============================
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           echo "Detected GKI Version: $GKI_V"
 
+          # ==============================
           # Detect Correct Kernel Common Directory
+          # ==============================
           if [ -d "./kernel_platform/common" ]; then
             KDIR="./kernel_platform/common"
           elif [ -d "./common" ]; then
@@ -1061,7 +1086,6 @@ jobs:
           # ==============================
           # Clone Correct SUSFS Repository
           # ==============================
-
           if [[ "$GKI_V" == "android14-6.1" || \
                 "$GKI_V" == "android15-6.6" || \
                 "$GKI_V" == "android16-6.12" ]]; then
@@ -1079,7 +1103,6 @@ jobs:
               # ==============================
               # SimonPunk SUSFS Clone (Smart Fallback)
               # ==============================
-
               BASE_BRANCH="gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
               DEV_BRANCH="${BASE_BRANCH}-dev"
               USE_DEV="${{ github.event.inputs.SUSFS_DEV }}"
@@ -1111,7 +1134,9 @@ jobs:
 
           fi
 
+          # ==============================
           # Validate Repository Structure
+          # ==============================
           if [ ! -d "susfs4ksu" ]; then
             echo "ERROR: SUSFS Repository Failed to Clone!"
             exit 1
@@ -1120,7 +1145,6 @@ jobs:
           # ==============================
           # Optional SUSFS Meta Checkout
           # ==============================
-
           cd susfs4ksu
 
           if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
@@ -1136,7 +1160,6 @@ jobs:
           # ==============================
           # Detect SUSFS Patch File
           # ==============================
-
           SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
           if [ -z "$SUS_PATCH" ]; then
@@ -1158,13 +1181,11 @@ jobs:
           # ==============================
           # Apply SUSFS Patch
           # ==============================
-
           patch -p1 < "$(basename $SUS_PATCH)"
 
           # ==============================
           # Hide Patch (Only Supported Bases)
           # ==============================
-
           if [[ "$GKI_V" == "android14-6.1" || \
                 "$GKI_V" == "android15-6.1" || \
                 "$GKI_V" == "android15-6.6" ]]; then
@@ -1198,7 +1219,9 @@ jobs:
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
+          # ==============================
           # 5.15 Legacy C Library Compatibility Fix
+          # ==============================
           if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Apply Legacy Fix for Kernel 5.15.0–5.15.123 (Old Libc Compatibility Issue)"
 
@@ -1208,7 +1231,9 @@ jobs:
             echo "5.15 Legacy Fix Applied Successfully"
           fi
 
+          # ==============================
           # 6.6.0–6.6.30 TrustyOS Missing Fix
+          # ==============================
           if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
             TRUSTY_EXISTS="false"
 
@@ -1228,7 +1253,9 @@ jobs:
 
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
 
+            # ==============================
             # Fake Patch Workaround to Prevent Patch Failures
+            # ==============================
             fake_patched=0
 
             if [ "$GKI_V" = "android15-6.6" ]; then
@@ -1264,7 +1291,9 @@ jobs:
               fi
             fi
 
+            # ==============================
             # Revert Temporary Fake Patch
+            # ==============================
             if [ "$fake_patched" = 1 ]; then
 
               if [ "$GKI_V" = "android15-6.6" ]; then
@@ -1286,7 +1315,9 @@ jobs:
               fi
             fi
 
+            # ==============================
             # Optional XUS fix
+            # ==============================
             if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && \
                [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
 
@@ -1302,7 +1333,9 @@ jobs:
 
           cd kernel_workspace/kernel_platform/common
 
+          # ==============================
           # If it Already Exists, Skip
+          # ==============================
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             [ -d "$p" ] && {
               echo "HMBIRD Source Already Exists, Skipping Conversion"
@@ -1339,7 +1372,9 @@ jobs:
 
           ZRAM="${{ github.event.inputs.ZRAM }}"
 
+          # ==============================
           # Count "/" safely
+          # ==============================
           SLASH_COUNT=$(echo "$ZRAM" | tr -cd '/' | wc -c)
 
           if [ "$SLASH_COUNT" -lt 2 ]; then
@@ -1348,7 +1383,9 @@ jobs:
             exit 10
           fi
 
+          # ==============================
           # Parse Fields
+          # ==============================
           IFS='/' read -r ZRAM_SWSTA ZRAM_ALGO ZRAM_SIZE <<< "$ZRAM"
 
           echo "ZRAM_ALGO=$ZRAM_ALGO" >> "$GITHUB_ENV"
@@ -1434,11 +1471,15 @@ jobs:
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
 
+          # ==============================
           # KSU Meta Configuration
+          # ==============================
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
           echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
+          # ==============================
           # KPM Configuration
+          # ==============================
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
           fi
@@ -1446,36 +1487,70 @@ jobs:
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
           fi
 
-          # SUSFS Configuration
-          if [[ ( "$GKI_V" == "android14-6.1" || \
-            "$GKI_V" == "android15-6.6" || \
-            "$GKI_V" == "android16-6.12" ) && \
-            "$SUSFS_META" != "-1" ]]; then
-            echo "Conditions Met"
-            echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"            
-            echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> "$CONFIG_FILE"
-            echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "$CONFIG_FILE"
+          # ==============================
+          # SUSFS Configuration (Full + Fallback)
+          # ==============================
+          if [[ "$SUSFS_META" != "-1" ]]; then
+
+            if [[ "$GKI_V" == "android14-6.1" || \
+                  "$GKI_V" == "android15-6.6" || \
+                  "$GKI_V" == "android16-6.12" ]]; then
+
+              echo "✅ Supported GKI Version Detected: $GKI_V"
+              echo "Using FULL SUSFS Configuration"
+
+              echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> "$CONFIG_FILE"
+              echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "$CONFIG_FILE"
+
           else
+
+              echo "⚠ Unsupported GKI Version: $GKI_V"
+              echo "Using Minimal / Fallback SUSFS Configuration"
+
+              if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
+                echo "CONFIG_KSU_SUSFS=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> "$CONFIG_FILE"
+                echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> "$CONFIG_FILE"
+              else
+                echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
+              fi
+
+          fi
+
+          else
+            echo "❌ SUFS Meta Disabled"
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
 
+          # ==============================
           # TMPFS Configuration (Mountify)
+          # ==============================
           echo "CONFIG_TMPFS_XATTR=y" >> "$CONFIG_FILE"
           echo "CONFIG_TMPFS_POSIX_ACL=y" >> "$CONFIG_FILE"
 
+          # ==============================
           # BBR & ECN Configuration
+          # ==============================
           if [ "${{ github.event.inputs.BBR_ECN }}" = "true" ]; then
             echo "CONFIG_TCP_CONG_ADVANCED=y" >> "$CONFIG_FILE"
             echo "CONFIG_TCP_CONG_BBR=y" >> "$CONFIG_FILE"
@@ -1489,7 +1564,9 @@ jobs:
             echo "CONFIG_IP_NF_TARGET_ECN=y" >> "$CONFIG_FILE"
           fi
 
+          # ==============================
           # ZRAM Configuration
+          # ==============================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
             echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
@@ -1499,12 +1576,16 @@ jobs:
             echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
           fi
 
+          # ==============================
           # LSM BBG Configuration
+          # ==============================
           if [ "${{ github.event.inputs.LSM }}" = "true" ]; then
             echo "CONFIG_BBG=y" >> "$CONFIG_FILE"
           fi
 
+          # ==============================
           # IPSET & IPV6 NAT Configuration
+          # ==============================
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
@@ -1533,7 +1614,9 @@ jobs:
             echo "CONFIG_IP6_NF_TARGET_MASQUERADE=y" >> "$CONFIG_FILE"
           fi
 
+          # ==============================
           # Apply Build Issues Fix
+          # ==============================
           if [ "$KERNEL_VERSION" = "6.1" ] && [[ "$CPU" == mt* ]]; then
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
@@ -1541,8 +1624,10 @@ jobs:
             echo "CONFIG_RUST=y" >> "$CONFIG_FILE"
             echo "CONFIG_ANDROID_BINDER_IPC_RUST=m" >> "$CONFIG_FILE"
           fi
-
+  
+          # ==============================
           # Remove Build Review
+          # ==============================         
           sed -i 's/check_defconfig//' ./build.config.gki
 
       - name: Fix IPv6 NAT Error
@@ -1555,8 +1640,10 @@ jobs:
           PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
 
           echo "NETFILTER Enabled — Checking IPV6 NAT Compatibility..."
-
+          
+          # ==============================
           # Ensure Target Directory Exists
+          # ==============================         
           if [ ! -d "$TARGET_DIR" ]; then
             echo "Target Directory Not Found: $TARGET_DIR"
             exit 1
@@ -1564,7 +1651,9 @@ jobs:
 
           cd "$TARGET_DIR"
 
+          # ==============================
           # Only Apply on Supported CPU
+          # ==============================         
           if [[ "${CPU:-}" == sm* ]]; then
             echo "Applying IPV6 NAT compatibility fix..."
 
@@ -1580,7 +1669,6 @@ jobs:
             echo "Device Does Not Support IPv6 NAT — Skipping"
           fi
 
-      # Custom Kernel Build Time, Without Adding #1 SMP PREEMPT
       - name: Custom Build Time
         shell: bash
         run: |
@@ -1619,14 +1707,18 @@ jobs:
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform
 
+          # ==============================
           # Automatic Detection of LLVM IAS
+          # ==============================                   
           if [[ -f ./common/build.config.arm ]] && grep -q '^LLVM_IAS=1' ./common/build.config.arm; then
             USE_LLVM_IAS=true
           else
             USE_LLVM_IAS=false
           fi
 
+          # ==============================
           # Read Clang Prebuilt Bin from Build Config Common
+          # ==============================
           CLANG_PREBUILT_BIN=""
           for f in ./common/build.config.common ./"$KERNEL_REPOS"/build.config.common; do
             [[ -f "$f" ]] || continue
@@ -1640,7 +1732,9 @@ jobs:
             exit 0
           fi
 
+          # ==============================
           # Try Extract Clang Version from Clang Prebuilt Bin
+          # ==============================
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           else
@@ -1657,19 +1751,27 @@ jobs:
             exit 0
           fi
 
+          # ==============================
           # Replace with New Clang Version Value
+          # ==============================
           CLANG_PREBUILT_BIN=${CLANG_PREBUILT_BIN/\$\{CLANG_VERSION\}/$CLANG_VERSION}
+         
+          # ==============================
           # Get First Directory Name of Clang Prebuilt Bin & Assign it to Clang Dir
+          # ==============================
           CLANG_DIR=$(echo "$CLANG_PREBUILT_BIN" | cut -d'/' -f1)
+        
+          # ==============================
           # Get Parent Directory Name of Clang Prebuilt Bin & Assign it to Clang Path
+          # ==============================
           CLANG_PATH=$(basename "$(dirname "$CLANG_PREBUILT_BIN")")
 
-          echo "======================="
+          echo "=========================="
           echo "CLANG_VERSION=$CLANG_VERSION"
           echo "CLANG_DIR=$CLANG_DIR"
           echo "CLANG_PATH=$CLANG_PATH"
           echo "USE_LLVM_IAS=$USE_LLVM_IAS"
-          echo "======================="
+          echo "=========================="
 
           set +u
           source "$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/build/kernel/_setup_env.sh" 2>/dev/null || true
@@ -1685,7 +1787,9 @@ jobs:
 
           cd ./common
 
+          # ==============================
           # Remapping Physical Paths
+          # ==============================
           MAP="-fdebug-prefix-map=${GITHUB_WORKSPACE}=."
           MPMAP="-fmacro-prefix-map=${GITHUB_WORKSPACE}=."
           FPMAP="-ffile-prefix-map=${GITHUB_WORKSPACE}=."
@@ -1800,7 +1904,9 @@ jobs:
 
           mkdir -p ./AnyKernel3
 
+          # ==============================
           # Get Latest Successful Run from any Workflow
+          # ==============================
           run_id=$(gh api \
             "repos/$REPO/actions/runs?branch=$BRANCH&status=success&per_page=1" \
             --jq '.workflow_runs[0].id' 2>/dev/null || echo "")
