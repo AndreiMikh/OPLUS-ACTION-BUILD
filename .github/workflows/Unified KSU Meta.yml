@@ -1010,13 +1010,13 @@ jobs:
               kernel/Kbuild
 
             # ==============================
-            # Apply Patches
+            # Apply Multi-Manager Patch
             # ==============================
-            cd ../common/drivers/kernelsu || exit 1
+            cd ../KernelSU-Next || exit 1
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
 
-            for p in apk_sign.patch; do
+            for p in multi_manager.patch; do
               echo "Downloading $p..."
               curl -fsSL "$PATCH_BASE/$p" -o "$p"
 
