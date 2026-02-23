@@ -1006,7 +1006,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s "$BRANCH_NAME"
+              | bash -s "$MANAGER_BRANCH"
 
               if [[ -n "$CUSTOM_TAG" ]]; then
                 echo "CUSTOM_TAG=$CUSTOM_TAG" >> "$GITHUB_ENV"
@@ -1025,7 +1025,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s "$BRANCH_NAME"
+              | bash -s "$MANAGER_BRANCH"
 
             cd ./KernelSU-Next || exit 1
 
@@ -1076,7 +1076,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s "$BRANCH_NAME"
+              | bash -s "$MANAGER_BRANCH"
 
             cd ./Wild_KSU || exit 1
 
