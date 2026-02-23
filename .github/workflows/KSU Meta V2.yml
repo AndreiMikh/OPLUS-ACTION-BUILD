@@ -1002,12 +1002,13 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s main
 
-            echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
-
+            
             cd ./KernelSU || exit 1
 
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+            echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${KSU_VERSION}\"" >> ./common/arch/arm64/configs/gki_defconfig
 
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
@@ -1150,15 +1151,15 @@ jobs:
               echo "SUSFS_DEV:   $USE_DEV"
 
               if [[ "$USE_DEV" == "true" ]]; then
-                echo "Checking if DEV Branch Exists..."
+                echo "Checking if Dev Branch Exists..."
 
                 if git ls-remote --heads https://gitlab.com/simonpunk/susfs4ksu.git "$DEV_BRANCH" | grep -q "$DEV_BRANCH"; then
-                  echo "DEV Branch Found, Cloning $DEV_BRANCH"
+                  echo "Dev Branch Found, Cloning $DEV_BRANCH"
                   git clone --depth=1 -b "$DEV_BRANCH" \
                     https://gitlab.com/simonpunk/susfs4ksu.git \
                     susfs4ksu
                 else
-                  echo "DEV Branch Not Found, Falling Back to $BASE_BRANCH"
+                  echo "Dev Branch Not Found, Falling Back to $BASE_BRANCH"
                   git clone --depth=1 -b "$BASE_BRANCH" \
                     https://gitlab.com/simonpunk/susfs4ksu.git \
                     susfs4ksu
@@ -1202,7 +1203,7 @@ jobs:
 
           if [ -z "$SUS_PATCH" ]; then
             echo "ERROR: SUSFS Patch Not Found for $GKI_V"
-            echo "Available patches:"
+            echo "Available Patches:"
             ls ./susfs4ksu/kernel_patches/ || true
             exit 1
           fi
@@ -1545,10 +1546,12 @@ jobs:
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
 
           # ==============================
-          # KSU Meta Configuration
+          # KSU Meta Configuration (ReSukiSU)
           # ==============================
-          echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
-          echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
+          if [[ "$KSU_META" == "ReSukiSU" ]]; then
+            echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
+          fi
 
           # ==============================
           # KPM Configuration
