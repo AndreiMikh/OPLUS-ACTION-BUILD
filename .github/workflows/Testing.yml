@@ -1070,7 +1070,7 @@ jobs:
 
           # Remove Old Config Line if Exists
           sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
-          echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME% ($KSUVER)\"" >> "$DEFCONFIG"
+          echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%($KSUVER)\"" >> "$DEFCONFIG"
 
           echo "✅ KernelSU Full Name Format Injected Successfully"
 
