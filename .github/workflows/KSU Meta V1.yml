@@ -999,14 +999,14 @@ jobs:
           # ==============================
           # ReSukiSU (Enhanced Slash Parser)
           # Format:
-          # ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)
+          # ReSukiSU/Branch/Custom Tag(Optional)/Commit Hash(Optional)
           # ==============================
           elif [[ "$KSU_META" == ReSukiSU* ]]; then
             echo "Configuring ReSukiSU..."
 
             if [[ "$(grep -o '/' <<< "$KSU_META" | wc -l)" -lt 1 ]]; then
               echo "ERROR: Invalid ReSukiSU Format"
-              echo "Expected: ReSukiSU/Branch/CustomTag (Optional)/CommitHash (Optional)"
+              echo "Expected: ReSukiSU/Branch/Custom Tag(Optional)/Commit Hash(Optional)"
               exit 10
             fi
 
@@ -1041,7 +1041,7 @@ jobs:
               sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' \
                 ../common/arch/arm64/configs/gki_defconfig
 
-              echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${CUSTOM_TAG}(${KSU_VERSION})\"" \
+              echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-Andrei(${KSU_VERSION})\"" \
                 >> ../common/arch/arm64/configs/gki_defconfig
             fi
 
