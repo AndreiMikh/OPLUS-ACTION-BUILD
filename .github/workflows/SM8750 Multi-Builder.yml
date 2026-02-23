@@ -3,6 +3,17 @@ name: Multi-Builder (SM8750)
 on:
   workflow_dispatch:
     inputs:
+
+      TARGET_WORKFLOW:
+        type: choice
+        description: "Select Workflow to Trigger"
+        required: true
+        default: "Unified KSU Meta.yml"
+        options:
+          - Unified KSU Meta.yml
+          - Unified KSU Meta Dev.yml
+          - Unified KSU Meta SM8750.yml
+
       KSU_META:
         type: choice
         description: "KSU Meta"
@@ -86,10 +97,11 @@ jobs:
 
     steps:
 
-      - name: Trigger Unified KSU Meta
+      - name: Trigger Selected Workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: Unified KSU Meta
+          workflow: ${{ github.event.inputs.TARGET_WORKFLOW }}
+          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: |
             {
@@ -123,9 +135,11 @@ jobs:
           sleep 600
 
           while (( SECONDS < MAX_TIME )); do
-            ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
+            ARTIFACTS=$(gh api \
+              repos/${{ github.repository }}/actions/artifacts \
+              --jq '.artifacts[].name')
 
-            if echo "$ALL_ARTIFACTS" | grep -q "$FILE"; then
+            if echo "$ARTIFACTS" | grep -q "$FILE"; then
               echo "Artifact found for $FILE"
               exit 0
             fi
@@ -138,7 +152,7 @@ jobs:
 
 
 # =========================
-# Package Final ZIP
+# Collect & Upload ZIPs (No Fusion)
 # =========================
 
   wait-and-package:
@@ -151,41 +165,37 @@ jobs:
       - name: Setup Tools
         run: |
           sudo apt update
-          sudo apt install -y gh zip unzip curl jq
+          sudo apt install -y gh curl jq
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Download All Artifacts
+      - name: Download Artifacts From Current Run Only
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p all_artifacts
-          ALL_ARTIFACTS=$(gh api --paginate repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[].name')
+          mkdir -p final_zips
 
-          for ART in $ALL_ARTIFACTS; do
-            ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/artifacts \
+          RUN_ID="${{ github.run_id }}"
+          echo "Fetching artifacts for run ID: $RUN_ID"
+
+          ARTIFACTS=$(gh api \
+            repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+            --jq '.artifacts[].name')
+
+          for ART in $ARTIFACTS; do
+            echo "Downloading $ART"
+
+            ARTIFACT_ID=$(gh api \
+              repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
               --jq ".artifacts[] | select(.name==\"$ART\") | .id")
 
-            curl -L -H "Authorization: token $GH_TOKEN" \
-              -o "all_artifacts/${ART}.zip" \
+            curl -L \
+              -H "Authorization: token $GH_TOKEN" \
+              -o "final_zips/${ART}.zip" \
               "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
           done
 
-      - name: Extract All ZIPs
-        run: |
-          mkdir -p extracted
-          cd all_artifacts
-          for f in *.zip; do
-            unzip -oq "$f" -d ../extracted
-          done
-
-      - name: Create Final AnyKernel3 ZIP
-        run: |
-          cd extracted
-          FINAL_NAME="All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750.zip"
-          zip -r "../$FINAL_NAME" ./*
-
-      - name: Upload Final ZIP
+      - name: Upload Device ZIPs (Separated)
         uses: actions/upload-artifact@v4
         with:
           name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750
-          path: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750.zip
+          path: final_zips/*.zip
