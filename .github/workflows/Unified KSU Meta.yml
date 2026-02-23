@@ -1986,59 +1986,120 @@ jobs:
           make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
 
-      - name: Fallback to Build Kernel
+      - name: Build Kernel Fallback
         if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
         run: |
+          set -euo pipefail
           cd kernel_workspace
-          if [ -f ./kernel_platform/build_with_bazel.py ]; then
-            ./kernel_platform/oplus/bazel/oplus_modules_variant.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
-            ./kernel_platform/build_with_bazel.py -t ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
+
+          echo "=========================="
+          echo "Fallback Kernel Build Triggered"
+          echo "FAST_BUILD=${{ github.event.inputs.FAST_BUILD }}"
+          echo "Fallback Output=${{ steps.fast_build.outputs.fallback }}"
+          echo "=========================="
+
+          if [[ -f ./kernel_platform/build_with_bazel.py ]]; then
+            echo "Detected Bazel Build Script → Using Bazel Workflow"
+            ./kernel_platform/oplus/bazel/oplus_modules_variant.sh "${{ env.CPUD }}" "${{ env.BUILD_METHOD }}"
+            ./kernel_platform/build_with_bazel.py -t "${{ env.CPUD }}" "${{ env.BUILD_METHOD }}"
           else
-            LTO=thin SYSTEM_DLKM_RE_SIGN=0 BUILD_SYSTEM_DLKM=0 KMI_SYMBOL_LIST_STRICT_MODE=0 \
-            ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ env.CPUD }} ${{ env.BUILD_METHOD }}
+            echo "Bazel Build Script Not found → Using Standard OPlus Build Script"
+            LTO=thin \
+            SYSTEM_DLKM_RE_SIGN=0 \
+            BUILD_SYSTEM_DLKM=0 \
+            KMI_SYMBOL_LIST_STRICT_MODE=0 \
+            ./kernel_platform/oplus/build/oplus_build_kernel.sh "${{ env.CPUD }}" "${{ env.BUILD_METHOD }}"
           fi
 
       - name: Make AnyKernel3
         run: |
+          set -euo pipefail
+
+          echo "=========================="
+          echo "Cloning AnyKernel3 repository"
+          echo "=========================="
           git clone https://github.com/AndreiMikh/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
+
           mkdir -p kernel_workspace/kernel_platform/out/Final-Image-Find/
-          image_path=""
-          if [ -d "./kernel_workspace/kernel_platform/common/out/" ]; then
-            image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
-            if [ -n "$image_path" ]; then
-              echo "Unified Path Used by Make for Compilation Successfully Located the Image File"
+
+          IMAGE_PATH=""
+
+          # ==============================
+          # Attempt 1: Look in Common/Out
+          # ==============================
+          if [[ -d "./kernel_workspace/kernel_platform/common/out/" ]]; then
+            IMAGE_PATH=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1 || true)
+            if [[ -n "$IMAGE_PATH" ]]; then
+              echo "✅ Unified Path Used by Make for Compilation Successfully Located the Image File"
             fi
           fi
-          if [ -z "$image_path" ] && [ -d "./kernel_workspace/kernel_platform/out/" ]; then
-            image_path=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1)
-            if [ -n "$image_path" ]; then
-              echo "Image File Successfully Found After Compiling Using Official Script"
+
+          # ==============================
+          # Attempt 2: Look in Out/
+          # ==============================
+          if [[ -z "$IMAGE_PATH" && -d "./kernel_workspace/kernel_platform/out/" ]]; then
+            IMAGE_PATH=$(find "./kernel_workspace/kernel_platform/out/" -name "Image" | head -n 1 || true)
+            if [[ -n "$IMAGE_PATH" ]]; then
+              echo "✅ Image File Successfully Found After Compiling Using Official Script"
             fi
           fi
-          if [ -z "$image_path" ]; then
-            echo "Image File Not Found, Build Failed" >&2
+
+          # ==============================
+          # Fail if Image Not Found
+          # ==============================
+          if [[ -z "$IMAGE_PATH" ]]; then
+            echo "❌ Image File Not Found, Build Failed" >&2
             exit 1
           fi
-          if [ -f "$image_path" ]; then
-            echo "Image File Finally Located at: $image_path"
-            cp "$image_path" ./AnyKernel3/Image
-            cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
-          fi
+
+          # ==============================
+          # Copy Image to AnyKernel3 & Final-Image-Find
+          # ==============================
+          echo "📌 Image File Located at: $IMAGE_PATH"
+          cp "$IMAGE_PATH" ./AnyKernel3/Image
+          cp "$IMAGE_PATH" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
+
+          echo "✅ Image Copied Successfully"
 
       - name: Patch Linux & Replace Image
         if: ${{ github.event.inputs.KPM == 'KPM' }}
         run: |
+          set -euo pipefail
+
+          echo "=========================="
+          echo "Patching Linux Kernel & Replacing Image"
+          echo "=========================="
+
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/SukiSU_patch/kpm"
           OUT_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/out/Final-Image-Find"
+          AK3_IMAGE="${GITHUB_WORKSPACE}/AnyKernel3/Image"
+
           cd "${OUT_DIR}"
+
+          # Copy & Prepare Patch Script
           cp "${PATCH_DIR}/patch_linux" .
           chmod +x patch_linux
-          ./patch_linux
-          rm -f Image
-          mv oImage Image
-          cp Image "${GITHUB_WORKSPACE}/AnyKernel3/Image"
+          echo "✅ Patch Linux Copied & Made Executable"
 
+          # Execute Patch
+          echo "🔧 Running Patch Linux..."
+          ./patch_linux
+
+          # Replace Old Image with Patched One
+          if [[ -f oImage ]]; then
+            rm -f Image
+            mv oImage Image
+            echo "✅ Image Replaced with Patched Kernel (oImage → Image)"
+          else
+            echo "❌ Patched oImage Not Found, Patch may have Failed" >&2
+            exit 1
+          fi
+
+          # Copy Patched Image to AnyKernel3 Folder
+          cp Image "${AK3_IMAGE}"
+          echo "📌 Patched Image Copied to AnyKernel3/Image Successfully"
+    
       - name: Download Selected KSU Manager APK
         continue-on-error: true
         env:
@@ -2092,73 +2153,148 @@ jobs:
       - name: Set Zip Suffix
         id: suffix
         run: |
-          echo "value=${{ env.ZRAM_ALGO_U && format('_{0}', env.ZRAM_ALGO_U) || '' }}${{ github.event.inputs.KPM == 'KPM' && '_KPM' || github.event.inputs.KPM == 'KPN' && '_KPN' || '' }}${{ github.event.inputs.LSM == 'true' && '_LSM' || '' }}_ILH${{ github.event.inputs.SCHED== 'true' && '_SCHED' || '' }}" >> $GITHUB_OUTPUT
+          set -euo pipefail
 
+          SUFFIX=""
+
+          # ==============================
+          # ZRAM Algorithm Suffix
+          # ==============================
+          if [[ -n "${ZRAM_ALGO_U:-}" ]]; then
+            SUFFIX+="_${ZRAM_ALGO_U}"
+          fi
+
+          # ==============================
+          # KPM/KPN Suffix
+          # ==============================
+          if [[ "${{ github.event.inputs.KPM }}" == "KPM" ]]; then
+            SUFFIX+="_KPM"
+          elif [[ "${{ github.event.inputs.KPM }}" == "KPN" ]]; then
+            SUFFIX+="_KPN"
+          fi
+
+          # ==============================
+          # LSM Suffix
+          # ==============================
+          if [[ "${{ github.event.inputs.LSM }}" == "true" ]]; then
+            SUFFIX+="_LSM"
+          fi
+
+          # ==============================
+          # Always Append ILH
+          # ==============================
+          SUFFIX+="_ILH"
+
+          # ==============================
+          # SCHED Suffix
+          # ==============================
+          if [[ "${{ github.event.inputs.SCHED }}" == "true" ]]; then
+            SUFFIX+="_SCHED"
+          fi
+
+          echo "value=$SUFFIX" >> $GITHUB_OUTPUT
+          echo "✅ Zip suffix Set to: $SUFFIX"
+          
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.FILE }}(${{ env.TKERNEL_VERSION }})-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})-R${{ github.run_number }}
+          # Construct Artifact Name Clearly with All Relevant Inputs & ENV Variables
+          name: >
+            AK3-${{ github.event.inputs.FILE }}
+            (${{ env.TKERNEL_VERSION }})
+            -${{ github.event.inputs.MANAGER_SOURCE }}
+            (v${{ env.KSUVER }})
+            -R${{ github.run_number }}
           path: ./AnyKernel3/*
 
       - name: Extract & Process ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/')
         id: zram_find
         run: |
-          set -e
-          ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/ZRAM.zip"
+          set -euo pipefail
 
-          if [ ! -f "$ZRAM_ZIP" ]; then
-            echo "Not Found, ZRAM.zip: $ZRAM_ZIP"
+          echo "=========================="
+          echo "ZRAM Module Processing"
+          echo "=========================="
+
+          ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/ZRAM.zip"
+          MODULE_DIR="ZRAM-Module"
+          CONFIG_PROP="${MODULE_DIR}/config.prop"
+          TARGET_KO="${MODULE_DIR}/zram/zram.ko"
+
+          # ==============================
+          # Check ZRAM.zip Existence
+          # ==============================
+          if [[ ! -f "$ZRAM_ZIP" ]]; then
+            echo "❌ ZRAM.zip Not Found at: $ZRAM_ZIP"
             echo "upload=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          unzip "$ZRAM_ZIP" -d ZRAM-Module
+          echo "📦 Extracting ZRAM.zip..."
+          unzip -q "$ZRAM_ZIP" -d "$MODULE_DIR"
 
-          CONFIG_PROP="ZRAM-Module/config.prop"
-          if [ -f "$CONFIG_PROP" ]; then
-            echo "Revise config.prop"
+          # ==============================
+          # Update Config.prop
+          # ==============================
+          if [[ -f "$CONFIG_PROP" ]]; then
+            echo "✏️ Updating Config.prop..."
+
             sed -i "s/^ZRAM_ALGO=.*/ZRAM_ALGO=${ZRAM_ALGO}/" "$CONFIG_PROP"
             sed -i "s/^ZRAM_SIZE=.*/ZRAM_SIZE=${ZRAM_SIZE}/" "$CONFIG_PROP"
-            echo "ZRAM_ALGO=${ZRAM_ALGO}"
-            echo "ZRAM_SIZE=${ZRAM_SIZE}"
+
+            echo "✅ ZRAM_ALGO=${ZRAM_ALGO}"
+            echo "✅ ZRAM_SIZE=${ZRAM_SIZE}"
           else
-            echo "Not Found Config Prop"
+            echo "❌ Config.prop Not Found Inside ZRAM Module"
             echo "upload=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          target="./ZRAM-Module/zram/zram.ko"
-          echo "Find ZRAM.ko Module File..."
-          search_paths=(
+          # ==============================
+          # Locate Built ZRAM.ko
+          # ==============================
+          echo "🔍 Searching for ZRAM.ko..."
+
+          SEARCH_PATHS=(
             "./kernel_workspace/kernel_platform/out"
             "./kernel_workspace/device/qcom"
+            "./kernel_workspace"
           )
-          zram_path=""
-          for path in "${search_paths[@]}"; do
-            if [ -d "$path" ]; then
-              zram_path=$(find "$path" -type f -name "zram.ko" | head -n 1)
-              [ -n "$zram_path" ] && break
+
+          ZRAM_PATH=""
+          for path in "${SEARCH_PATHS[@]}"; do
+            if [[ -d "$path" ]]; then
+              ZRAM_PATH=$(find "$path" -type f -name "zram.ko" | head -n 1 || true)
+              [[ -n "$ZRAM_PATH" ]] && break
             fi
           done
-          if [ -z "$zram_path" ]; then
-            zram_path=$(find "./kernel_workspace" -type f -name "zram.ko" | head -n 1)
-          fi
-          if [ -n "$zram_path" ] && [ -f "$zram_path" ]; then
-            echo "ZRAM.ko File Finally Located at: $zram_path"
-            install -D "$zram_path" "$target"
-          else
-            echo "ZRAM.ko File was Not Found, Possibly Due to an Unsupported Kernel Version or Build Failure"
+
+          if [[ -z "$ZRAM_PATH" || ! -f "$ZRAM_PATH" ]]; then
+            echo "❌ ZRAM.ko Not Found — Unsupported Kernel Version or Build Failure"
             echo "upload=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          echo "📌 ZRAM.ko Located at: $ZRAM_PATH"
+
+          # ==============================
+          # Install Module into ZRAM Package
+          # ==============================
+          install -D "$ZRAM_PATH" "$TARGET_KO"
+
+          echo "✅ ZRAM.ko Successfully Installed into ZRAM Module"
+          echo "upload=true" >> "$GITHUB_OUTPUT"
+
       - name: Upload ZRAM Module
-        if: startsWith(github.event.inputs.ZRAM, '1/') && steps.zram_find.outputs.upload != 'false'
+        if: startsWith(github.event.inputs.ZRAM, '1/') && steps.zram_find.outputs.upload == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ZRAM-${{ env.KERNEL_VERSION }}_${{ steps.extract_info.outputs.value }}
+          name: >
+            ZRAM-${{ env.KERNEL_VERSION }}
+            _${{ steps.extract_info.outputs.value }}
+            -R${{ github.run_number }}
           path: ZRAM-Module/*
-
+          
       - name: Post-build Disk Check
         run: df -h
