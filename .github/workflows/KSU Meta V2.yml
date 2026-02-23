@@ -1059,9 +1059,8 @@ jobs:
 
       - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
         if: ${{ github.event.inputs.SUSFS_META != '-1' }}
-        env:
-          FILE: ${{ github.event.inputs.FILE }}
         run: |
+          set -e
           cd kernel_workspace
           
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
