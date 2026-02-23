@@ -57,11 +57,6 @@ on:
           - oneplus_15
           - oneplus_15_t_aosp
           - oneplus_15_wild
-      CUSTOM_TAG:
-        type: string
-        description: Custom Tag
-        required: false
-        default: "Andrei"
       KPM:
         type: choice
         description: "Kernel Module Implementation Methods"
@@ -496,7 +491,6 @@ jobs:
               # ==============================  
               echo "--- GitHub Inputs ---"
               echo "FILE              : ${{ github.event.inputs.FILE }}"
-              echo "CUSTOM_TAG        : ${{ github.event.inputs.CUSTOM_TAG }}"
               echo "KPM               : ${{ github.event.inputs.KPM }}"
               echo "MANAGER_SOURCE    : ${{ github.event.inputs.MANAGER_SOURCE }}"
               echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
@@ -1008,15 +1002,27 @@ jobs:
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
               | bash -s "$MANAGER_BRANCH"
 
-              if [[ -n "$CUSTOM_TAG" ]]; then
-                echo "CUSTOM_TAG=$CUSTOM_TAG" >> "$GITHUB_ENV"
-                echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%(${{ env.KSUVER }})-${CUSTOM_TAG}"' >> ./common/arch/arm64/configs/gki_defconfig
-              fi
-                        
             cd ./KernelSU || exit 1
 
+            # Generate Version First
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+            # Detect DefConfig Path
+            if [[ -f ../common/arch/arm64/configs/gki_defconfig ]]; then
+              DEFCONFIG="../common/arch/arm64/configs/gki_defconfig"
+            elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
+              DEFCONFIG="../arch/arm64/configs/gki_defconfig"
+            else
+              echo "GKI DefConfig Not Found!"
+              exit 1
+            fi
+
+            # Remove Old Entry to Prevent Duplication
+            sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
+
+            # Add Formatted Name
+            echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-(${KSU_VERSION})-Andrei\"" >> "$DEFCONFIG"
 
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
