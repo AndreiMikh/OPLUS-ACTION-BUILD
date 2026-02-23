@@ -57,6 +57,11 @@ on:
           - oneplus_15
           - oneplus_15_t_aosp
           - oneplus_15_wild
+      CUSTOM_TAG:
+        type: string
+        description: Custom Tag
+        required: false
+        default: "Andrei"
       KPM:
         type: choice
         description: "Kernel Module Implementation Methods"
@@ -491,6 +496,7 @@ jobs:
               # ==============================  
               echo "--- GitHub Inputs ---"
               echo "FILE              : ${{ github.event.inputs.FILE }}"
+              echo "CUSTOM_TAG        : ${{ github.event.inputs.CUSTOM_TAG }}"
               echo "KPM               : ${{ github.event.inputs.KPM }}"
               echo "MANAGER_SOURCE    : ${{ github.event.inputs.MANAGER_SOURCE }}"
               echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
@@ -1000,15 +1006,16 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s main
-
-            
+              | bash -s "$BRANCH_NAME"
+                  
             cd ./KernelSU || exit 1
+
+            if [[ -n "$CUSTOM_TAG" ]]; then
+              echo "CUSTOM_TAG=$CUSTOM_TAG" >> "$GITHUB_ENV"
+            fi
 
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
-
-            echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${KSU_VERSION}\"" >> ./common/arch/arm64/configs/gki_defconfig
 
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
@@ -1551,6 +1558,10 @@ jobs:
           if [[ "$KSU_META" == "ReSukiSU" ]]; then
             echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
             echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
+
+            if [[ -n "$CUSTOM_TAG" ]]; then
+              echo "CONFIG_KSU_FULL_NAME_FORMAT=\"%TAG_NAME%-${CUSTOM_TAG}(${KSU_VERSION})\"" >> "$CONFIG_FILE"
+            fi
           fi
 
           # ==============================
