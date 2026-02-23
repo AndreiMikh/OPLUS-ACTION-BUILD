@@ -1565,7 +1565,7 @@ jobs:
             echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
 
             if [[ -n "$CUSTOM_TAG" ]]; then
-              echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%-${CUSTOM_TAG}(${KSU_VERSION})"' >> "$CONFIG_FILE"
+              echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%(${{ env.KSUVER }})-${CUSTOM_TAG}"' >> "$CONFIG_FILE"
             fi
           fi
 
