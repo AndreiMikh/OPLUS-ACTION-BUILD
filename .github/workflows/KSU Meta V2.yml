@@ -1264,10 +1264,10 @@ jobs:
           # Clone SUSFS Repos (Primary + Fallback)
           # ==============================
           echo "Cloning SUSFS4OKI..."
-          git clone --depth=1 -b $SUSFS_BRANCH https://gitlab.com/simonpunk/susfs4oki.git susfs4oki || echo "SUSFS4OKI not found"
+          git clone --depth=1 -b $SUSFS_BRANCH https://github.com/cctv18/susfs4oki.git susfs4oki || echo "SUSFS4OKI Not Found"
 
           echo "Cloning SUSFS4KSU (fallback)..."
-          git clone --depth=1 -b $SUSFS_BRANCH https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu || echo "SUSFS4KSU not found"
+          git clone --depth=1 -b $SUSFS_BRANCH https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu || echo "SUSFS4KSU Not Found"
 
           # ==============================
           # Detect which SUSFS Repository was Cloned & Get Version
