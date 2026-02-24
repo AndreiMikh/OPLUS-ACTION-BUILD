@@ -111,7 +111,6 @@ on:
          - WildKSU-Canary
          - WildKSU-Canary-Spoofed
          - KernelSU-Main
-         - KernelSU-Main-Spoofed
       ZRAM:
         type: string
         description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
@@ -888,13 +887,9 @@ jobs:
               BRANCH="stable"
               ARTIFACT="manager-spoofed"
               ;;
-            KernelKSU-Main)
+            KernelSU-Main)
               BRANCH="main"
               ARTIFACT="manager"
-              ;;
-            KernelKSU-Main-Spoofed)
-              BRANCH="stable"
-              ARTIFACT="manager-spoofed"
               ;;
             ReSukiSU-Main)
               BRANCH="main"
