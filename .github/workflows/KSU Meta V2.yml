@@ -842,7 +842,7 @@ jobs:
 
           cd kernel_workspace
 
-          echo "====== Clone  Patch ======"
+          echo "====== Clone Patch ======"
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
           git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
           echo "Patch Cloned"
@@ -921,7 +921,6 @@ jobs:
                   https://gitlab.com/simonpunk/susfs4ksu.git \
                   susfs4ksu
               fi
-
           fi
 
           # ==============================
@@ -936,7 +935,7 @@ jobs:
           # Optional SUSFS Meta Checkout
           # ==============================
           cd susfs4ksu
-          
+    
           if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
             if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
               git checkout HEAD~${{ github.event.inputs.SUSFS_META }}
@@ -956,7 +955,7 @@ jobs:
 
           echo "Detected SUSFS Version: $SUSFS_VERSION"
           echo "SUSFS_VERSION=$SUSFS_VERSION" >> "$GITHUB_ENV"
-          
+    
           cd ..
 
           # ==============================
@@ -986,7 +985,7 @@ jobs:
           patch -p1 < "$(basename $SUS_PATCH)"
 
           # ==============================
-          # Hide Patch (Only Supported Bases)
+          # Hide Patch (Supported Bases)
           # ==============================
           if [[ "$GKI_V" == "android14-6.1" || \
                 "$GKI_V" == "android15-6.1" || \
@@ -1006,7 +1005,33 @@ jobs:
           cd - >/dev/null
 
           echo "===== SUSFS Applied Successfully ====="
-          
+    
+          # ==============================
+          # Apply Overwrite Hook Mode Patch (v2.0.0 SUSFS & KernelSU-Next)
+          # ==============================
+          if [[ "$SUSFS_VERSION" == "v2.0.0" && "$KSU_META" == "KernelSU-Next" ]]; then
+            echo "Applying Overwrite Hook Mode Patch..."
+            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
+      
+            curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
+            patch -p1 --forward < overwrite_hook_mode.patch || \
+              echo "Overwrite Hook Mode Patch Already Applied or Skipped"
+          else
+            echo "SUSFS Version is Not v2.0.0 or KSU Meta is Not KernelSU-Next, Skipping Overwrite Hook Mode Patch"
+          fi
+
+          # ==============================
+          # Apply Multi Manager Patch (For KernelSU-Next & WildKSU)
+          # ==============================
+          if [[ "$KSU_META" == "KernelSU-Next" || "$KSU_META" == "WildKSU" ]]; then
+            echo "Applying Multi Manager Patch..."
+            curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
+            patch -p1 --forward < multi_manager.patch || \
+              echo "Multi Manager Patch Already Applied or Skipped"
+          else
+            echo "KSU_META is not KernelSU-Next. Skipping Multi Manager Patch."
+          fi
+
           # ==============================
           # Pull ZRAM Patches
           # ==============================
@@ -1050,7 +1075,7 @@ jobs:
 
             echo "✅ All ZRAM Patches Applied"
           fi
-          
+
           cd ./kernel_platform/common
 
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
