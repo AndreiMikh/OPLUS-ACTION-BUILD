@@ -1256,21 +1256,21 @@ jobs:
           # ==============================
           # Detect SUSFS Patch File
           # ==============================
-          SUSFS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
+          SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
-          if [ -z "$SUSFS_PATCH" ]; then
+          if [ -z "$SUS_PATCH" ]; then
             echo "ERROR: SUSFS Patch Not Found for $GKI_V"
             echo "Available Patches:"
             ls ./susfs4ksu/kernel_patches/ || true
             exit 1
           fi
 
-          echo "Using SUSFS Patch: $SUSFS_PATCH"
+          echo "Using SUSFS Patch: $SUS_PATCH"
 
           # ==============================
           # Copy Patch + Source Files
           # ==============================
-          cp "$SUSFS_PATCH" $KDIR/
+          cp "$SUS_PATCH" $KDIR/
           cp -r ./susfs4ksu/kernel_patches/fs/* $KDIR/fs/
           cp -r ./susfs4ksu/kernel_patches/include/linux/* $KDIR/include/linux/
 
@@ -1279,7 +1279,7 @@ jobs:
           # ==============================
           # Apply SUSFS Patch
           # ==============================
-          patch -p1 < "$(basename $SUSFS_PATCH)"
+          patch -p1 < "$(basename $SUS_PATCH)" || true
 
           # ==============================
           # Hide Patch (Only Supported Bases)
