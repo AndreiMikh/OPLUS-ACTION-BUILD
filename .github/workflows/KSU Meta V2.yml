@@ -932,50 +932,10 @@ jobs:
 
           cd kernel_workspace/kernel_platform || exit 1
 
-          # ==============================
-          # Clone SUSFS Repos (Primary + Fallback)
-          # ==============================
-          echo "Cloning SUSFS4OKI..."
-          git clone --depth=1 -b $SUSFS_BRANCH https://github.com/cctv18/susfs4oki.git ../../susfs4oki || echo "SUSFS4OKI not found"
-
-          echo "Cloning SUSFS4KSU (fallback)..."
-          git clone --depth=1 -b $SUSFS_BRANCH https://gitlab.com/simonpunk/susfs4ksu.git ../../susfs4ksu || echo "SUSFS4KSU not found"
-
-          # ==============================
-          # Detect which SUSFS Repository was Cloned & Get Version
-          # ==============================
-          if [ -d "../../susfs4oki" ]; then
-              SUS_DIR="../../susfs4oki/susfs4ksu"  # Correct Internal Folder
-          elif [ -d "../../susfs4ksu" ]; then
-              SUS_DIR="../../susfs4ksu"
-          else
-              echo "ERROR: No SUSFS Repository Found!"
-              exit 1
-          fi
-
-          cd "$SUS_DIR"
-
-          git fetch --tags
-
-          SUSFS_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "untagged")
-          echo "Detected SUSFS_VERSION=$SUSFS_VERSION"
-          echo "SUSFS_VERSION=$SUSFS_VERSION" >> "$GITHUB_ENV"
-
-          cd - >/dev/null
-
           echo "=============================="
-          echo "DEBUG: SUSFS_VERSION=$SUSFS_VERSION"
           echo "KSU_META=${{ github.event.inputs.KSU_META }}"
           echo "MANAGER_BRANCH=${{ steps.manager.outputs.MANAGER_BRANCH }}"
           echo "=============================="
-
-          # ==============================
-          # Fail Fast if SUSFS Version Not Detected
-          # ==============================
-          if [ -z "$SUSFS_VERSION" ] || [ "$SUSFS_VERSION" = "untagged" ]; then
-              echo "ERROR: SUSFS_VERSION Not Detected Correctly!"
-              exit 1
-          fi
 
           get_commit_count_version() {
             local repo="$1"
