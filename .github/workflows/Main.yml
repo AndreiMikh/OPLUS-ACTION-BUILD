@@ -118,7 +118,7 @@ on:
          
       SUSFS_VERSION:
         type: choice
-        description: SUSFS OGKI / SUSFS GKI
+        description: SUSFS for OGKI (susfs4oki) / SUSFS for GKI (susfs4ksu)
         required: true
         default: OGKI
         options:
