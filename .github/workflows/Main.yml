@@ -1186,9 +1186,9 @@ jobs:
           echo "Using Kernel Directory: $KDIR"
 
           # ==============================
-          # GIT Authentication Setup
+          # Git Authentication Setup
           # ==============================
-          echo "Setting up Git authentication..."
+          echo "Setting up Git Authentication..."
           
           echo "Ensuring No Cached Credentials"
           git config --global --unset credential.helper
@@ -1199,28 +1199,28 @@ jobs:
           if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
               echo "Using SUSFS OGKI Repository"
 
-              # Check for SUSFS OGKI DEV Branch if Selected
+              # Check for SUSFS OGKI Development Branch if Selected
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
-                  echo "Cloning SUSFS OGKI DEV Branch"
+                  echo "Cloning SUSFS OGKI Development Branch"
                   git clone --depth=1 \
-                    https://github.com/cctv18/susfs4ksu.git susfs4ksu \
-                    -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
+                    -b "oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
               else
                   echo "Cloning SUSFS OGKI Main Branch"
                   git clone --depth=1 \
-                    https://github.com/cctv18/susfs4ksu.git susfs4ksu \
+                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
                     -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               fi
           
           elif [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "GKI" ]]; then
               echo "Using SUSFS GKI Repository"
 
-              # Check for GKI DEV Branch if Selected
+              # Check for GKI Development Branch if Selected
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
-                  echo "Cloning SUSFS GKI DEV Branch"
+                  echo "Cloning SUSFS GKI Development Branch"
                   git clone --depth=1 \
                     https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
-                    -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+                    -b "gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
               else
                   echo "Cloning SUSFS GKI Main Branch"
                   git clone --depth=1 \
