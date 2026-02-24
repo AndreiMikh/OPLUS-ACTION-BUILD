@@ -10,6 +10,7 @@ on:
         default: 'Unified KSU Meta'
         options:
           - Unified KSU Meta
+          - KSU Meta V2
       cache_mode:
         type: choice
         description: 'Type of Cache to  Clean'
