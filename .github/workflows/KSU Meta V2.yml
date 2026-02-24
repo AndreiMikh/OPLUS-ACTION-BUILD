@@ -1260,13 +1260,15 @@ jobs:
 
           cd kernel_workspace/kernel_platform || exit 1
 
-          echo "==============================="
+          echo "=============================="
           echo "DEBUG: SUSFS_VERSION=$SUSFS_VERSION"
           echo "KSU_META=${{ github.event.inputs.KSU_META }}"
           echo "MANAGER_BRANCH=${{ steps.manager.outputs.MANAGER_BRANCH }}"
-          echo "==============================="
+          echo "=============================="
 
+          # ==============================
           # Fail Fast if SUSFS Version Not Detected
+          # ==============================
           if [ -z "$SUSFS_VERSION" ] || [ "$SUSFS_VERSION" = "untagged" ]; then
               echo "ERROR: SUSFS_VERSION Not Detected Correctly!"
               exit 1
@@ -1406,10 +1408,10 @@ jobs:
             # Conditionally Apply Overwrite Hook Patch
             # ==============================
             if [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
-              echo "==============================="
+              echo "=============================="
               echo "🔔 SUSFS v2.0.0 Detected!"
               echo "Applying Overwrite Hook Mode Patch..."
-              echo "==============================="
+              echo "=============================="
 
               curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
 
