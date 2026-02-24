@@ -170,9 +170,9 @@
     echo "===== SUSFS Applied Successfully ====="
     
     # ==============================
-    # Apply Overwrite Hook Mode Patch (Only for v2.0.0 SUSFS)
+    # Apply Overwrite Hook Mode Patch (Only for v2.0.0 SUSFS AND KernelSU-Next)
     # ==============================
-    if [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
+    if [[ "$SUSFS_VERSION" == "v2.0.0" && "$KSU_META" == "KernelSU-Next" ]]; then
       echo "Applying Overwrite Hook Mode Patch..."
       PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
       
@@ -180,17 +180,21 @@
       patch -p1 --forward < overwrite_hook_mode.patch || \
         echo "Overwrite Hook Mode Patch Already Applied or Skipped"
     else
-      echo "SUSFS Version is not v2.0.0. Skipping Overwrite Hook Mode Patch."
+      echo "SUSFS Version is not v2.0.0 or KSU_META is not KernelSU-Next. Skipping Overwrite Hook Mode Patch."
     fi
 
     # ==============================
-    # Apply Multi Manager Patch
+    # Apply Multi Manager Patch (Only for KernelSU-Next)
     # ==============================
-    echo "Applying Multi Manager Patch..."
-    curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
-    patch -p1 --forward < multi_manager.patch || \
-      echo "Multi Manager Patch Already Applied or Skipped"
-    
+    if [[ "$KSU_META" == "KernelSU-Next" ]]; then
+      echo "Applying Multi Manager Patch..."
+      curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
+      patch -p1 --forward < multi_manager.patch || \
+        echo "Multi Manager Patch Already Applied or Skipped"
+    else
+      echo "KSU_META is not KernelSU-Next. Skipping Multi Manager Patch."
+    fi
+
     # ==============================
     # Pull ZRAM Patches
     # ==============================
