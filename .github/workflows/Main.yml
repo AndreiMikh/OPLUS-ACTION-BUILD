@@ -116,6 +116,15 @@ on:
          - WildKSU-Canary
          - WildKSU-Canary-Spoofed
          
+      SUSFS_VERSION:
+        type: choice
+        description: SUSFS OGKI / SUSFS GKI
+        required: true
+        default: OGKI
+        options:
+          - OGKI
+          - GKI
+      
       ZRAM:
         type: string
         description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
@@ -525,6 +534,7 @@ jobs:
               echo "LSM               : ${{ github.event.inputs.LSM }}"
               echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
               echo "BBR_ECN           : ${{ github.event.inputs.BBR_ECN }}"
+              echo "SUSFS_VERSION     : ${{ github.event.inputs.SUSFS_VERSION }}"
               echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
               echo "FAST_BUILD        : ${{ github.event.inputs.FAST_BUILD }}"
               echo "SCHED             : ${{ github.event.inputs.SCHED }}"
@@ -1176,7 +1186,7 @@ jobs:
           # ==============================
           # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
-          if [[ "${{ github.event.inputs.susfs_version }}" == "susfs4ksu_cctv18" ]]; then
+          if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
               echo "Using SUSFS OGKI Repository"
 
               # Check for SUSFS OGKI DEV Branch if Selected
@@ -1191,22 +1201,8 @@ jobs:
                     https://github.com/cctv18/susfs4ksu.git susfs4ksu \
                     -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               fi
-          elif [[ "${{ github.event.inputs.susfs_version }}" == "susfs4oki" ]]; then
-              echo "Using SUSFS OGKI Repository"
-
-              # Check for OGKI DEV Branch if Selected
-              if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
-                  echo "Cloning SUSFS OGKI DEV Branch"
-                  git clone --depth=1 \
-                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
-                    -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
-              else
-                  echo "Cloning SUSFS OGKI Main Branch"
-                  git clone --depth=1 \
-                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
-                    -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
-              fi
-          elif [[ "${{ github.event.inputs.susfs_version }}" == "susfs4ksu_simonpunk" ]]; then
+          
+          elif [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "GKI" ]]; then
               echo "Using SUSFS GKI Repository"
 
               # Check for GKI DEV Branch if Selected
@@ -1252,21 +1248,21 @@ jobs:
           # ==============================
           # Detect SUSFS Patch File
           # ==============================
-          SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
+          SUSFS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
-          if [ -z "$SUS_PATCH" ]; then
+          if [ -z "$SUSFS_PATCH" ]; then
             echo "ERROR: SUSFS Patch Not Found for $GKI_V"
-            echo "Available patches:"
+            echo "Available Patches:"
             ls ./susfs4ksu/kernel_patches/ || true
             exit 1
           fi
 
-          echo "Using SUSFS Patch: $SUS_PATCH"
+          echo "Using SUSFS Patch: $SUSFS_PATCH"
 
           # ==============================
           # Copy Patch + Source Files
           # ==============================
-          cp "$SUS_PATCH" $KDIR/
+          cp "$SUSFS_PATCH" $KDIR/
           cp -r ./susfs4ksu/kernel_patches/fs/* $KDIR/fs/
           cp -r ./susfs4ksu/kernel_patches/include/linux/* $KDIR/include/linux/
 
@@ -1275,7 +1271,7 @@ jobs:
           # ==============================
           # Apply SUSFS Patch
           # ==============================
-          patch -p1 < "$(basename $SUS_PATCH)"
+          patch -p1 < "$(basename $SUSFS_PATCH)"
 
           # ==============================
           # Hide Patch (Only Supported Bases)
