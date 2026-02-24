@@ -1289,29 +1289,34 @@ jobs:
           echo "===== SUSFS Applied Successfully ====="
     
           # ==============================
-          # Apply Overwrite Hook Mode Patch (v2.0.0 SUSFS & KernelSU-Next)
+          # Define Supported KSU Meta Managers for Special Patches
           # ==============================
-          if [[ "$SUSFS_VERSION" == "v2.0.0" && "$KSU_META" == "KernelSU-Next" ]]; then
-            echo "Applying Overwrite Hook Mode Patch..."
-            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
-      
-            curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
-            patch -p1 --forward < overwrite_hook_mode.patch || \
-              echo "Overwrite Hook Mode Patch Already Applied or Skipped"
+          PATCH_MANAGERS=("KernelSU-Next" "WildKSU")  # Add more Here if Needed
+
+          # ==============================
+          # Apply Overwrite Hook Mode Patch (v2.0.0 SUSFS)
+          # ==============================
+          if [[ " ${PATCH_MANAGERS[*]} " =~ " ${KSU_META} " ]] && [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
+              echo "Applying Overwrite Hook Mode Patch for $KSU_META..."
+              PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
+    
+              curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
+              patch -p1 --forward < overwrite_hook_mode.patch || \
+                  echo "Overwrite Hook Mode Patch Already Applied or Skipped"
           else
-            echo "SUSFS Version is Not v2.0.0 or KSU Meta is Not KernelSU-Next, Skipping Overwrite Hook Mode Patch"
+              echo "Skipping Overwrite Hook Mode Patch: Either SUSFS != v2.0.0 or $KSU_META Not Supported"
           fi
 
           # ==============================
-          # Apply Multi Manager Patch (For KernelSU-Next & WildKSU)
+          # Apply Multi Manager Patch
           # ==============================
-          if [[ "$KSU_META" == "KernelSU-Next" || "$KSU_META" == "WildKSU" ]]; then
-            echo "Applying Multi Manager Patch..."
-            curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
-            patch -p1 --forward < multi_manager.patch || \
-              echo "Multi Manager Patch Already Applied or Skipped"
+          if [[ " ${PATCH_MANAGERS[*]} " =~ " ${KSU_META} " ]]; then
+              echo "Applying Multi Manager Patch for $KSU_META..."
+              curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
+              patch -p1 --forward < multi_manager.patch || \
+                  echo "Multi Manager Patch Already Applied or Skipped"
           else
-            echo "KSU_META is not KernelSU-Next. Skipping Multi Manager Patch."
+              echo "Skipping Multi Manager Patch: $KSU_META Not Supported"
           fi
 
           # ==============================
