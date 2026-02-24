@@ -1022,7 +1022,7 @@ jobs:
             sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
 
             # Add Formatted Name
-            printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%% [%s]"\n' "$KSU_VERSION" >> "$DEFCONFIG"
+            printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%%-Andrei[%s]"\n' "$KSU_VERSION" >> "$DEFCONFIG"
             
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
@@ -1051,14 +1051,13 @@ jobs:
             # ==============================
             # Apply Multi-Manager Patch
             # ==============================
-
             cd ../KernelSU-Next || exit 1
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
 
-            # ------------------------------
+            # ==============================
             # Always Apply Multi Manager Patch
-            # ------------------------------
+            # ==============================
             echo "Downloading multi_manager.patch..."
             curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
 
@@ -1066,9 +1065,9 @@ jobs:
             patch -p1 --forward < multi_manager.patch || \
               echo "multi_manager.patch Already Applied or Skipped"
 
-            # ------------------------------
+            # ==============================
             # Conditionally Apply Overwrite Hook Patch
-            # ------------------------------
+            # ==============================
             if [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
               echo "SUSFS v2.0.0 Detected → Applying Overwrite Hook Mode Patch"
 
