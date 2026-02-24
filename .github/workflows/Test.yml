@@ -1594,25 +1594,43 @@ jobs:
 
       - name: Add Configuration Settings
         run: |
+          # Navigate to the Correct Directory
           cd kernel_workspace/kernel_platform/common
+
+          # Set the Path to the Configuration File
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
+
+          # Get the Kernel Version & Manager Branch from Environment Variables & GitHub Actions
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
 
           # ==============================
           # KSU Meta Configuration
           # ==============================
-          echo "CONFIG_KSU=y" >> "$CONFIG_FILE"
-          echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
+          echo "CONFIG_KSU=y" >> "$CONFIG_FILE"  # Enable KernelSU Support
+
+          # Check if KSU Meta is Either SukiSU-Ultra or ReSukiSU
+          if [[ "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ]]; then
+            # Enable Multi-Manager Support if the Condition is True
+            echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
+            echo "Multi-Manager Support Enabled for $KSU_META"
+          else
+             echo "Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"
+          fi
 
           # ==============================
           # KPM Configuration
           # ==============================
+          # Check if KPM input is "KPN" or "None", disable KPM
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
+            echo "KPM is disabled (KPN or None)."
           fi
+
+          # Check if KPM Input is "KPM", Enable KPM
           if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
+            echo "KPM is Enabled"
           fi
 
           # ==============================
