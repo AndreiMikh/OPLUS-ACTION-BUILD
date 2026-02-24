@@ -1051,29 +1051,36 @@ jobs:
             # ==============================
             # Apply Multi-Manager Patch
             # ==============================
+
             cd ../KernelSU-Next || exit 1
 
             PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
 
-            PATCH_LIST=(
-              multi_manager.patch
-              overwrite_hook_mode.patch
-            )
+            # ------------------------------
+            # Always Apply Multi Manager Patch
+            # ------------------------------
+            echo "Downloading multi_manager.patch..."
+            curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
 
-            for p in "${PATCH_LIST[@]}"; do
-              echo "Downloading $p..."
-              curl -fsSL "$PATCH_BASE/$p" -o "$p"
-            
-              echo "Applying $p..."
+            echo "Applying multi_manager.patch..."
+            patch -p1 --forward < multi_manager.patch || \
+              echo "multi_manager.patch Already Applied or Skipped"
 
-              if patch -p1 --forward < "$p"; then
-                echo "$p Applied Successfully"
-              else
-                echo "$p Already Applied or Failed, Skipping..."
-              fi
-            done
+            # ------------------------------
+            # Conditionally Apply Overwrite Hook Patch
+            # ------------------------------
+            if [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
+              echo "SUSFS v2.0.0 Detected → Applying Overwrite Hook Mode Patch"
 
-            echo "All KernelSU-Next Patches Processed"
+              curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
+
+              patch -p1 --forward < overwrite_hook_mode.patch || \
+                echo "Overwrite Hook Mode Patch Already Applied or Skipped"
+            else
+              echo "SUSFS is Not v2.0.0 → Skipping Overwrite Hook Mode Patch"
+            fi
+
+            echo "KernelSU-Next Patch Handling Done"
 
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
@@ -1204,7 +1211,7 @@ jobs:
           # Optional SUSFS Meta Checkout
           # ==============================
           cd susfs4ksu
-
+          
           if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
             if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
               git checkout HEAD~${{ github.event.inputs.SUSFS_META }}
@@ -1213,6 +1220,18 @@ jobs:
             fi
           fi
 
+          # ==============================
+          # Detect SUSFS Version (After Checkout)
+          # ==============================
+          SUSFS_VERSION=$(git tag --points-at HEAD | head -n1)
+
+          if [ -z "$SUSFS_VERSION" ]; then
+            SUSFS_VERSION="untagged"
+          fi
+
+          echo "Detected SUSFS Version: $SUSFS_VERSION"
+          echo "SUSFS_VERSION=$SUSFS_VERSION" >> "$GITHUB_ENV"
+          
           cd ..
 
           # ==============================
