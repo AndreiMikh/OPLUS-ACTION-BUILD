@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="AndreiMikh.png" alt="ANDREIMIKH KERNEL LAB" width="100%">
+</p>
+
+<br>
+
 ⚡ ANDREIMIKH KERNEL LAB ⚡
 
 No Hand-Holding, No Compromises, Just Raw Kernel Power
