@@ -1295,7 +1295,7 @@ jobs:
           
                   # Download the patch
                   echo "Downloading KernelSU Patch from $PATCH_URL"
-                  wget -q "$PATCH_URL" -O ./KernelSU/10_enable_susfs_for_ksu.patch
+                  wget "$PATCH_URL" -O ./KernelSU/10_enable_susfs_for_ksu.patch
           
                   KS_PATCH="./KernelSU/10_enable_susfs_for_ksu.patch"
           
