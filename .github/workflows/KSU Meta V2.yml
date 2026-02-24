@@ -1063,7 +1063,7 @@ jobs:
             sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
 
             # Add Formatted Name
-            printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%%-Andrei[%s]"\n' "$KSU_VERSION" >> "$DEFCONFIG"
+            printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%%-AndreiMikh[%s]"\n' "$KSU_VERSION" >> "$DEFCONFIG"
             
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
@@ -1088,42 +1088,6 @@ jobs:
             sed -i \
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
-
-            # ==============================
-            # Apply Multi-Manager Patch
-            # ==============================
-            cd ../KernelSU-Next || exit 1
-
-            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
-
-            # ==============================
-            # Always Apply Multi Manager Patch
-            # ==============================
-            echo "Downloading multi_manager.patch..."
-            curl -fsSL "$PATCH_BASE/multi_manager.patch" -o multi_manager.patch
-
-            echo "Applying multi_manager.patch..."
-            patch -p1 --forward < multi_manager.patch || \
-              echo "multi_manager.patch Already Applied or Skipped"
-
-            # ==============================
-            # Conditionally Apply Overwrite Hook Patch
-            # ==============================
-            if [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
-              echo "=============================="
-              echo "🔔 SUSFS v2.0.0 Detected!"
-              echo "Applying Overwrite Hook Mode Patch..."
-              echo "=============================="
-
-              curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
-
-              patch -p1 --forward < overwrite_hook_mode.patch || \
-                echo "Overwrite Hook Mode Patch Already Applied or Skipped"
-          else
-              echo "SUSFS is Not v2.0.0 → Skipping Overwrite Hook Mode Patch"
-          fi
-
-          echo "KernelSU-Next Patch Handling Done"
 
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
