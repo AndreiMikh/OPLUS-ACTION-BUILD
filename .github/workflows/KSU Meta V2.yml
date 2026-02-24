@@ -1100,7 +1100,7 @@ jobs:
               kernel/Kbuild
 
           else
-            echo "No built-in KSU Meta Selected, Skipping..."
+            echo "No Built-in KSU Meta Selected, Skipping..."
           fi
 
       - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
