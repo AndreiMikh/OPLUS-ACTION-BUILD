@@ -29,16 +29,18 @@ on:
         required: true
         default: "ReSukiSU-Main"
         options:
-          - ReSukiSU-Main
-          - ReSukiSU-Main-Spoofed
-          - SukiSU-Ultra-Main
-          - SukiSU-Main-Spoofed
-          - KernelSU-Next-Dev
-          - KernelSU-Next-Dev-Spoofed
-          - WildKSU-Stable
-          - WildKSU-Stable-Spoofed
-          - WildKSU-Canary
-          - WildKSU-Canary-Spoofed
+         - ReSukiSU-Main
+         - ReSukiSU-Main-Spoofed
+         - SukiSU-Ultra-Main
+         - SukiSU-Main-Spoofed
+         - KernelSU-Next-Stable
+         - KernelSU-Next-Stable-Spoofed
+         - KernelSU-Next-Dev
+         - KernelSU-Next-Dev-Spoofed
+         - WildKSU-Stable
+         - WildKSU-Stable-Spoofed
+         - WildKSU-Canary
+         - WildKSU-Canary-Spoofed
 
 permissions:
   actions: write
