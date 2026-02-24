@@ -4,6 +4,21 @@
 
 <br>
 
+## 🔥 Supported Root Engines
+
+<p align="center">
+
+| 🟣 **SukiSU-Ultra** | 🔵 **ReSukiSU** | 🟢 **KernelSU-Next** |
+|:-------------------:|:---------------:|:--------------------:|
+| SUSFS Monster Mode | Balanced & Refined | Bleeding Edge |
+
+| 🟡 **WildKSU** | 🔴 **KernelSU (Official)** | ⚙ Future Slot |
+|:---------------:|:--------------------------:|:--------------:|
+| Experimental Fork | Clean Upstream | Expandable |
+
+</p>
+
+
 ⚡ ANDREIMIKH KERNEL LAB ⚡
 
 No Hand-Holding, No Compromises, Just Raw Kernel Power
