@@ -1142,7 +1142,7 @@ jobs:
 
           cd kernel_workspace
 
-          echo "====== Clone  Patch ======"
+          echo "====== Clone Patch ======"
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
           git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
           echo "Patch Cloned"
@@ -1174,54 +1174,56 @@ jobs:
           echo "Using Kernel Directory: $KDIR"
 
           # ==============================
-          # Clone Correct SUSFS Repository
+          # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
-          if [[ "$GKI_V" == "android14-6.1" || \
-                "$GKI_V" == "android15-6.6" || \
-                "$GKI_V" == "android16-6.12" ]]; then
+          if [[ "${{ github.event.inputs.susfs_version }}" == "susfs4ksu_cctv18" ]]; then
+              echo "Using SUSFS OGKI Repository"
 
-              echo "Using SUSFS (OKI) Repository"
-
-              git clone --depth=1 \
-                https://github.com/cctv18/susfs4oki.git susfs4ksu \
-                -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
-
-          else
-
-              echo "Using SimonPunk SUSFS Fallback Repository"
-
-              # ==============================
-              # SimonPunk SUSFS Clone (Smart Fallback)
-              # ==============================
-              BASE_BRANCH="gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
-              DEV_BRANCH="${BASE_BRANCH}-dev"
-              USE_DEV="${{ github.event.inputs.SUSFS_DEV }}"
-
-              echo "Base branch: $BASE_BRANCH"
-              echo "Dev branch:  $DEV_BRANCH"
-              echo "SUSFS_DEV:   $USE_DEV"
-
-              if [[ "$USE_DEV" == "true" ]]; then
-                echo "Checking if DEV Branch Exists..."
-
-                if git ls-remote --heads https://gitlab.com/simonpunk/susfs4ksu.git "$DEV_BRANCH" | grep -q "$DEV_BRANCH"; then
-                  echo "DEV Branch Found, Cloning $DEV_BRANCH"
-                  git clone --depth=1 -b "$DEV_BRANCH" \
-                    https://gitlab.com/simonpunk/susfs4ksu.git \
-                    susfs4ksu
-                else
-                  echo "DEV Branch Not Found, Falling Back to $BASE_BRANCH"
-                  git clone --depth=1 -b "$BASE_BRANCH" \
-                    https://gitlab.com/simonpunk/susfs4ksu.git \
-                    susfs4ksu
-                fi
+              # Check for SUSFS OGKI DEV Branch if Selected
+              if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+                  echo "Cloning SUSFS DEV Branch"
+                  git clone --depth=1 \
+                    https://github.com/cctv18/susfs4ksu.git susfs4ksu \
+                    -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               else
-                echo "Cloning Normal Branch $BASE_BRANCH"
-                git clone --depth=1 -b "$BASE_BRANCH" \
-                  https://gitlab.com/simonpunk/susfs4ksu.git \
-                  susfs4ksu
+                  echo "Cloning SUSFS OGKI Main Branch"
+                  git clone --depth=1 \
+                    https://github.com/cctv18/susfs4ksu.git susfs4ksu \
+                    -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               fi
+          elif [[ "${{ github.event.inputs.susfs_version }}" == "susfs4oki" ]]; then
+              echo "Using SUSFS OGKI Repository"
 
+              # Check for OGKI DEV Branch if Selected
+              if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+                  echo "Cloning SUSFS OGKI DEV Branch"
+                  git clone --depth=1 \
+                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
+                    -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+              else
+                  echo "Cloning SUSFS OGKI Main Branch"
+                  git clone --depth=1 \
+                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
+                    -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+              fi
+          elif [[ "${{ github.event.inputs.susfs_version }}" == "susfs4ksu_simonpunk" ]]; then
+              echo "Using SUSFS GKI Repository"
+
+              # Check for GKI DEV Branch if Selected
+              if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+                  echo "Cloning SUSFS GKI DEV Branch"
+                  git clone --depth=1 \
+                    https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
+                    -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+              else
+                  echo "Cloning SUSFS GKI Main Branch"
+                  git clone --depth=1 \
+                    https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
+                    -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+              fi
+          else
+              echo "ERROR: Invalid SUSFS Version Selected!"
+              exit 1
           fi
 
           # ==============================
@@ -1295,7 +1297,7 @@ jobs:
 
           cd - >/dev/null
 
-          echo "===== SUSFS Applied Successfully ====="
+          echo "SUSFS Applied Successfully"        
           
           # ==============================
           # Pull ZRAM Patches
