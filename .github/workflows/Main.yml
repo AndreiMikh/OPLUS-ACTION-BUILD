@@ -1009,6 +1009,28 @@ jobs:
             KSU_VERSION=$(( $(git rev-list --count main 2>/dev/null || echo 114514) + 30700 ))
             echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
 
+            # ==============================
+            # Detect DefConfig Path
+            # ==============================
+            if [[ -f ../common/arch/arm64/configs/gki_defconfig ]]; then
+              DEFCONFIG="../common/arch/arm64/configs/gki_defconfig"
+            elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
+              DEFCONFIG="../arch/arm64/configs/gki_defconfig"
+            else
+              echo "GKI DefConfig Not Found!"
+              exit 1
+            fi
+
+            # ==============================
+            # Remove Old Entry to Prevent Duplication
+            # ==============================
+            sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
+
+            # ==============================
+            # Add Formatted Name
+            # ==============================
+            printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%%-Andrei[%s]"\n' "$KSU_VERSION" >> "$DEFCONFIG"
+            
           elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
 
@@ -1209,7 +1231,9 @@ jobs:
 
           echo "Using SUSFS Patch: $SUS_PATCH"
 
+          # ==============================
           # Copy Patch + Source Files
+          # ==============================
           cp "$SUS_PATCH" $KDIR/
           cp -r ./susfs4ksu/kernel_patches/fs/* $KDIR/fs/
           cp -r ./susfs4ksu/kernel_patches/include/linux/* $KDIR/include/linux/
@@ -1486,7 +1510,9 @@ jobs:
 
           cd kernel_workspace/kernel_platform/common || exit 1
 
+          # ==============================
           # Check if Fengchi Already Exists
+          # ==============================
           for p in ./kernel/sched/hmbird* ./vendor/oplus/kernel/cpu/sched_ext/hmbird*; do
             if [ -d "$p" ]; then
               echo "Fengchi Code Already Exists, Skipping"
@@ -1732,7 +1758,9 @@ jobs:
             echo "CONFIG_DEBUG_INFO_BTF=n" >> "$CONFIG_FILE"
           fi
 
+          # ==============================
           # Enable Rust Support if Requested
+          # ==============================
           if [[ "$ENABLE_RUST" == "true" ]]; then
             cat >> "$CONFIG_FILE" << EOF
           CONFIG_RUST=y
@@ -1889,7 +1917,10 @@ jobs:
           if [[ "$CLANG_PREBUILT_BIN" =~ (clang-r[0-9a-z]+) ]]; then
             CLANG_VERSION="${BASH_REMATCH[1]}"
           else
+          
+            # ==============================
             # If No Match Found, Try Extract from Build Config Constants
+            # ==============================
             if [[ -f ./common/build.config.constants ]]; then
               CLANG_VERSION=$(grep '^CLANG_VERSION=' ./common/build.config.constants | cut -d'=' -f2 || true)
             fi
