@@ -914,6 +914,9 @@ jobs:
             WildKSU)
               REPO="WildKernels/Wild_KSU"
               ;;
+            KernelSU)
+              REPO="tiann/KernelSU"
+              ;;
             ReSukiSU)
               REPO="ReSukiSU/ReSukiSU"
               ;;
