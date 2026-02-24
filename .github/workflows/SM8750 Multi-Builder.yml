@@ -8,11 +8,9 @@ on:
         type: choice
         description: "Select Workflow to Trigger"
         required: true
-        default: "Unified KSU Meta.yml"
+        default: "KSU Meta V2.yml"
         options:
-          - Unified KSU Meta.yml
-          - Unified KSU Meta Dev.yml
-          - Unified KSU Meta SM8750.yml
+          - KSU Meta V2.yml
 
       KSU_META:
         type: choice
@@ -112,7 +110,7 @@ jobs:
               "KSU_META": "${{ github.event.inputs.KSU_META }}",
               "ZRAM": "0/1z4kd/8589934592",
               "BUILD_TIME": "",
-              "SUFFIX": "",
+              "SUFFIX": "8-andreimikhail-4k",
               "LSM": true,
               "NETFILTER": true,
               "BBR_ECN": true,
