@@ -1261,6 +1261,16 @@ jobs:
           cd kernel_workspace/kernel_platform || exit 1
 
           # ==============================
+          # Clone SUSFS Repos
+          # ==============================
+          echo "Cloning SUSFS4OKI..."
+          git clone --depth=1 -b $SUSFS_BRANCH https://gitlab.com/simonpunk/susfs4oki.git ../../susfs4oki || echo "SUSFS4OKI not found"
+
+          echo "Cloning SUSFS4KSU (fallback)..."
+          git clone --depth=1 -b $SUSFS_BRANCH https://gitlab.com/simonpunk/susfs4ksu.git ../../susfs4ksu || echo "SUSFS4KSU not found"
+
+
+          # ==============================
           # Detect which SUSFS Repository was Cloned & Get Version
           # ==============================
           if [ -d "../../susfs4oki" ]; then
