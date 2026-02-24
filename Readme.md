@@ -18,6 +18,67 @@
 
 </p>
 
+## 🧠 Core Philosophy
+
+<p align="center">
+
+| ⚡ Principle | 💀 What It Means |
+|:-------------|:-----------------|
+| **Performance > Safety Nets** | Speed & Efficiency Come First — No Artificial Limits |
+| **Automation > Manual Mess** | CI-Driven Builds — No Telegram Zip Roulette |
+| **Power Users > Casual Flashers** | Built For People Who Read Logs, Not Tutorials |
+| **Reproducible > Random** | Clean Commit History, Deterministic Builds |
+| **Visibility > Mystery** | No Hidden Binaries, No Secret Patches, Everything Is Auditable |
+
+</p>
+
+> No Mystery Binaries  
+> No Hidden Patches  
+> Everything Is Automated — Everything Is Visible
+
+## 💀 Built For Operators — Not Spectators
+
+You Want Control — Not Comfort
+
+You Want Source — Not Sketches
+
+You Want Reproducibility — Not Random Telegram Builds
+
+<p align="center">
+
+| 💣 Demand | 🧠 Implementation |
+|:----------|:------------------|
+| Root Authority | Kernel-Level Integration |
+| SUSFS Support | Auto-Detected, Patched Correctly |
+| Multi-KSU Eco-System | Selectable Build Time |
+| CI Automation | Deterministic GitHub Pipeline |
+| Version Integrity | Offset-based, Collision-Proof Logic |
+| Clean Architecture | Structured Patch Engine |
+
+</p>
+
+If You're Afraid Of Fastboot —
+
+Turn Back
+Why This Version Is Better
+
+✔ Looks Intentional
+✔ Feels Engineered
+✔ Maintains Aggression Without Looking Childish
+✔ Visually Structured
+✔ Makes Your Repository Feel Serious
+
+If You Want, I Can Now:
+
+Convert Entire README Into "Elite Kernel Lab" Theme
+
+Add An Architecture Diagram Section
+
+Add Animated Shields Row
+
+Make It Look Like A Real Open-Source Flagship Project
+
+We Can Turn This Into Top Tier Presentation 😈
 
 ⚡ ANDREIMIKH KERNEL LAB ⚡
 
@@ -27,126 +88,24 @@ No Hand-Holding, No Compromises, Just Raw Kernel Power
 
 This Repository Builds Performance-Focused OnePlus Kernels Integrated With Multiple KernelSU Eco-Systems
 
-If You Want:
+## ⚙️ Build Infrastructure — Engineered, Not Assembled
 
-Full Root Control
+<p align="center">
 
-SUSFS Power
+| 🧠 Component | ⚡ Implementation |
+|:-------------|:------------------|
+| **CI Engine** | GitHub Actions Multi-Manifest Automation |
+| **Source Handling** | Manifest-Based Upstream Syncing |
+| **Version Logic** | Commit Count Injection With Fork Offsets |
+| **SUSFS Integration** | Auto Header Detection + Adaptive Patching |
+| **Patch System** | Official First Logic With Clean Fallback |
+| **Feature Toggles** | SUSFS • ZRAM • LZ4KD • KSU META |
 
-Custom KSU Forks
+</p>
 
-Automated CI Builds
+This Is Not Manual Patch Stacking  
+This Is Structured Kernel Engineering
 
-Clean Version Injection
-
-Zero Bloated Non-Sense
-
-You're In The Right Place
-
-If You're Scared Of Fastboot, Go Back Now
-
-🔥 Supported Root Engines
-
-This Kernel Can Be Built With:
-
-🟣 SukiSU-Ultra – SUSFS Monster Mode
-
-🔵 ReSukiSU – Balanced and Refined
-
-🟢 KernelSU-Next – Bleeding Edge
-
-🟡 WildKSU – Experimental Fork
-
-🔴 KernelSU (Official) – Clean Upstream
-
-You Choose Your Weapon At Build Time
-
-🧠 Core Philosophy
-
-Performance > Safety Nets
-
-Automation > Manual Mess
-
-Power Users > Casual Flashers
-
-Reproducible Builds > Telegram Prebuilts
-
-No Mystery Binaries
-No Hidden Patches
-Everything Is Automated - Everything Is Visible
-
-⚙️ Build System – No Weak Setup
-
-This Repository Runs:
-
-🚀 GitHub Actions CI Automation
-
-🧩 Manifest-Based Source Pulling
-
-🧮 Commit-Based Dynamic Version Injection
-
-🛡 Auto-Detect SUSFS Header Parsing
-
-🔧 Patch Injection (Official / Fallback Logic)
-
-🧠 Modular Toggles:
-
-SUSFS
-
-ZRAM
-
-LZ4KD
-
-KSU META Switch
-
-🧬 Kernel Versioning Logic
-
-We Don’t Hardcode Lazy Version Numbers
-
-KSU_VERSION=$(( $(git rev-list --count main) + OFFSET ))
-
-Each KSU Fork Has Its Own Offset
-
-Why?
-
-So Versions Never Collide
-So Managers Don’t Misread Builds
-So the Ecosystem Stays Clean
-
-🧨 What Makes These Builds Different?
-
-✔ VMA Compatibility Fixes (When SUSFS Requires It)
-✔ Proper Symbol Handling
-✔ Clean Driver Injection
-✔ KernelSU Full Name Formatting (ReSukiSU Compatible)
-✔ ZRAM Enhancement Support
-✔ LZ4KD Performance Compression
-✔ Multi-Manifest Selectable Builds
-✔ Zero Telegram-Only Patches
-
-This Is Structured, Not Random Patch Stacking
-
-🛠 Workflow Inputs
-
-You Control Everything From GitHub Actions:
-
-Input	Meaning
-FILE	        Select Target Manifest
-KSU META	    Select Root Engine
-SUSFS META	  Enable/Disable SUSFS
-ZRAM	Enable  ZRAM Optimization
-
-Full Modular Control, No Fork Needed
-
-💣 Installation
-
-You Should Already Know What You’re Doing
-
-"fastboot flash boot boot.img"
-
-If This Scares You — Stop Here
-
-⚠ Reality Check
 
 Flashing Custom Kernels Can:
 
@@ -160,19 +119,6 @@ Cause Instability
 
 You Chose This Life
 
-🧪 Target Users
-
-ROM Developers
-
-Kernel Hackers
-
-Advanced Root Users
-
-People Who Understand Logs
-
-People Who Read Commit History
-
-Not For Casual Users Asking “How To Root?”
 
 🏴 Maintained By
 
