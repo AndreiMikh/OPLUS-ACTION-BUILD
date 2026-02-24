@@ -1827,7 +1827,7 @@ jobs:
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           TARGET_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
-          PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
+          PATCH_FILE="${PATCH_DIR}/IPv6_NAT.patch"
 
           echo "NETFILTER Enabled — Checking IPv6 NAT Compatibility..."
 
@@ -1845,7 +1845,7 @@ jobs:
           # Only Apply on Supported CPU
           # ==============================
           if [[ "${CPU:-}" == sm* ]]; then
-            echo "Applying IPv6 NAT compatibility fix..."
+            echo "Applying IPv6 NAT Compatibility Fix..."
 
             if [[ ! -f "$PATCH_FILE" ]]; then
               echo "❌ Patch File Not Found: $PATCH_FILE"
