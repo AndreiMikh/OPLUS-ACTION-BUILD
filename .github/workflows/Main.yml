@@ -1186,6 +1186,12 @@ jobs:
           echo "Using Kernel Directory: $KDIR"
 
           # ==============================
+          # GIT Authentication Setup
+          # ==============================
+          echo "Setting up Git authentication..."
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+          # ==============================
           # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
           if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
