@@ -1287,22 +1287,21 @@ jobs:
           
           if [[ "$KSU_META" == "KernelSU" || "$KSU_META" == "KernelSU-Next" ]]; then
               if [[ "$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12" ]]; then
-                  echo "KSU_META=KSU Meta & OKI Base Detected ($GKI_V), Applying 10 Enable SUSFS Patch for KSU Meta"
+                  echo "KSU_META=$KSU_META & OKI Base Detected ($GKI_V), Applying 10 Enable KernelSU SUSFS Patch"
           
-                  # Dynamically Detect Patch Path
                   KS_PATCH=$(ls ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch 2>/dev/null | head -n1)
           
                   if [[ -n "$KS_PATCH" ]]; then
                       echo "Using KernelSU Patch: $KS_PATCH"
                       patch -p1 < "$KS_PATCH" || true
                   else
-                      echo "WARNING: 10 Enable SUSFS Patch Not Found, Skipping"
+                      echo "WARNING: 10 Enable KernelSU SUSFS Patch Not Found, Skipping"
                   fi
               else
-                  echo "KSU_META=KSU Meta but Unsupported Android/Kernel Base ($GKI_V), Skipping 10 Enable SUSFS Patch for KSU Meta"
+                  echo "KSU_META=$KSU_META But Unsupported Android/Kernel Base ($GKI_V), Skipping 10 Enable KernelSU SUSFS Patch"
               fi
           else
-              echo "KSU_META != KernelSU, Skipping 10 Enable SUSFS Patch for KSU Meta"
+              echo "KSU_META=$KSU_META, Skipping 10 Enable KernelSU SUSFS Patch"
           fi
 
           # ==============================
