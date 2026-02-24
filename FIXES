@@ -51,13 +51,13 @@
             fi
           fi
 
-          # Validate repository
+          # Validate Repository
           if [ ! -d "susfs4ksu" ]; then
             echo "ERROR: SUSFS Repository Failed to Clone!"
             exit 1
           fi
 
-          # Optional SUSFS_META checkout
+          # Optional SUSFS Meta Checkout
           cd susfs4ksu
           if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
             if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
@@ -67,14 +67,14 @@
             fi
           fi
 
-          # Detect SUSFS version
+          # Detect SUSFS Version
           SUSFS_VERSION=$(git tag --points-at HEAD | head -n1)
           [ -z "$SUSFS_VERSION" ] && SUSFS_VERSION="untagged"
           echo "Detected SUSFS Version: $SUSFS_VERSION"
           echo "SUSFS_VERSION=$SUSFS_VERSION" >> "$GITHUB_ENV"
           cd ..
 
-          # Detect SUSFS patch
+          # Detect SUSFS Patch
           SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
           if [ -z "$SUS_PATCH" ]; then
             echo "ERROR: SUSFS Patch Not Found for $GKI_V"
@@ -89,7 +89,7 @@
           cd $KDIR
           patch -p1 < "$(basename $SUS_PATCH)"
 
-          # Hide Patch for supported bases
+          # Hide Patch for Supported Bases
           if [[ "$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.1" || "$GKI_V" == "android15-6.6" ]]; then
             echo "Applying Hide Patch"
             wget -q https://raw.githubusercontent.com/AndreiMikh/OPlus-Action-Build/LiquidAndrei/patches/69_hide_stuff.patch -O 69_hide_stuff.patch
@@ -100,7 +100,7 @@
           cd - >/dev/null
           echo "===== SUSFS Applied Successfully ====="
 
-          # Apply WildKernels v2.0.0 patches for KSU Meta
+          # Apply WildKernels v2.0.0 Patches for KSU Meta
           PATCH_MANAGERS=("KernelSU-Next" "WildKSU")
           PATCH_BASE="https://github.com/WildKernels/kernel_patches/raw/main/next/susfs_fix_patches"
 
@@ -115,18 +115,18 @@
               patch -p1 --forward < multi_manager.patch || echo "Multi Manager Patch Already Applied or Skipped"
             fi
 
-            # Older KernelSU-Next SUSFS fixes
+            # Older KernelSU-Next SUSFS Fixes
             if [ "$KSU_META" == "KernelSU-Next" ]; then
               case "$SUSFS_VERSION" in
                 "v1.5.8"|"v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
-                  echo "Applying older SUSFS fixes for $SUSFS_VERSION..."
+                  echo "Applying Older SUSFS Fixes for $SUSFS_VERSION..."
                   [ -f ../../OPlus-Action-Build/patches/ksu_next_legacy_fix.patch ] && patch -p1 < ../../OPlus-Action-Build/patches/ksu_next_legacy_fix.patch
                   ;;
               esac
             fi
           fi
 
-          # Pull ZRAM patches
+          # Pull ZRAM Patches
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "Pulling ZRAM Patches..."
             SRC_BASE="../SukiSU_patch/other/zram"
@@ -139,13 +139,13 @@
           cd ./kernel_platform/common
           SUBLEVEL=$(grep '^SUBLEVEL *=' Makefile | head -n1 | cut -d= -f2 | tr -d ' ')
 
-          # 5.15 Legacy C Library Fix
+          # 5.15 Legacy Compiler Library Fix
           if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
           fi
 
-          # Fake / temporary patches for VMA / PAGE_SIZE
+          # Fake / Temporary Patches for VMA / PAGE SIZE
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             fake_patched=0
             case "$GKI_V" in
@@ -166,7 +166,7 @@
                 ;;
             esac
 
-            # Revert fake patch if applied
+            # Revert Fake Patch if Applied
             if [ "$fake_patched" = 1 ]; then
               if [ "$GKI_V" = "android15-6.6" ]; then
                 sed -i -e '/unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;/d' \
@@ -177,7 +177,7 @@
               fi
             fi
 
-            # Optional XUS patch
+            # Optional XUS Patch
             if [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
               cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
