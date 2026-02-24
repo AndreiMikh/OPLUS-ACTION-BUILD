@@ -1053,7 +1053,7 @@ jobs:
             # ==============================
             cd ../KernelSU-Next || exit 1
 
-            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
+            PATCH_BASE="https://github.com/AndreiMikh/AndreiMikh-Kernel-Lab/raw/refs/heads/LiquidAndrei/patches"
 
             PATCH_LIST=(
               multi_manager.patch
@@ -1112,7 +1112,7 @@ jobs:
 
           echo "====== Clone  Patch ======"
           git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
-          git clone --depth=1 https://github.com/AndreiMikh/OPlus-Action-Build.git
+          git clone --depth=1 https://github.com/AndreiMikh/AndreiMikh-Kernel-Lab.git
           echo "Patch Cloned"
           echo "=========================="
 
@@ -1262,7 +1262,7 @@ jobs:
 
               echo "Applying Hide Patch"
 
-              wget -q https://raw.githubusercontent.com/AndreiMikh/OPlus-Action-Build/LiquidAndrei/patches/69_hide_stuff.patch \
+              wget -q https://raw.githubusercontent.com/AndreiMikh/AndreiMikh-Kernel-Lab/LiquidAndrei/patches/69_hide_stuff.patch \
                 -O 69_hide_stuff.patch
 
               patch -p1 -N -F 3 < 69_hide_stuff.patch || true
@@ -1330,7 +1330,7 @@ jobs:
           if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Apply Legacy Fix for Kernel 5.15.0–5.15.123 (Old Libc Compatibility Issue)"
 
-            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
+            cp ../../AndreiMikh-Kernel-Lab/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
             patch -p1 < fix_5.15.legacy.patch
 
             echo "5.15 Legacy Fix Applied Successfully"
@@ -1426,7 +1426,7 @@ jobs:
             if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && \
                [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
 
-              cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
+              cp ../../AndreiMikh-Kernel-Lab/patches/No_5uS.patch ./
               patch -p1 < No_5uS.patch || true
             fi
           fi        
@@ -1434,7 +1434,7 @@ jobs:
       - name: Apply Conversion
         if: ${{ env.KERNEL_VERSION == '6.6' && github.event.inputs.SCHED == 'false' }}
         run: |
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
 
           cd kernel_workspace/kernel_platform/common
 
@@ -1460,7 +1460,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
 
           cd kernel_workspace/kernel_platform/common || exit 1
 
@@ -1752,7 +1752,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
+          PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
           TARGET_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           PATCH_FILE="${PATCH_DIR}/IPv6_NAT_FIX.patch"
 
@@ -2106,7 +2106,7 @@ jobs:
         id: zram_find
         run: |
           set -e
-          ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/ZRAM.zip"
+          ZRAM_ZIP="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/ZRAM.zip"
 
           if [ ! -f "$ZRAM_ZIP" ]; then
             echo "Not Found, ZRAM.zip: $ZRAM_ZIP"
