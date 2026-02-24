@@ -282,7 +282,7 @@ jobs:
             # ==============================
             # 1. AndreiMikh/kernel_manifest
             # 2. AndreiMikh/Kernel_Manifest_Appendix
-            # 3. User Defined Dynamic Repo
+            # 3. User Defined Dynamic Repository
           
             declare -A REPOS
           
@@ -382,7 +382,7 @@ jobs:
           # ==============================
           if [[ -z "$FOUND_REPO" || ! -s "$XML_PATH" ]]; then
             echo ""
-            echo "ERROR: ${FILE}.xml Not Found in Any Configured Repository"
+            echo "Error: ${FILE}.xml Not Found in any Configured Repository"
             exit 9
           fi
 
@@ -424,7 +424,7 @@ jobs:
           ANDROID_VERSION=$(echo "$REVISION" | grep -oE '[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?' | head -n1 || true)
 
           if [[ -z "$CPU" || -z "$ANDROID_VERSION" ]]; then
-            echo "ERROR: Failed to extract CPU or Android version"
+            echo "ERROR: Failed to extract CPU or Android Version"
             exit 1
           fi
 
@@ -986,7 +986,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s builtin
+              | bash -s "$MANAGER_BRANCH"
 
             cd ./KernelSU || exit 1
 
@@ -1024,7 +1024,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s main
+              | bash -s "$MANAGER_BRANCH"
 
             echo 'CONFIG_KSU_FULL_NAME_FORMAT="%TAG_NAME%"' >> ./common/arch/arm64/configs/gki_defconfig
 
@@ -1062,7 +1062,7 @@ jobs:
 
             curl -fsSL \
               "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
-              | bash -s dev_susfs
+              | bash -s "$MANAGER_BRANCH"
 
             cd ./KernelSU-Next || exit 1
 
