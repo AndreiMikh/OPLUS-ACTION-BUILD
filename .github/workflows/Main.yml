@@ -57,6 +57,7 @@ on:
           - oneplus_15
           - oneplus_15_t_aosp
           - oneplus_15_wild
+          
       KPM:
         type: choice
         description: "Kernel Module Implementation Methods"
@@ -66,21 +67,25 @@ on:
           - KPM
           - KPN
           - None
+          
       SUSFS_META:
         type: string
         description: "Rollback SUSFS (Enter Hash or Number or -1 to Turn Off)"
         required: false
         default: ""
+        
       DYNAMIC_REPO:
         type: string
         description: "Dynamic Inventory Warehouse Owner"
         required: true
         default: "AndreiMikh"
+        
       BUILD_TIME:
         type: string
         description: "Custom Build Time (Input 'UTC' to Use Current UTC Time)"
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
+        
       KSU_META:
         type: choice
         description: "KSU Meta"
@@ -91,6 +96,7 @@ on:
          - SukiSU-Ultra
          - KernelSU-Next
          - WildKSU
+         
       MANAGER_SOURCE:
         type: choice
         description: "KSU Meta-Branch (Download Manager Artifact)"
@@ -109,65 +115,78 @@ on:
          - WildKSU-Stable-Spoofed
          - WildKSU-Canary
          - WildKSU-Canary-Spoofed
+         
       ZRAM:
         type: string
         description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
         required: true
         default: "0/lz4kd/8589934592"
+        
       SUFFIX:
         type: string
         description: "Custom Kernel Suffix (Use Random String if Not Specified)"
         required: false
         default: "8-andreimikhail-4k"
+        
       SUBLEVEL:
         description: "Custom Kernel Level Spoofing (Sublevel)"
         required: false
         default: ""
+        
       FAST_BUILD:
         type: boolean
         description: "Enable Fast Kernel Build?"
         required: true
         default: true
+        
       LSM:
         type: boolean
         description: "Enable Critical Partition Write Protection (BBG)?"
         required: true
         default: true
+        
       NETFILTER:
         type: boolean
         description: "Enable Network Feature Extensions (Netfilter)?"
         required: true
-        default: false
+        default: true
+        
       BBR_ECN:
         type: boolean
         description: "Enable Network Optimization Algorithm (BBR+ECN)?"
         required: true
         default: true
+        
       UNICODE_BYPASS:
         type: boolean
         description: "Add Fix for Unicode Invisible Code Point Bypass Read Vulnerability?"
         required: true
         default: true
+        
       SCHED:
         type: boolean
         description: "Add Windspeed Driver v1.0 (Fengchi)?"
         required: true
-        default: false
+        default: true
+        
       XUS_FIX:
         type: boolean
         description: "Prevent Generation of 5US Error Files?"
         required: true
         default: true
+        
       SUSFS_DEV:
         type: boolean
         description: "Extract SUSFS-Dev Branch?"
         required: true
         default: false
+        
       SPACE_NOCLEAN:
         type: boolean
         description: "Disable Space Cleaning?"
         required: true
         default: false
+        
       BUILD_NOCCACHE:
         type: boolean
         description: "Disable Ccache Update?"
@@ -182,11 +201,16 @@ jobs:
        '{0}{1}{2}{3}{4}{5}-{6} {7}',
        github.event.inputs.FAST_BUILD == 'true' && ' FAST' || '',
        contains(github.event.inputs.FILE, '_aosp') && ' AOSP' || '',
+       github.event.inputs.KSU_META == 'SukiSU-Ultra' && ' SukiSU' ||
+       github.event.inputs.KSU_META == 'ReSukiSU' && ' ReSukiSU' ||
+       github.event.inputs.KSU_META == 'KernelSU-Next' && ' KSUNext' ||
+       github.event.inputs.KSU_META == 'WildKSU' && ' WildKSU' || '',
        github.event.inputs.KPM == 'KPM' && ' KPM' ||
-       github.event.inputs.KPM == 'KPN' && ' KPN' || '',
-       github.event.inputs.LSM == 'true' && ' BBG' || '',
-       github.event.inputs.SCHED == 'true' && ' SCHED' || '',
-       startsWith(github.event.inputs.ZRAM, '1/') && ' ZRAM' || '',
+       github.event.inputs.KPM == 'KPN' && ' KPN' ||
+       github.event.inputs.KPM == 'None' && ' None' || '',
+       github.event.inputs.LSM == 'true' && ' LSM' || '',
+       github.event.inputs.SCHED == 'true' && ' Sched' || '',
+       startsWith(github.event.inputs.ZRAM, '1/') && ' ZRam' || '',
        github.event.inputs.FILE,
        github.event.inputs.SUFFIX
        )
