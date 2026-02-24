@@ -1101,7 +1101,6 @@ jobs:
             PATCH_LIST=(
               multi_manager.patch
               overwrite_hook_mode.patch
-              ksu_toolkit.patch
             )
 
             for p in "${PATCH_LIST[@]}"; do
