@@ -1279,19 +1279,30 @@ jobs:
           # Apply KernelSU SUSFS Patch (if KSU Meta = KernelSU & Supported OKI Base)
           # ==============================
           KSU_META="${{ github.event.inputs.KSU_META }}"
-          
+
           if [[ "$KSU_META" == "KernelSU" || "$KSU_META" == "KernelSU-Next" ]]; then
               if [[ "$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12" ]]; then
                   echo "KSU_META=$KSU_META & OKI Base Detected ($GKI_V), Applying 10 Enable KernelSU SUSFS Patch"
           
-                  KS_PATCH=$(ls ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch 2>/dev/null | head -n1)
+                  # Create Folder for KernelSU Patches if it Doesn't Exist
+                  mkdir -p ./KernelSU
           
-                  if [[ -n "$KS_PATCH" ]]; then
+                  # Determine branch to try
+                  PATCH_URL="https://raw.githubusercontent.com/cctv18/susfs4oki/oki-${GKI_V}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+          
+                  # Download the patch
+                  echo "Downloading KernelSU Patch from $PATCH_URL"
+                  wget -q "$PATCH_URL" -O ./KernelSU/10_enable_susfs_for_ksu.patch
+          
+                  KS_PATCH="./KernelSU/10_enable_susfs_for_ksu.patch"
+          
+                  if [[ -f "$KS_PATCH" ]]; then
                       echo "Using KernelSU Patch: $KS_PATCH"
                       patch -p1 < "$KS_PATCH" || true
                   else
-                      echo "WARNING: 10 Enable KernelSU SUSFS Patch Not Found, Skipping"
+                      echo "WARNING: 10 Enable KernelSU SUSFS Patch Not Found at $PATCH_URL, Skipping"
                   fi
+          
               else
                   echo "KSU_META=$KSU_META But Unsupported Android/Kernel Base ($GKI_V), Skipping 10 Enable KernelSU SUSFS Patch"
               fi
