@@ -1204,7 +1204,7 @@ jobs:
       
             if [ "$KSU_META" == "KernelSU-Next" ] && [ "$NEED_HOOKS" == "true" ]; then
               case "$susfs_version" in
-                "v1.5.8"|"v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
+                "v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
                   echo "Applying Older SUSFS Fixes for $susfs_version..."
                   [ -f ../../OPlus-Action-Build/patches/ksu_next_legacy_fix.patch ] && patch -p1 < ../../OPlus-Action-Build/patches/ksu_next_legacy_fix.patch
                   ;;
