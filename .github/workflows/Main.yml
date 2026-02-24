@@ -1189,8 +1189,10 @@ jobs:
           # GIT Authentication Setup
           # ==============================
           echo "Setting up Git authentication..."
-          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
+          
+          echo "Ensuring No Cached Credentials"
+          git config --global --unset credential.helper
+          
           # ==============================
           # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
@@ -1199,7 +1201,7 @@ jobs:
 
               # Check for SUSFS OGKI DEV Branch if Selected
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
-                  echo "Cloning SUSFS DEV Branch"
+                  echo "Cloning SUSFS OGKI DEV Branch"
                   git clone --depth=1 \
                     https://github.com/cctv18/susfs4ksu.git susfs4ksu \
                     -b dev-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
