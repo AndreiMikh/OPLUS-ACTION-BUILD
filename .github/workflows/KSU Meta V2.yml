@@ -1260,8 +1260,17 @@ jobs:
 
           cd kernel_workspace/kernel_platform || exit 1
 
-          MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
-          KSU_META="${{ github.event.inputs.KSU_META }}"
+          echo "==============================="
+          echo "DEBUG: SUSFS_VERSION=$SUSFS_VERSION"
+          echo "KSU_META=${{ github.event.inputs.KSU_META }}"
+          echo "MANAGER_BRANCH=${{ steps.manager.outputs.MANAGER_BRANCH }}"
+          echo "==============================="
+
+          # Fail Fast if SUSFS Version Not Detected
+          if [ -z "$SUSFS_VERSION" ] || [ "$SUSFS_VERSION" = "untagged" ]; then
+              echo "ERROR: SUSFS_VERSION Not Detected Correctly!"
+              exit 1
+          fi
 
           get_commit_count_version() {
             local repo="$1"
@@ -1397,17 +1406,20 @@ jobs:
             # Conditionally Apply Overwrite Hook Patch
             # ==============================
             if [[ "$SUSFS_VERSION" == "v2.0.0" ]]; then
-              echo "SUSFS v2.0.0 Detected → Applying Overwrite Hook Mode Patch"
+              echo "==============================="
+              echo "🔔 SUSFS v2.0.0 Detected!"
+              echo "Applying Overwrite Hook Mode Patch..."
+              echo "==============================="
 
               curl -fsSL "$PATCH_BASE/overwrite_hook_mode.patch" -o overwrite_hook_mode.patch
 
               patch -p1 --forward < overwrite_hook_mode.patch || \
                 echo "Overwrite Hook Mode Patch Already Applied or Skipped"
-            else
+          else
               echo "SUSFS is Not v2.0.0 → Skipping Overwrite Hook Mode Patch"
-            fi
+          fi
 
-            echo "KernelSU-Next Patch Handling Done"
+          echo "KernelSU-Next Patch Handling Done"
 
           elif [[ "$KSU_META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
