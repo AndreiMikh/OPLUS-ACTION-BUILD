@@ -91,6 +91,7 @@ on:
          - SukiSU-Ultra
          - KernelSU-Next
          - WildKSU
+         - KernelSU
       MANAGER_SOURCE:
         type: choice
         description: "KSU Meta-Branch (Download Manager Artifact)"
@@ -109,6 +110,8 @@ on:
          - WildKSU-Stable-Spoofed
          - WildKSU-Canary
          - WildKSU-Canary-Spoofed
+         - KernelSU-Main
+         - KernelSU-Main-Spoofed
       ZRAM:
         type: string
         description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
@@ -885,6 +888,14 @@ jobs:
               BRANCH="stable"
               ARTIFACT="manager-spoofed"
               ;;
+            KernelKSU-Main)
+              BRANCH="main"
+              ARTIFACT="manager"
+              ;;
+            KernelKSU-Main-Spoofed)
+              BRANCH="stable"
+              ARTIFACT="manager-spoofed"
+              ;;
             ReSukiSU-Main)
               BRANCH="main"
               ARTIFACT="Manager-release"
@@ -1099,6 +1110,22 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
+          elif [[ "$KSU_META" == "KernelSU" ]]; then
+            echo "Configuring KernelSU..."
+
+            REPO="tiann/KernelSU"
+
+            curl -fsSL \
+              "https://raw.githubusercontent.com/${REPO}/${MANAGER_BRANCH}/kernel/setup.sh" \
+              | bash -s "$MANAGER_BRANCH"
+
+            cd ./KernelSU || exit 1
+
+            KSU_VERSION=$(get_commit_count_version "$REPO" "$MANAGER_BRANCH" 30000)
+            echo "KSUVER=$KSU_VERSION" >> "$GITHUB_ENV"
+
+            sed -i'' "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Kbuild       
+            
           else
             echo "No Built-in KSU Meta Selected, Skipping..."
           fi
@@ -1252,6 +1279,31 @@ jobs:
           # Apply SUSFS Patch
           # ==============================
           patch -p1 < "$(basename $SUS_PATCH)"
+
+          # ==============================
+          # Apply KernelSU SUSFS Patch (if KSU Meta = KernelSU & Supported OKI Base)
+          # ==============================
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+          
+          if [[ "$KSU_META" == "KernelSU" || "$KSU_META" == "KernelSU-Next" ]]; then
+              if [[ "$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12" ]]; then
+                  echo "KSU_META=KSU Meta & OKI Base Detected ($GKI_V), Applying 10 Enable SUSFS Patch for KSU Meta"
+          
+                  # Dynamically Detect Patch Path
+                  KS_PATCH=$(ls ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch 2>/dev/null | head -n1)
+          
+                  if [[ -n "$KS_PATCH" ]]; then
+                      echo "Using KernelSU Patch: $KS_PATCH"
+                      patch -p1 < "$KS_PATCH" || true
+                  else
+                      echo "WARNING: 10 Enable SUSFS Patch Not Found, Skipping"
+                  fi
+              else
+                  echo "KSU_META=KSU Meta but Unsupported Android/Kernel Base ($GKI_V), Skipping 10 Enable SUSFS Patch for KSU Meta"
+              fi
+          else
+              echo "KSU_META != KernelSU, Skipping 10 Enable SUSFS Patch for KSU Meta"
+          fi
 
           # ==============================
           # Hide Patch (Only Supported Bases)
