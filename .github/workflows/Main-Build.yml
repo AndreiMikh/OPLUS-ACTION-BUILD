@@ -97,6 +97,7 @@ on:
          - SukiSU-Ultra
          - KernelSU-Next
          - WildKSU
+         - KernelSU
          
       MANAGER_SOURCE:
         type: choice
@@ -116,6 +117,7 @@ on:
          - WildKSU-Stable-Spoofed
          - WildKSU-Canary
          - WildKSU-Canary-Spoofed
+         - KernelSU-Main
          
       SUSFS_VERSION:
         type: choice
