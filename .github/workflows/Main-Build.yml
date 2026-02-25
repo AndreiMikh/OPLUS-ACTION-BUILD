@@ -2175,66 +2175,69 @@ jobs:
 
       # Rename Devices
       - name: Rename Devices
-        run: |
-          # Define Mapping of Old Names to New Names
-          declare -A device_map
-          device_map["oneplus_10r_v"]="OnePlus10R"
-          device_map["oneplus_nord_3_v"]="OnePlusNord3"
-          device_map["oneplus_ace_v"]="OnePlusAce"
-          device_map["oneplus_ace_race_v"]="OnePlusAceRace"
-          device_map["oneplus_10_pro_V"]="OnePlus10Pro"
-          device_map["oneplus_10t_v"]="OnePlus10T"
-          device_map["oneplus_11r_b"]="OnePlus11R"
-          device_map["oneplus_ace2_b"]="OnePlusAce2"
-          device_map["oneplus_pad_lite_v"]="OnePlusPadLite"
-          device_map["oneplus_pad_mt6983_b"]="OnePlusPadMT6983"
-          device_map["oneplus_ace_2v_v"]="OnePlusAce2V"
-          device_map["oneplus_ace_pro_v"]="OnePlusAcePro"
-          device_map["oneplus_11_b"]="OnePlus11"
-          device_map["oneplus_12r_b"]="OnePlus12R"
-          device_map["oneplus_ace2_pro_b"]="OnePlusAce2Pro"
-          device_map["oneplus_ace3_b"]="OnePlusAce3"
-          device_map["oneplus_open_b"]="OnePlusOpen"
-          device_map["oneplus_nord_ce4_b"]="OnePlusNordCE4"
-          device_map["oneplus_pad_go_2_b"]="OnePlusPadGo2"
-          device_map["oneplus_nord_ce4_lite_5g_v"]="OnePlusNordCE4Lite5G"
-          device_map["oneplus_nord_4_b"]="OnePlusNord4"
-          device_map["oneplus_ace_3v_b"]="OnePlusAce3V"
-          device_map["oneplus_pad_mt6897_v"]="OnePlusPadMT6897"
-          device_map["oneplus_12_b"]="OnePlus12"
-          device_map["oneplus_13r_b"]="OnePlus13R"
-          device_map["oneplus_ace3_pro_b"]="OnePlusAce3Pro"
-          device_map["oneplus_ace5_b"]="OnePlusAce5"
-          device_map["oneplus_pad_pro_b"]="OnePlusPadPro"
-          device_map["oneplus_pad2_b"]="OnePlusPad2"
-          device_map["oneplus_nord_ce5_b"]="OnePlusNordCE5"
-          device_map["oneplus_nord_5_b"]="OnePlusNord5"
-          device_map["oneplus_ace5_pro_b"]="OnePlusAce5Pro"
-          device_map["oneplus_13_b"]="OnePlus13"
-          device_map["oneplus_13t_b"]="OnePlus13T"
-          device_map["oneplus_13s_b"]="OnePlus13S"
-          device_map["oneplus_pad_2_pro_b"]="OnePlusPad2Pro"
-          device_map["oneplus_pad_3_b"]="OnePlusPad3"
-          device_map["oneplus_ace5_race_b"]="OnePlusAce5Race"
-          device_map["oneplus_ace5_ultra_b"]="OnePlusAce5Ultra"
-          device_map["oneplus_pad2_mt6991_b"]="OnePlusPad2MT6991"
-          device_map["oneplus_ace_6"]="OnePlusAce6"
-          device_map["oneplus_ace_6t"]="OnePlusAce6T"
-          device_map["oneplus_ace_6t_aosp"]="OnePlusAce6TAOSP"
-          device_map["oneplus_15"]="OnePlus15"
-          device_map["oneplus_15_t_aosp"]="OnePlus15AOSP"
-          device_map["oneplus_15_wild"]="OnePlus15Wild"
+         run: |
+           # Assign File Input to a Bash Variable
+           FILE="${{ github.event.inputs.FILE }}"
+           echo "Using FILE: $FILE"
 
-          # Modify the Device Names in the Artifact Directory
-          for device in "${options[@]}"; do
-              if [[ -n "${device_map[$device]}" ]]; then
-                  echo "Renaming $device to ${device_map[$device]}"
-                  # Assuming the Device Name is a Directory or File within the Path
-                  mv "./AnyKernel3/$device" "./AnyKernel3/${device_map[$device]}"
-              else
-                  echo "No Mapping Found for $device"
-              fi
-          done
+           # Define the Device Map with Old Names as Keys & New Names as Values
+           declare -A device_map
+           device_map["oneplus_10r_v"]="OnePlus10R-V"
+           device_map["oneplus_nord_3_v"]="OnePlusNord3-V"
+           device_map["oneplus_ace_v"]="OnePlusAce"
+           device_map["oneplus_ace_race_v"]="OnePlusAceRace-V"
+           device_map["oneplus_10_pro_V"]="OnePlus10Pro-V"
+           device_map["oneplus_10t_v"]="OnePlus10T-V"
+           device_map["oneplus_11r_b"]="OnePlus11R-B"
+           device_map["oneplus_ace2_b"]="OnePlusAce2-B"
+           device_map["oneplus_pad_lite_v"]="OnePlusPadLite-V"
+           device_map["oneplus_pad_mt6983_b"]="OnePlusPadMT6983-B"
+           device_map["oneplus_ace_2v_v"]="OnePlusAce2V-V"
+           device_map["oneplus_ace_pro_v"]="OnePlusAcePro-V"
+           device_map["oneplus_11_b"]="OnePlus11-B"
+           device_map["oneplus_12r_b"]="OnePlus12R-B"
+           device_map["oneplus_ace2_pro_b"]="OnePlusAce2Pro-B"
+           device_map["oneplus_ace3_b"]="OnePlusAce3-B"
+           device_map["oneplus_open_b"]="OnePlusOpen-B"
+           device_map["oneplus_nord_ce4_b"]="OnePlusNordCE4-B"
+           device_map["oneplus_pad_go_2_b"]="OnePlusPadGo2-B"
+           device_map["oneplus_nord_ce4_lite_5g_v"]="OnePlusNordCE4Lite5G-V"
+           device_map["oneplus_nord_4_b"]="OnePlusNord4-B"
+           device_map["oneplus_ace_3v_b"]="OnePlusAce3V-B"
+           device_map["oneplus_pad_mt6897_v"]="OnePlusPadMT6897-V"
+           device_map["oneplus_12_b"]="OnePlus12-B"
+           device_map["oneplus_13r_b"]="OnePlus13R-B"
+           device_map["oneplus_ace3_pro_b"]="OnePlusAce3Pro-B"
+           device_map["oneplus_ace5_b"]="OnePlusAce5-B"
+           device_map["oneplus_pad_pro_b"]="OnePlusPadPro-B"
+           device_map["oneplus_pad2_b"]="OnePlusPad2-B"
+           device_map["oneplus_nord_ce5_b"]="OnePlusNordCE5-B"
+           device_map["oneplus_nord_5_b"]="OnePlusNord5-B"
+           device_map["oneplus_ace5_pro_b"]="OnePlusAce5Pro-B"
+           device_map["oneplus_13_b"]="OnePlus13-B"
+           device_map["oneplus_13t_b"]="OnePlus13T-B"
+           device_map["oneplus_13s_b"]="OnePlus13S-B"
+           device_map["oneplus_pad_2_pro_b"]="OnePlusPad2Pro-B"
+           device_map["oneplus_pad_3_b"]="OnePlusPad3-B"
+           device_map["oneplus_ace5_race_b"]="OnePlusAce5Race-B"
+           device_map["oneplus_ace5_ultra_b"]="OnePlusAce5Ultra-B"
+           device_map["oneplus_pad2_mt6991_b"]="OnePlusPad2MT6991-B"
+           device_map["oneplus_ace_6"]="OnePlusAce6"
+           device_map["oneplus_ace_6t"]="OnePlusAce6T"
+           device_map["oneplus_ace_6t_aosp"]="OnePlusAce6TAOSP"
+           device_map["oneplus_15"]="OnePlus15"
+           device_map["oneplus_15_t_aosp"]="OnePlus15AOSP"
+           device_map["oneplus_15_wild"]="OnePlus15Wild"
+           
+           # Loop to Rename the Files Based on the Device Map
+           for device in "${options[@]}"; do
+               if [[ -n "${device_map[$device]}" ]]; then
+                   echo "Renaming $device to ${device_map[$device]}"
+                   mv "./AnyKernel3/$device" "./AnyKernel3/${device_map[$device]}"
+               else
+                   echo "No Mapping Found for $device"
+               fi
+           done
 
       # Upload AnyKernel3 Artifact
       - name: Upload AnyKernel3
