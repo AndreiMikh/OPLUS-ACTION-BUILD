@@ -812,7 +812,7 @@ jobs:
 
           echo "Committing Suffix Modifications..."
           git add -A
-          git commit -m "Inject custom kernel suffix and remove -dirty tags"
+          git commit -m "Inject Custom Kernel Suffix & Remove -dirty Tags"
 
       - name: Apply Auto-Generated Kernel Suffix
         if: ${{ github.event.inputs.SUFFIX == '' }}
@@ -1096,7 +1096,7 @@ jobs:
             # ==============================
             cd ../KernelSU-Next || exit 1
 
-            PATCH_BASE="https://github.com/AndreiMikh/AndreiMikh-Kernel-Lab/raw/refs/heads/LiquidAndrei/patches"
+            PATCH_BASE="https://github.com/AndreiMikh/OPlus-Action-Build/raw/refs/heads/LiquidAndrei/patches"
 
             PATCH_LIST=(
               multi_manager.patch
@@ -1351,8 +1351,8 @@ jobs:
           if [ "$GKI_V" == "android13-5.15" ] && [ "$SUBLEVEL" -lt 123 ]; then
             echo "Apply Legacy Fix for Kernel 5.15.0–5.15.123 (Old Libc Compatibility Issue)"
 
-            cp ../../OPlus-Action-Build/patches/fix_5.15.legacy ./fix_5.15.legacy.patch
-            patch -p1 < fix_5.15.legacy.patch
+            cp ../../OPlus-Action-Build/patches/Legacy-5.15-Fix ./Legacy-5.15-Fix.patch
+            patch -p1 < Legacy-5.15-Fix.patch
 
             echo "5.15 Legacy Fix Applied Successfully"
           fi
@@ -1454,8 +1454,8 @@ jobs:
             if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && \
                [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
 
-              cp ../../OPlus-Action-Build/patches/No_5uS.patch ./
-              patch -p1 < No_5uS.patch || true
+              cp ../../OPlus-Action-Build/patches/XUS-Fix.patch ./
+              patch -p1 < XUS-Fix.patch || true
             fi
           fi        
             
@@ -1479,7 +1479,7 @@ jobs:
           sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
 
           echo "Applying OGKI → GKI Conversion Patch"
-          patch -p1 -F 3 < "${PATCH_DIR}/hmbird_patch.patch" || true
+          patch -p1 -F 3 < "${PATCH_DIR}/HMBIRD.patch" || true
 
           echo "Conversion Completed"
       
@@ -1493,9 +1493,9 @@ jobs:
           cd kernel_workspace/kernel_platform/common || exit 1
 
           if [ "$KV1" -lt 6 ]; then
-            patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1-.patch" || true
+            patch -p1 --forward < "${PATCH_DIR}/Unicode-Bypass-Fix-6.1-.patch" || true
           else
-            patch -p1 --forward < "${PATCH_DIR}/unicode_bypass_fix_6.1+.patch" || true
+            patch -p1 --forward < "${PATCH_DIR}/Unicode-Bypass-Fix-6.1+.patch" || true
           fi
 
       - name: ZRAM
@@ -1575,10 +1575,10 @@ jobs:
 
           cp "./Kernel-Hmbird-Patch/${PATCH_FILE}" ./
 
-          echo "Applying Windspeed Patch..."
+          echo "Applying Patch..."
           dos2unix "${PATCH_FILE}" || true
           patch -p1 -F 3 < "${PATCH_FILE}"
-          echo "Windspeed Patch Complete"
+          echo "Patch Complete"
 
       - name: LSM BBG
         if: ${{ github.event.inputs.LSM == 'true' }}
@@ -1834,7 +1834,7 @@ jobs:
 
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/OPlus-Action-Build/patches"
           TARGET_DIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
-          PATCH_FILE="${PATCH_DIR}/IPv6_NAT.patch"
+          PATCH_FILE="${PATCH_DIR}/IPv6.patch"
 
           echo "NETFILTER Enabled — Checking IPv6 NAT Compatibility..."
 
