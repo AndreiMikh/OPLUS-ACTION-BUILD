@@ -182,7 +182,7 @@ on:
         type: boolean
         description: "Prevent Generation of 5US Error Files?"
         required: true
-        default: true
+        default: false
         
       SUSFS_DEV:
         type: boolean
