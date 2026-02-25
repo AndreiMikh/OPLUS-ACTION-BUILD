@@ -118,7 +118,7 @@ on:
          
       SUSFS_VERSION:
         type: choice
-        description: SUSFS for OGKI (susfs4oki) / SUSFS for GKI (susfs4ksu)
+        description: SUSFS for OGKI, Only Available for Version android14-6.1, android15-6.6 & android16-6.12 (susfs4oki)? / SUSFS for GKI (susfs4ksu)?
         required: true
         default: OGKI
         options:
@@ -1187,7 +1187,7 @@ jobs:
           # ==============================
           # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
-          if [[ ("$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.1" || "$GKI_V" == "android15-6.6") && "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+          if [[ ("$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12") && "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
               echo "If Both Conditions are Met, Executing Specific Logic of SUSFS OGKI Repository"
 
               # Check for SUSFS OGKI Development Branch if Selected
