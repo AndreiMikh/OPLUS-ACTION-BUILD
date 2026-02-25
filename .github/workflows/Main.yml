@@ -1187,8 +1187,8 @@ jobs:
           # ==============================
           # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
-          if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
-              echo "Using SUSFS OGKI Repository"
+          if [[ ("$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.1" || "$GKI_V" == "android15-6.6") && "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+              echo "If Both Conditions are Met, Executing Specific Logic of SUSFS OGKI Repository"
 
               # Check for SUSFS OGKI Development Branch if Selected
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
