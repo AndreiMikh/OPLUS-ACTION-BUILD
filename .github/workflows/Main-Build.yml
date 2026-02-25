@@ -1195,13 +1195,13 @@ jobs:
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
                   echo "Cloning SUSFS OGKI Development Branch"
                   git clone --depth=1 \
-                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
-                    -b "oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
+                     https://github.com/cctv18/susfs4oki.git susfs4ksu \
+                     -b "oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
               else
                   echo "Cloning SUSFS OGKI Main Branch"
                   git clone --depth=1 \
-                    https://github.com/cctv18/susfs4oki.git susfs4ksu \
-                    -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+                     https://github.com/cctv18/susfs4oki.git susfs4ksu \
+                     -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               fi
           
           elif [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "GKI" ]]; then
@@ -1211,13 +1211,13 @@ jobs:
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
                   echo "Cloning SUSFS GKI Development Branch"
                   git clone --depth=1 \
-                    https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
-                    -b "gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
+                     https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
+                     -b "gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
               else
                   echo "Cloning SUSFS GKI Main Branch"
                   git clone --depth=1 \
-                    https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
-                    -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
+                     https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
+                     -b gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               fi
           else
               echo "ERROR: Invalid SUSFS Version Selected!"
