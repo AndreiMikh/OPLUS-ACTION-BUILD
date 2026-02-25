@@ -1276,6 +1276,21 @@ jobs:
           patch -p1 < "$(basename $SUS_PATCH)" || true
 
           # ==============================
+          # Apply KernelSU Enable SUSFS Patch (Only for KernelSU)
+          # ==============================
+          if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then
+              echo "KernelSU (tiann/KernelSU) Detected, Applying 10 Enable SUSFS Patch"
+
+              # Copy 10 Enable SUSFS for KernelSU Patch for Enabling SUSFS to $KDIR
+              cp ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch $KDIR/
+
+              # Apply the Patch in $KDIR
+              patch -p1 < 10_enable_susfs_for_ksu.patch || true
+          else
+              echo "No 10 Enable SUSFS for KernelSU Patch Applied"
+          fi
+
+          # ==============================
           # Hide Patch (Only Supported Bases)
           # ==============================
           if [[ "$GKI_V" == "android14-6.1" || \
