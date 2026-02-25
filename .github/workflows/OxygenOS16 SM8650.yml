@@ -6,7 +6,7 @@ on:
 
       TARGET_WORKFLOW:
         type: choice
-        description: "Select Workflow to Trigger"
+        description: "Select Workflow to Trigger for SM8650"
         required: true
         default: Main-Build.yml
         options:
@@ -131,7 +131,7 @@ on:
         type: boolean
         description: "Add Windspeed Driver v1.0 (Fengchi)?"
         required: true
-        default: true
+        default: false
         
       XUS_FIX:
         type: boolean
@@ -177,8 +177,8 @@ jobs:
         id: set-matrix
         run: |
           FILE_LIST=(
-            "oneplus_13_b"
-            "oneplus_13s_b"
+            "oneplus_12_b"
+            "oneplus_13r_b"
             "oneplus_13t_b"
             "oneplus_ace5_pro_b"
             "oneplus_ace_6"
