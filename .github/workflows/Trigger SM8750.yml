@@ -276,47 +276,65 @@ jobs:
 # Collect & Upload ZIPs (No Fusion)
 # =========================
 
-  wait-and-package:
-    needs: build
-    runs-on: ubuntu-latest
+wait-and-package:
+  needs: build
+  runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+  steps:
+    - uses: actions/checkout@v4
 
-      - name: Setup Tools
-        run: |
-          sudo apt update
-          sudo apt install -y gh curl jq
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Setup Tools
+      run: |
+        sudo apt update
+        sudo apt install -y gh curl jq
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Download Artifacts From Current Run Only
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p final_zips
+    - name: Debug: List Existing Artifacts in This Run
+      run: |
+        RUN_ID="${{ github.run_id }}"
+        echo "Checking for artifacts in the current run ID: $RUN_ID"
+        ARTIFACTS=$(gh api \
+          repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+          --jq '.artifacts[].name')
+        echo "Artifacts found: $ARTIFACTS"
 
-          RUN_ID="${{ github.run_id }}"
-          echo "Fetching artifacts for run ID: $RUN_ID"
+    - name: Download Artifacts From Current Run Only
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        mkdir -p final_zips
 
-          ARTIFACTS=$(gh api \
+        RUN_ID="${{ github.run_id }}"
+        echo "Fetching artifacts for run ID: $RUN_ID"
+
+        ARTIFACTS=$(gh api \
+          repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+          --jq '.artifacts[].name')
+
+        if [[ -z "$ARTIFACTS" ]]; then
+          echo "No artifacts found for this run. Exiting."
+          exit 1
+        fi
+
+        for ART in $ARTIFACTS; do
+          echo "Downloading $ART"
+          ARTIFACT_ID=$(gh api \
             repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
-            --jq '.artifacts[].name')
+            --jq ".artifacts[] | select(.name==\"$ART\") | .id")
 
-          for ART in $ARTIFACTS; do
-            echo "Downloading $ART"
+          curl -L \
+            -H "Authorization: token $GH_TOKEN" \
+            -o "final_zips/${ART}.zip" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+        done
 
-            ARTIFACT_ID=$(gh api \
-              repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
-              --jq ".artifacts[] | select(.name==\"$ART\") | .id")
+    - name: Debug: List files in final_zips
+      run: |
+        echo "Listing the files in final_zips directory:"
+        ls -al final_zips/
 
-            curl -L \
-              -H "Authorization: token $GH_TOKEN" \
-              -o "final_zips/${ART}.zip" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
-          done
-
-      - name: Upload Device ZIPs (Separated)
-        uses: actions/upload-artifact@v4
-        with:
-          name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750
-          path: final_zips/*.zip
+    - name: Upload Device ZIPs (Separated)
+      uses: actions/upload-artifact@v4
+      with:
+        name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-SM8750
+        path: final_zips/*.zip
