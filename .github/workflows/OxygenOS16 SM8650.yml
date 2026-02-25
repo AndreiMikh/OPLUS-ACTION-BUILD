@@ -179,11 +179,10 @@ jobs:
           FILE_LIST=(
             "oneplus_12_b"
             "oneplus_13r_b"
-            "oneplus_13t_b"
-            "oneplus_ace5_pro_b"
-            "oneplus_ace_6"
-            "oneplus_pad_2_pro_b"
-            "oneplus_pad_3_b"
+            "oneplus_ace3_pro_b"
+            "oneplus_ace5_b"
+            "oneplus_pad2_b"
+            "oneplus_pad_pro_b"
           )
 
           MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
@@ -191,7 +190,7 @@ jobs:
             map({
               file: .,
               file_short: (sub("_[a-z]$"; "")),
-              enable_sched: true
+              enable_sched: false
             })
           ')
 
