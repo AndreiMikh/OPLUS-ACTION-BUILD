@@ -1335,7 +1335,7 @@ jobs:
               # Copy 10 Enable SUSFS for KernelSU Patch for Enabling SUSFS to KernelSU
               cp ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
 
-              cd ./KernelSU
+              cd ../KernelSU
 
               # Apply the Patch to KernelSU
               patch -p1 < 10_enable_susfs_for_ksu.patch || true
