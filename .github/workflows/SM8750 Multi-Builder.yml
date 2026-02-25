@@ -220,22 +220,28 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: |
             {
-              "FILE": "${{ matrix.file }}",
-              "KPM": "KPN",
-              "MANAGER_SOURCE": "${{ github.event.inputs.MANAGER_SOURCE }}",
-              "SUSFS_META": "",
-              "KSU_META": "${{ github.event.inputs.KSU_META }}",
-              "ZRAM": "0/1z4kd/8589934592",
-              "BUILD_TIME": "",
-              "SUFFIX": "8-andreimikhail-4k",
-              "LSM": true,
-              "NETFILTER": true,
-              "BBR_ECN": true,
-              "SUSFS_DEV": false,
-              "FAST_BUILD": true,
-              "SCHED": true,
-              "UNICODE_BYPASS": true,
-              "XUS_FIX": true
+              "FILE"             : "${{ matrix.file }}",
+              "KPM"              : "${{ github.event.inputs.KPM }}",
+              "MANAGER_SOURCE"   : "${{ github.event.inputs.MANAGER_SOURCE }}",
+              "SUSFS_META"       : "${{ github.event.inputs.SUSFS_META }}",
+              "DYNAMIC_REPO"     : "${{ github.event.inputs.DYNAMIC_REPO }}",
+              "SUSFS_META"       : "${{ github.event.inputs.SUSFS_META }}",  
+              "KSU_META"         : "${{ github.event.inputs.KSU_META }}",
+              "ZRAM"             : "${{ github.event.inputs.ZRAM }}",
+              "BUILD_TIME"       : "${{ github.event.inputs.BUILD_TIME }}",
+              "SUFFIX"           : "${{ github.event.inputs.SUFFIX }}",
+              "SUSFS_VERSION"    : "${{ github.event.inputs.SUSFS_VERSION }}",
+              "LSM"              : "${{ github.event.inputs.LSM }}",
+              "SUBLEVEL"         : "${{ github.event.inputs.SUBLEVEL }}",
+              "NETFILTER"        : "${{ github.event.inputs.NETFILTER }}",
+              "BBR_ECN"          : "${{ github.event.inputs.BBR_ECN }}",
+              "SUSFS_DEV"        : "${{ github.event.inputs.SUSFS_DEV }}",
+              "FAST_BUILD"       : "${{ github.event.inputs.FAST_BUILD }}",
+              "SCHED"            : "${{ github.event.inputs.SCHED }}",
+              "UNICODE_BYPASS"   : "${{ github.event.inputs.UNICODE_BYPASS }}",
+              "SPACE_NOCLEAN"    : "${{ github.event.inputs.SPACE_NOCLEAN }}",
+              "BUILD_NOCCACHE"   : "${{ github.event.inputs.BUILD_NOCCACHE }}",
+              "XUS_FIX"          : "${{ github.event.inputs.XUS_FIX }}"
             }
 
       - name: Wait for Artifact
