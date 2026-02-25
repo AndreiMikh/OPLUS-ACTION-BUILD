@@ -328,7 +328,7 @@ wait-and-package:
             "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
         done
 
-    - name: Debug: List files in final_zips
+    - name: Debug List files in final_zips
       run: |
         echo "Listing the files in final_zips directory:"
         ls -al final_zips/
