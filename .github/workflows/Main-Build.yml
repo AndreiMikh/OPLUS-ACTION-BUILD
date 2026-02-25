@@ -1333,7 +1333,7 @@ jobs:
               echo "KernelSU 'tiann/KernelSU' Detected, Applying 10 Enable SUSFS Patch"
 
               # Copy 10 Enable SUSFS for KernelSU Patch for Enabling SUSFS to KernelSU
-              cp -r ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+              cp -r ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch $KDIR/
 
               cd $KDIR
 
