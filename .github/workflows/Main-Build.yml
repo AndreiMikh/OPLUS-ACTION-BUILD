@@ -1306,21 +1306,7 @@ jobs:
           # Apply SUSFS Patch
           # ==============================
           patch -p1 < "$(basename $SUS_PATCH)" || true
-
-          # ==============================
-          # Apply KernelSU Enable SUSFS Patch (Only for KernelSU)
-          # ==============================
-          if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then
-              echo "KernelSU (tiann/KernelSU) Detected, Applying 10 Enable SUSFS Patch"
-
-              # Copy 10 Enable SUSFS for KernelSU Patch for Enabling SUSFS to $KDIR
-              cp ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch $KDIR/
-
-              # Apply the Patch in $KDIR
-              patch -p1 < 10_enable_susfs_for_ksu.patch || true
-          else
-              echo "No 10 Enable SUSFS for KernelSU Patch Applied"
-          fi
+          echo "✅ 50 Enable SUSFS Patch Applied!"
 
           # ==============================
           # Hide Patch (Only Supported Bases)
@@ -1335,10 +1321,29 @@ jobs:
                 -O 69_hide_stuff.patch
 
               patch -p1 -N -F 3 < 69_hide_stuff.patch || true
-
+              echo "✅ Hide Patch Applied!"
           else
-            echo "Skipping Hide Patch (Unsupported Base)"
+            echo "❌ Skipping Hide Patch (Unsupported Base)"
           fi
+
+          # ==============================
+          # Apply KernelSU Enable SUSFS Patch (Only for KernelSU)
+          # ==============================
+          if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then
+              echo "KernelSU 'tiann/KernelSU' Detected, Applying 10 Enable SUSFS Patch"
+
+              # Copy 10 Enable SUSFS for KernelSU Patch for Enabling SUSFS to KernelSU
+              cp ./susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+
+              cd ./KernelSU
+
+              # Apply the Patch to KernelSU
+              patch -p1 < 10_enable_susfs_for_ksu.patch || true
+              echo "✅ 10 Enable SUSFS Patch Applied!"
+          else
+              echo "❌ No 10 Enable SUSFS for KernelSU Patch Applied"
+          fi
+
 
           cd - >/dev/null
 
