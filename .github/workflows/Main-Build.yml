@@ -2175,9 +2175,69 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: AK3-${{ github.event.inputs.FILE }}(${{ env.TKERNEL_VERSION }})-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})-R${{ github.run_number }}
+          name: "${{ github.event.inputs.FILE }}(${{ env.TKERNEL_VERSION }})-${{ github.event.inputs.MANAGER_SOURCE }}(v${{ env.KSUVER }})"
           path: ./AnyKernel3/*
+        run: |
+          # Define your mapping of old names to new names
+          declare -A device_map
+          device_map["oneplus_10r_v"]="OnePlus-10R"
+          device_map["oneplus_nord_3_v"]="OnePlus-Nord3"
+          device_map["oneplus_ace_v"]="OnePlus-Ace"
+          device_map["oneplus_ace_race_v"]="OnePlus-Ace-Race"
+          device_map["oneplus_10_pro_V"]="OnePlus-10-Pro"
+          device_map["oneplus_10t_v"]="OnePlus-10T"
+          device_map["oneplus_11r_b"]="OnePlus-11R"
+          device_map["oneplus_ace2_b"]="OnePlus-Ace2"
+          device_map["oneplus_pad_lite_v"]="OnePlus-Pad-Lite"
+          device_map["oneplus_pad_mt6983_b"]="OnePlus-Pad-MT6983"
+          device_map["oneplus_ace_2v_v"]="OnePlus-Ace2V"
+          device_map["oneplus_ace_pro_v"]="OnePlus-Ace-Pro"
+          device_map["oneplus_11_b"]="OnePlus-11"
+          device_map["oneplus_12r_b"]="OnePlus-12R"
+          device_map["oneplus_ace2_pro_b"]="OnePlus-Ace2-Pro"
+          device_map["oneplus_ace3_b"]="OnePlus-Ace3"
+          device_map["oneplus_open_b"]="OnePlus-Open"
+          device_map["oneplus_nord_ce4_b"]="OnePlus-NordCE4"
+          device_map["oneplus_pad_go_2_b"]="OnePlus-PadGo2"
+          device_map["oneplus_nord_ce4_lite_5g_v"]="OnePlus-NordCE4-Lite5G"
+          device_map["oneplus_nord_4_b"]="OnePlus-Nord4"
+          device_map["oneplus_ace_3v_b"]="OnePlus-Ace3V"
+          device_map["oneplus_pad_mt6897_v"]="OnePlus-Pad-MT6897"
+          device_map["oneplus_12_b"]="OnePlus-12"
+          device_map["oneplus_13r_b"]="OnePlus-13R"
+          device_map["oneplus_ace3_pro_b"]="OnePlus-Ace3-Pro"
+          device_map["oneplus_ace5_b"]="OnePlus-Ace5"
+          device_map["oneplus_pad_pro_b"]="OnePlus-Pad-Pro"
+          device_map["oneplus_pad2_b"]="OnePlus-Pad2"
+          device_map["oneplus_nord_ce5_b"]="OnePlus-Nord-CE5"
+          device_map["oneplus_nord_5_b"]="OnePlus-Nord5"
+          device_map["oneplus_ace5_pro_b"]="OnePlus-Ace5-Pro"
+          device_map["oneplus_13_b"]="OnePlus-13"
+          device_map["oneplus_13t_b"]="OnePlus-13T"
+          device_map["oneplus_13s_b"]="OnePlus-13S"
+          device_map["oneplus_pad_2_pro_b"]="OnePlus-Pad2-Pro"
+          device_map["oneplus_pad_3_b"]="OnePlus-Pad3"
+          device_map["oneplus_ace5_race_b"]="OnePlus-Ace5-Race"
+          device_map["oneplus_ace5_ultra_b"]="OnePlus-Ace5-Ultra"
+          device_map["oneplus_pad2_mt6991_b"]="OnePlus-Pad2-MT6991"
+          device_map["oneplus_ace_6"]="OnePlus-Ace-6"
+          device_map["oneplus_ace_6t"]="OnePlus-Ace-6T"
+          device_map["oneplus_ace_6t_aosp"]="OnePlus-Ace-6T-AOSP"
+          device_map["oneplus_15"]="OnePlus-15"
+          device_map["oneplus_15_t_aosp"]="OnePlus-15-AOSP"
+          device_map["oneplus_15_wild"]="OnePlus-15-Wild"
 
+          # Modify the device names in the artifact directory
+          for device in "${options[@]}"; do
+              if [[ -n "${device_map[$device]}" ]]; then
+                  echo "Renaming $device to ${device_map[$device]}"
+                  # Assuming the device name is a directory or file within the path
+                  mv "./AnyKernel3/$device" "./AnyKernel3/${device_map[$device]}"
+              else
+                  echo "No mapping found for $device"
+              fi
+          done
+          
       - name: Extract & Process ZRAM Module
         if: startsWith(github.event.inputs.ZRAM, '1/')
         id: zram_find
