@@ -289,7 +289,7 @@ wait-and-package:
         sudo apt install -y gh curl jq
         echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-    - name: Debug: List Existing Artifacts in This Run
+    - name: Debug List Existing Artifacts in This Run
       run: |
         RUN_ID="${{ github.run_id }}"
         echo "Checking for artifacts in the current run ID: $RUN_ID"
