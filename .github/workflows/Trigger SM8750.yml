@@ -216,7 +216,7 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: ${{ github.event.inputs.TARGET_WORKFLOW }}
-          ref: Main-Build
+          ref: refs/heads/LiquidAndrei
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: |
             {
