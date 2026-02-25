@@ -33,7 +33,7 @@ on:
         type: string
         description: "Dynamic Inventory Warehouse Owner"
         required: true
-        default: "AndreiMikh"
+        default: "Andrei"
         
       BUILD_TIME:
         type: string
