@@ -180,7 +180,7 @@ on:
         
       XUS_FIX:
         type: boolean
-        description: "Prevent Generation of 5US Error Files?"
+        description: "Prevent Generation of XUS Error Files?"
         required: true
         default: false
         
