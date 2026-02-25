@@ -1,4 +1,4 @@
-name: Multi-Builder (SM8750)
+name: Custom Multi-Build Trigger for SM8750
 
 on:
   workflow_dispatch:
