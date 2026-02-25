@@ -13,22 +13,50 @@ on:
           - Main.yml
           - Test.yml
 
+      KPM:
+        type: choice
+        description: "Kernel Module Implementation Methods"
+        required: true
+        default: KPN
+        options:
+          - KPM
+          - KPN
+          - None
+          
+      SUSFS_META:
+        type: string
+        description: "Rollback SUSFS (Enter Hash or Number or -1 to Turn Off)"
+        required: false
+        default: ""
+        
+      DYNAMIC_REPO:
+        type: string
+        description: "Dynamic Inventory Warehouse Owner"
+        required: true
+        default: "AndreiMikh"
+        
+      BUILD_TIME:
+        type: string
+        description: "Custom Build Time (Input 'UTC' to Use Current UTC Time)"
+        required: false
+        default: "Sat Feb 14 07:17:27 UTC 2026"
+        
       KSU_META:
         type: choice
         description: "KSU Meta"
         required: true
         default: "ReSukiSU"
         options:
-          - ReSukiSU
-          - SukiSU-Ultra
-          - KernelSU-Next
-          - WildKSU
-
+         - ReSukiSU
+         - SukiSU-Ultra
+         - KernelSU-Next
+         - WildKSU
+         
       MANAGER_SOURCE:
         type: choice
-        description: "KSU Meta Branch (Download Manager Artifact)"
+        description: "KSU Meta-Branch (Download Manager Artifact)"
         required: true
-        default: "ReSukiSU-Main"
+        default: ReSukiSU-Main
         options:
          - ReSukiSU-Main
          - ReSukiSU-Main-Spoofed
@@ -42,6 +70,92 @@ on:
          - WildKSU-Stable-Spoofed
          - WildKSU-Canary
          - WildKSU-Canary-Spoofed
+         
+      SUSFS_VERSION:
+        type: choice
+        description: SUSFS for OGKI (susfs4oki) / SUSFS for GKI (susfs4ksu)
+        required: true
+        default: OGKI
+        options:
+          - OGKI
+          - GKI
+      
+      ZRAM:
+        type: string
+        description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
+        required: true
+        default: "0/lz4kd/8589934592"
+        
+      SUFFIX:
+        type: string
+        description: "Custom Kernel Suffix (Use Random String if Not Specified)"
+        required: false
+        default: "8-andreimikhail-4k"
+        
+      SUBLEVEL:
+        description: "Custom Kernel Level Spoofing (Sublevel)"
+        required: false
+        default: ""
+        
+      FAST_BUILD:
+        type: boolean
+        description: "Enable Fast Kernel Build?"
+        required: true
+        default: true
+        
+      LSM:
+        type: boolean
+        description: "Enable Critical Partition Write Protection (BBG)?"
+        required: true
+        default: true
+        
+      NETFILTER:
+        type: boolean
+        description: "Enable Network Feature Extensions (Netfilter)?"
+        required: true
+        default: true
+        
+      BBR_ECN:
+        type: boolean
+        description: "Enable Network Optimization Algorithm (BBR+ECN)?"
+        required: true
+        default: true
+        
+      UNICODE_BYPASS:
+        type: boolean
+        description: "Add Fix for Unicode Invisible Code Point Bypass Read Vulnerability?"
+        required: true
+        default: true
+        
+      SCHED:
+        type: boolean
+        description: "Add Windspeed Driver v1.0 (Fengchi)?"
+        required: true
+        default: true
+        
+      XUS_FIX:
+        type: boolean
+        description: "Prevent Generation of 5US Error Files?"
+        required: true
+        default: true
+        
+      SUSFS_DEV:
+        type: boolean
+        description: "Extract SUSFS-Dev Branch?"
+        required: true
+        default: false
+        
+      SPACE_NOCLEAN:
+        type: boolean
+        description: "Disable Space Cleaning?"
+        required: true
+        default: false
+        
+      BUILD_NOCCACHE:
+        type: boolean
+        description: "Disable Ccache Update?"
+        required: true
+        default: false
 
 permissions:
   actions: write
