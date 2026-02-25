@@ -8,10 +8,10 @@ on:
         type: choice
         description: "Select Workflow to Trigger"
         required: true
-        default: "Main.yml"
+        default: Main-Build.yml
         options:
-          - Main.yml
-          - Test.yml
+          - Main-Build.yml
+          - Test-Build.yml
 
       KPM:
         type: choice
@@ -45,7 +45,7 @@ on:
         type: choice
         description: "KSU Meta"
         required: true
-        default: "ReSukiSU"
+        default: ReSukiSU
         options:
          - ReSukiSU
          - SukiSU-Ultra
@@ -216,7 +216,7 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: ${{ github.event.inputs.TARGET_WORKFLOW }}
-          ref: main
+          ref: Main-Build
           token: ${{ secrets.GITHUB_TOKEN }}
           inputs: |
             {
