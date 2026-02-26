@@ -130,7 +130,7 @@ on:
         required: false
         default: ""
         
-      FAST_BUILD:
+      FASTBUILD:
         type: boolean
         description: "Enable Fast Kernel Build?"
         required: true
@@ -148,7 +148,7 @@ on:
         required: true
         default: true
         
-      BBR_ECN:
+      BBR-ECN:
         type: boolean
         description: "Enable Network Optimization Algorithm (BBR+ECN)?"
         required: true
@@ -202,7 +202,7 @@ jobs:
      ${{
       format(
        '{0}{1}{2}{3}{4}{5}-{6} {7}',
-       github.event.inputs.FAST_BUILD == 'true' && ' Fast' || '',
+       github.event.inputs.FASTBUILD == 'true' && ' Fast' || '',
        contains(github.event.inputs.FILE, '_aosp') && ' AOSP' || '',
        github.event.inputs.KSU-META == 'SukiSU-Ultra' && ' SukiSU' ||
        github.event.inputs.KSU-META == 'ReSukiSU' && ' ReSukiSU' ||
@@ -522,10 +522,10 @@ jobs:
               echo "SUFFIX            : ${{ github.event.inputs.SUFFIX }}"
               echo "LSM               : ${{ github.event.inputs.LSM }}"
               echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
-              echo "BBR_ECN           : ${{ github.event.inputs.BBR_ECN }}"
+              echo "BBR-ECN           : ${{ github.event.inputs.BBR-ECN }}"
               echo "SUSFS-VERSION     : ${{ github.event.inputs.SUSFS-VERSION }}"
               echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
-              echo "FAST_BUILD        : ${{ github.event.inputs.FAST_BUILD }}"
+              echo "FASTBUILD        : ${{ github.event.inputs.FASTBUILD }}"
               echo "FENGCHI             : ${{ github.event.inputs.FENGCHI }}"
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
@@ -593,7 +593,7 @@ jobs:
           key: >
             ccache-${{ runner.os }}-${{ github.ref_name }}-
             ${{ github.event.inputs.FILE }}-${{ env.BUILD_METHOD }}-
-            ${{ github.event.inputs.FAST_BUILD == 'true' && 'alpha' || 'beta' }}-16.2
+            ${{ github.event.inputs.FASTBUILD == 'true' && 'alpha' || 'beta' }}-16.2
 
       - name: Setup Compiler Cache
         if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
@@ -751,7 +751,7 @@ jobs:
 
           SUFFIX="${{ github.event.inputs.SUFFIX }}"
           KANDROID_VERSION="${{ env.KANDROID_VERSION }}"
-          FAST_BUILD="${{ github.event.inputs.FAST_BUILD }}"
+          FASTBUILD="${{ github.event.inputs.FASTBUILD }}"
 
           echo "Injecting Custom Kernel Suffix: $SUFFIX"
 
@@ -776,7 +776,7 @@ jobs:
             elif grep -q 'echo "\$res"' "$path"; then
               echo "Old SetLocalVersion Format Detected"
 
-              if [ "$FAST_BUILD" = "true" ]; then
+              if [ "$FASTBUILD" = "true" ]; then
                 echo "Fast Build Enabled: Setting Static Res Value"
                 sed -i "s/^res=.*/res=\"-${KANDROID_VERSION}-${SUFFIX}\"/" "$path"
               else
@@ -806,7 +806,7 @@ jobs:
           cd kernel_workspace
 
           KANDROID_VERSION="${{ env.KANDROID_VERSION }}"
-          FAST_BUILD="${{ github.event.inputs.FAST_BUILD }}"
+          FASTBUILD="${{ github.event.inputs.FASTBUILD }}"
 
           echo "Generating Random Kernel Suffix..."
           RANDOM_DIGIT=$(od -An -N1 -tu1 < /dev/urandom | tr -d '[:space:]' | awk '{print $1 % 11}')
@@ -836,7 +836,7 @@ jobs:
             elif grep -q 'echo "\$res"' "$path"; then
               echo "Old SetLocalVersion Format Detected"
 
-              if [ "$FAST_BUILD" = "true" ]; then
+              if [ "$FASTBUILD" = "true" ]; then
                 echo "Fast Build: Using Static Res with Random Suffix"
                 sed -i "s/^res=.*/res=\"-${KANDROID_VERSION}-${AUTO_SUFFIX}\"/" "$path"
               else
@@ -1775,7 +1775,7 @@ jobs:
           # ==============================
           # BBR & ECN Configuration
           # ==============================
-          if [[ "${{ github.event.inputs.BBR_ECN }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.BBR-ECN }}" == "true" ]]; then
             echo "Enabling BBR Congestion Control & ECN Features..."
 
             cat >> "$CONFIG_FILE" << EOF
@@ -1981,8 +1981,8 @@ jobs:
           fi
       
       - name: Build Kernel (Fast)
-        if: ${{ github.event.inputs.FAST_BUILD == 'true' }}
-        id: fast_build
+        if: ${{ github.event.inputs.FASTBUILD == 'true' }}
+        id: fastbuild
         run: |
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           cd kernel_workspace/kernel_platform
@@ -2116,7 +2116,7 @@ jobs:
           ccache -s
 
       - name: Fallback to Build Kernel
-        if: ${{ github.event.inputs.FAST_BUILD == 'false' || steps.fast_build.outputs.fallback == 'true' }}
+        if: ${{ github.event.inputs.FASTBUILD == 'false' || steps.fastbuild.outputs.fallback == 'true' }}
         run: |
           cd kernel_workspace
           if [ -f ./kernel_platform/build_with_bazel.py ]; then
