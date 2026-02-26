@@ -162,9 +162,9 @@ on:
         
       SCHED:
         type: boolean
-        description: "Add Windspeed Driver v1.0 (Fengchi)?"
+        description: "Apply HMBIRD? (SM-8750)"
         required: true
-        default: true
+        default: false
         
       XUS_FIX:
         type: boolean
