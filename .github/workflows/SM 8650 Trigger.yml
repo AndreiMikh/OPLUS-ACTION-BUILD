@@ -296,7 +296,7 @@ jobs:
           DEVICES=("oneplus_12_b" "oneplus_13r_b" "oneplus_ace3_pro_b" "oneplus_ace5_b" "oneplus_pad2_b" "oneplus_pad_pro_b")
   
           for DEVICE in "${DEVICES[@]}"; do
-            echo "Processing device: $DEVICE"
+            echo "Processing Device: $DEVICE"
             RUN_ID="${{ github.run_id }}"
   
             # AnyKernel3
