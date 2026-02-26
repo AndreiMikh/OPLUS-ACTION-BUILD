@@ -293,9 +293,7 @@ jobs:
             # ==============================
             if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
              
-              # ==============================
               # Remove https://github.com/ if User Pasted full URL
-              # ==============================
               DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT#https://github.com/}"
               DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT%/}"
               
@@ -347,9 +345,7 @@ jobs:
               if curl -sf --head "$XML_URL" >/dev/null; then
                 echo "Found ${FILE}.xml in ${OWNER}/${REPO_NAME} (Branch: $BRANCH)"
 
-                # ==============================
                 # Download XML & README using GitHub Token
-                # ==============================
                 curl -fsSL -o "$XML_PATH" "$XML_URL"
                 curl -fsSL -o "$README_PATH" "$README_URL" || true
 
@@ -500,18 +496,14 @@ jobs:
                 echo
               }
 
-              # ==============================
-              # ENV Variables (Parsed from Manifest)
-              # ==============================               
+              # ENV Variables (Parsed from Manifest) 
               echo "--- Manifest Parsed Values ---"
               echo "CPU               : ${CPU:-<empty>}"
               echo "CPUD              : ${CPUD:-<empty>}"
               echo "ANDROID_VERSION   : ${ANDROID_VERSION:-<empty>}"
               echo "BUILD_METHOD      : ${BUILD_METHOD:-<empty>}"
 
-              # ==============================
               # GitHub Action Inputs
-              # ==============================  
               echo "--- GitHub Inputs ---"
               echo "FILE              : ${{ github.event.inputs.FILE }}"
               echo "KPM               : ${{ github.event.inputs.KPM }}"
@@ -531,9 +523,7 @@ jobs:
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
               
-              # ==============================
               # Unicode Inspection (Whitespace / Hidden Character Detection)
-              # ==============================
               print_unicode "BUILD_TIME" "${{ github.event.inputs.BUILD_TIME }}"
               print_unicode "SUFFIX" "${{ github.event.inputs.SUFFIX }}"
 
@@ -1355,33 +1345,25 @@ jobs:
             SRC_BASE="../SukiSU_patch/other/zram"
             DEST_BASE="./common"
 
-            # ==============================
             # Copy Headers
-            # ==============================
             if [[ -d "$SRC_BASE/lz4k/include/linux" ]]; then
               cp -r "$SRC_BASE/lz4k/include/linux/" "$DEST_BASE/include/linux/"
               echo "✅ Copied Linux Headers"
             fi
 
-            # ==============================
             # Copy Lib Files
-            # ==============================
             if [[ -d "$SRC_BASE/lz4k/lib" ]]; then
               cp -r "$SRC_BASE/lz4k/lib/" "$DEST_BASE/lib/"
               echo "✅ Copied Lib Files"
             fi
 
-            # ==============================
             # Copy Crypto Files
-            # ==============================
             if [[ -d "$SRC_BASE/lz4k/crypto" ]]; then
               cp -r "$SRC_BASE/lz4k/crypto/" "$DEST_BASE/crypto/"
               echo "✅ Copied Crypto Files"
             fi
 
-            # ==============================
             # Copy OPlus-Specific Lib
-            # ==============================
             if [[ -d "$SRC_BASE/lz4k_oplus" ]]; then
               cp -r "$SRC_BASE/lz4k_oplus/" "$DEST_BASE/lib/"
               echo "✅ Copied LZ4K OPlus Files"
@@ -1695,9 +1677,7 @@ jobs:
           # ==============================
           if [[ "$SUSFS_META" != "-1" ]]; then
 
-            # ==============================
             # Full vs Minimal SUSFS
-            # ==============================
             if [[ "$GKI_V" == "android14-6.1" || \
                   "$GKI_V" == "android15-6.6" || \
                   "$GKI_V" == "android16-6.12" ]]; then
@@ -1708,9 +1688,7 @@ jobs:
               echo "⚠ Unsupported GKI Version: $GKI_V → Using Minimal SUSFS"
             fi
 
-            # ==============================
             # Base SUSFS Settings (Common)
-            # ==============================
             cat >> "$CONFIG_FILE" << EOF
           CONFIG_KSU_SUSFS=y
           CONFIG_KSU_SUSFS_SUS_PATH=y
@@ -1724,9 +1702,7 @@ jobs:
           CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
           EOF
 
-            # ==============================
             # Full SUSFS Additional Settings
-            # ==============================
             if [[ "$SUSFS_CONFIG" == "FULL" ]]; then
               cat >> "$CONFIG_FILE" << EOF
           CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
@@ -1738,9 +1714,8 @@ jobs:
             fi
 
           else
-            # ==============================
+          
             # SUSFS Disabled
-            # ==============================
             echo "❌ SUSFS Meta Disabled"
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
@@ -1809,16 +1784,12 @@ jobs:
           # ==============================
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
 
-            # ==============================
             # BPF Stream Parser for Non-6.12 Kernels
-            # ==============================
             if [[ "$KERNEL_VERSION" != "6.12" ]]; then
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
             fi
 
-            # ==============================
             # NETFILTER & IPSET Core Config
-            # ==============================
             cat >> "$CONFIG_FILE" << EOF
           CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
           CONFIG_NETFILTER_XT_SET=y
@@ -1901,9 +1872,7 @@ jobs:
               exit 1
             fi
 
-            # ==============================
             # Apply Patch with Fuzz Factor 3
-            # ==============================
             patch -p1 -F 3 < "$PATCH_FILE"
 
             echo "✅ IPv6 NAT Fix Applied Successfully"
