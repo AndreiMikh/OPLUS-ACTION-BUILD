@@ -1,4 +1,4 @@
-name: SM 8750 Trigger
+name: SM-8750 Trigger
 
 on:
   workflow_dispatch:
@@ -164,7 +164,7 @@ permissions:
 jobs:
 
 # =========================
-# Generate SM8750 Matrix
+# Generate SM-8750 Matrix
 # =========================
 
   generate-matrix:
@@ -173,7 +173,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
     steps:
-      - name: Generate sm8750 Device Matrix
+      - name: Generate SM-8750 Device Matrix
         id: set-matrix
         run: |
           FILE_LIST=(
