@@ -1576,7 +1576,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo "LZ4K Patches Complete"
 
-      - name: Fengchi Windspeed Driver v1.0
+      - name: Fengchi Scheduler
         if: ${{ github.event.inputs.SCHED == 'true' }}
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -1649,7 +1649,33 @@ jobs:
           # Get the Kernel Version & Manager Branch from Environment Variables & GitHub Actions
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
+          GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
+          # ==============================
+          # ADIOS I/O Scheduler Configuration
+          # ==============================
+          if [[ "${{ github.event.inputs.ADIOS }}" == "true" ]]; then 
+            # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
+            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
+            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
+
+            # Check if DefConfig is Set & the File Exists
+            if [[ -z "$DEFCONFIG" ]] || [[ ! -f "$DEFCONFIG" ]]; then
+                echo "❌ Error: DefCondig File Not Found or Path is Incorrect!"
+                exit 1
+            fi
+            
+            # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
+            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
+            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
+
+            # Confirm that the Configuration has been Applied   
+            echo "✅ ADIOS I/O Scheduler Configuration Applied"            
+          else
+              # Notify that ADIOS I/O Scheduler is Disabled
+              echo "❌ ADIOS I/O Scheduler is Disabled"  
+          fi
+          
           # ==============================
           # KSU Meta Configuration
           # ==============================
@@ -1658,10 +1684,12 @@ jobs:
           # Check if KSU Meta is Either SukiSU-Ultra or ReSukiSU
           if [[ "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ]]; then
             # Enable Multi-Manager Support if the Condition is True
-            echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
+            echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"            
             echo "✅ Multi-Manager Support Enabled for $KSU_META"
+        
           else
-             echo "❌ Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"
+          
+             echo "❌ Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"  
           fi
 
           # ==============================
@@ -1788,7 +1816,7 @@ jobs:
           fi
 
           # ==============================
-          # IPSET & IPV6 NAT Configuration
+          # IPSET & IPv6 NAT Configuration
           # ==============================
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
 
@@ -1825,28 +1853,7 @@ jobs:
 
             echo "✅ NETFILTER & IP Set Core Configuration Applied"
           fi
-
-          # ==============================
-          # ADIOS I/O Scheduler Configuration
-          # ==============================
-          if [[ "${{ github.event.inputs.ADIOS }}" == "true" ]]; then 
-            # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
-            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
-            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
-
-            # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
-            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
-            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
-
-            # Confirm that the Configuration has been Applied   
-            echo "✅ ADIOS I/O Scheduler Configuration Applied"
-            
-          else
-          
-            # Notify that ADIOS I/O Scheduler is Disabled
-            echo "❌ ADIOS I/O Scheduler is Disabled"
-          fi
-          
+     
           # ==============================
           # Apply Build Issues Fix
           # ==============================
