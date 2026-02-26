@@ -43,7 +43,6 @@ on:
           - oneplus_15                    # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported; Manifest Error
           - oneplus_15_t_aosp             # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported 
           - oneplus_15_wild               # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported 
-          - OnePlus-15-Custom-Manifest
           
       KPM:
         type: choice
