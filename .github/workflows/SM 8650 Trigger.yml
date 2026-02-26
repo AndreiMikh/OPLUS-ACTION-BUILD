@@ -271,7 +271,7 @@ jobs:
           exit 1
 
 # =========================
-# Collect & Upload ZIPs (Robust Version)
+# Wait-and-Package Job (Per-Device Loop)
 # =========================
   wait-and-package:
     needs: build
@@ -283,57 +283,67 @@ jobs:
       - name: Setup Tools
         run: |
           sudo apt update
-          sudo apt install -y gh curl jq
+          sudo apt install -y gh curl jq unzip
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
   
-      - name: Debug - List Existing Artifacts
-        run: |
-          RUN_ID="${{ github.run_id }}"
-          echo "Checking for artifacts in the current run ID: $RUN_ID"
-          ARTIFACTS=$(gh api \
-            repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
-            --jq '.artifacts[].name')
-          echo "Artifacts found: $ARTIFACTS"
+      - name: Create Final ZIPs Folder
+        run: mkdir -p final_zips
   
-      - name: Download Artifacts From Current Run
+      - name: Process All Devices
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p final_zips
-          RUN_ID="${{ github.run_id }}"
+          DEVICES=("oneplus_12_b" "oneplus_13r_b" "oneplus_ace3_pro_b" "oneplus_ace5_b" "oneplus_pad2_b" "oneplus_pad_pro_b")
   
-          ARTIFACTS=$(gh api \
-            repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
-            --jq '.artifacts[].name')
+          for DEVICE in "${DEVICES[@]}"; do
+            echo "Processing device: $DEVICE"
+            RUN_ID="${{ github.run_id }}"
   
-          if [[ -z "$ARTIFACTS" ]]; then
-            echo "No artifacts found for this run. Exiting."
-            exit 1
-          fi
-  
-          for ART in $ARTIFACTS; do
-            echo "Downloading $ART"
-            ARTIFACT_ID=$(gh api \
+            # AnyKernel3
+            AK3_ART=$(gh api \
               repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
-              --jq ".artifacts[] | select(.name==\"$ART\") | .id")
+              --jq '.artifacts[] | .name' | grep "$DEVICE" | grep -i 'AnyKernel3' | head -n1)
   
-            # Sanitize File Name (Remove spaces & special characters)
-            SAFE_NAME=$(echo "$ART" | tr ' ' '_' | tr -cd '[:alnum:]_-')
-            curl -L \
-              -H "Authorization: token $GH_TOKEN" \
-              -o "final_zips/${SAFE_NAME}.zip" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
+            if [[ -n "$AK3_ART" ]]; then
+              ART_ID=$(gh api \
+                repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+                --jq ".artifacts[] | select(.name==\"$AK3_ART\") | .id")
+              SAFE_NAME=$(echo "$AK3_ART" | tr ' ' '_' | tr -cd '[:alnum:]_-')
+              curl -L -H "Authorization: token $GH_TOKEN" \
+                -o "final_zips/${SAFE_NAME}.zip" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ART_ID}/zip"
+              echo "Downloaded AnyKernel3 Artifact for $DEVICE"
+            else
+              echo "No AnyKernel3 Artifact Found for $DEVICE"
+            fi
+  
+            # ZRAM
+            ZRAM_ART=$(gh api \
+              repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+              --jq '.artifacts[] | .name' | grep "$DEVICE" | grep -i 'ZRAM' | head -n1)
+  
+            if [[ -n "$ZRAM_ART" ]]; then
+              ART_ID=$(gh api \
+                repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+                --jq ".artifacts[] | select(.name==\"$ZRAM_ART\") | .id")
+              SAFE_NAME=$(echo "$ZRAM_ART" | tr ' ' '_' | tr -cd '[:alnum:]_-')
+              curl -L -H "Authorization: token $GH_TOKEN" \
+                -o "final_zips/${SAFE_NAME}.zip" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ART_ID}/zip"
+              echo "Downloaded ZRAM Artifact for $DEVICE"
+            else
+              echo "No ZRAM Artifact Found for $DEVICE"
+            fi
+  
           done
   
-      - name: Debug - List files in Final ZIPs
-        run: |
-          echo "Listing the Files in Final ZIPs Directory:"
-          ls -al final_zips/
+      - name: Debug - List All Downloaded Files
+        run: ls -al final_zips/
   
-      - name: Upload Device ZIPs (All Artifacts)
+      - name: Upload All Collected Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750
+          name: All-AnyKernel3-ZRAM-${{ github.event.inputs.KSU_META }}
           path: final_zips/**/*.zip
           if-no-files-found: warn
           compression-level: 6
