@@ -83,8 +83,8 @@ on:
          - KernelSU-Next
          - WildKSU
          - KernelSU
-         
-      MANAGER_SOURCE:
+       
+      KSU-META-SOURCE:
         type: choice
         description: "KSU Meta-Branch (Download Manager Artifact)"
         required: true
@@ -514,7 +514,7 @@ jobs:
               echo "--- GitHub Inputs ---"
               echo "FILE              : ${{ github.event.inputs.FILE }}"
               echo "KPM               : ${{ github.event.inputs.KPM }}"
-              echo "MANAGER_SOURCE    : ${{ github.event.inputs.MANAGER_SOURCE }}"
+              echo "KSU-META-SOURCE    : ${{ github.event.inputs.KSU-META-SOURCE }}"
               echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
               echo "KSU-META          : ${{ github.event.inputs.KSU-META }}"
               echo "ZRAM              : ${{ github.event.inputs.ZRAM }}"
@@ -860,13 +860,13 @@ jobs:
       - name: Re-Solve KSU Meta Source
         id: manager
         run: |
-          MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
+          KSU-META-SOURCE="${{ github.event.inputs.KSU-META-SOURCE }}"
           KSU-META="${{ github.event.inputs.KSU-META }}"
 
           # ==============================
           # Re-Solve KSU Meta Downloader Branch + Artifact
           # ==============================
-          case "$MANAGER_SOURCE" in
+          case "$KSU-META-SOURCE" in
             SukiSU-Ultra-Main)
               BRANCH="main"
               ARTIFACT="Manager"
@@ -2227,7 +2227,7 @@ jobs:
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})-${{ github.event.inputs.MANAGER_SOURCE }}(${{ env.KSUVER }})"
+          name: "${{ steps.extract_info.outputs.value }}(${{ env.TKERNEL_VERSION }})-${{ github.event.inputs.KSU-META-SOURCE }}(${{ env.KSUVER }})"
           path: ./AnyKernel3/*
           
       - name: Extract & Process ZRAM Module
