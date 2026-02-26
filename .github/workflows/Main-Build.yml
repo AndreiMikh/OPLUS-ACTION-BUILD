@@ -164,19 +164,19 @@ on:
         type: boolean
         description: "Apply HMBIRD (SM-8750)?"
         required: true
-        default: false
+        default: true
 
       ADIOS:
         type: boolean
         description: "Apply ADIOS I/O Scheduler"
-        required: false
+        required: true
         default: false
         
       XUS_FIX:
         type: boolean
         description: "Prevent Generation of XUS Error Files?"
         required: true
-        default: false
+        default: true
         
       SUSFS_DEV:
         type: boolean
@@ -1576,7 +1576,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo "LZ4K Patches Complete"
 
-      - name: Windspeed Driver
+      - name: Fengchi Windspeed Driver v1.0
         if: ${{ github.event.inputs.SCHED == 'true' }}
         env:
           FILE: ${{ github.event.inputs.FILE }}
@@ -1617,41 +1617,9 @@ jobs:
           echo "Applying Patch..."
           dos2unix "${PATCH_FILE}" || true
           patch -p1 -F 3 < "${PATCH_FILE}"
-          echo "Patch Complete"
+          echo "✅ Patch Complete"
 
-      - name: Adaptive I/O Scheduler
-        if: ${{ github.event.inputs.ADIOS == 'true' }}
-        run: |
-          set -euo pipefail
-          cd kernel_workspace/kernel_platform/common || exit 1
-
-          # Detect DefConfig Path
-          if [[ -f ../common/arch/arm64/configs/gki_defconfig ]]; then
-            DEFCONFIG="../common/arch/arm64/configs/gki_defconfig"
-          elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
-            DEFCONFIG="../arch/arm64/configs/gki_defconfig"
-          else
-            echo "GKI DefConfig Not Found!"
-            exit 1
-          fi
-
-          # Check if Adaptive I/O Scheduler Source Exists
-          if [[ ! -f ../drivers/block/mq-iosched/adios-iosched.c ]]; then
-            echo "⚠ Adaptive I/O Scheduler Source Not Found, Skipping Adaptive IO Scheduler Configuration"
-            exit 0
-          fi
-
-          # Remove Old Adaptive I/O Scheduler Entries to Prevent Duplication
-          sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
-          sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
-
-          # Enable Adaptive I/O Scheduler
-          echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
-          echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
-
-          echo "✅ Adaptive I/O Scheduler Enabled in $DEFCONFIG"
-
-      - name: LSM BBG
+      - name: LSM Baseband Guard
         if: ${{ github.event.inputs.LSM == 'true' }}
         run: |
           set -euo pipefail
@@ -1691,9 +1659,9 @@ jobs:
           if [[ "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ]]; then
             # Enable Multi-Manager Support if the Condition is True
             echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
-            echo "Multi-Manager Support Enabled for $KSU_META"
+            echo "✅ Multi-Manager Support Enabled for $KSU_META"
           else
-             echo "Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"
+             echo "❌ Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"
           fi
 
           # ==============================
@@ -1702,13 +1670,13 @@ jobs:
           # Check if KPM input is "KPN" or "None", disable KPM
           if [ "${{ github.event.inputs.KPM }}" = "KPN" ] || [ "${{ github.event.inputs.KPM }}" = "None" ]; then
             echo "CONFIG_KPM=n" >> "$CONFIG_FILE"
-            echo "KPM is disabled (KPN or None)."
+            echo "❌ KPM is disabled (KPN or None)"
           fi
 
           # Check if KPM Input is "KPM", Enable KPM
           if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
-            echo "KPM is Enabled"
+            echo "✅ KPM is Enabled"
           fi
 
           # ==============================
@@ -1724,7 +1692,7 @@ jobs:
               echo "✅ Supported GKI Version Detected: $GKI_V → Using FULL SUSFS"
             else
               SUSFS_CONFIG="MINIMAL"
-              echo "⚠ Unsupported GKI Version: $GKI_V → Using Minimal SUSFS"
+              echo "❌ Unsupported GKI Version: $GKI_V → Using Minimal SUSFS"
             fi
 
             # Base SUSFS Settings (Common)
@@ -1750,6 +1718,7 @@ jobs:
           CONFIG_KSU_SUSFS_TRY_UMOUNT=y
           CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
           EOF
+              echo "✅ SUSFS Based Configuration# Applied"
             fi
 
           else
@@ -1828,7 +1797,7 @@ jobs:
               echo "CONFIG_BPF_STREAM_PARSER=y" >> "$CONFIG_FILE"
             fi
 
-            # NETFILTER & IPSET Core Config
+            # NETFILTER & IPSET Core Configuration
             cat >> "$CONFIG_FILE" << EOF
           CONFIG_NETFILTER_XT_MATCH_ADDRTYPE=y
           CONFIG_NETFILTER_XT_SET=y
@@ -1854,8 +1823,30 @@ jobs:
           CONFIG_IP6_NF_TARGET_MASQUERADE=y
           EOF
 
+            echo "✅ NETFILTER & IP Set Core Configuration Applied"
           fi
 
+          # ==============================
+          # ADIOS I/O Scheduler Configuration
+          # ==============================
+          if [[ "${{ github.event.inputs.ADIOS }}" == "true" ]]; then 
+            # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
+            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
+            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
+
+            # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
+            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
+            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
+
+            # Confirm that the Configuration has been Applied   
+            echo "✅ ADIOS I/O Scheduler Configuration Applied"
+            
+          else
+          
+            # Notify that ADIOS I/O Scheduler is Disabled
+            echo "❌ ADIOS I/O Scheduler is Disabled"
+          fi
+          
           # ==============================
           # Apply Build Issues Fix
           # ==============================
@@ -1872,6 +1863,7 @@ jobs:
           CONFIG_RUST=y
           CONFIG_ANDROID_BINDER_IPC_RUST=m
           EOF
+            echo "✅ Rust Support Request Applied"
           fi
   
           # ==============================
@@ -1916,7 +1908,7 @@ jobs:
 
             echo "✅ IPv6 NAT Fix Applied Successfully"
           else
-            echo "⚠ Device Does Not Support IPv6 NAT — Skipping"
+            echo "❌ Device Does Not Support IPv6 NAT — Skipping"
           fi
 
       - name: Custom Build Time
@@ -1943,7 +1935,7 @@ jobs:
           cd kernel_workspace/kernel_platform/
 
           # ==============================
-          # Patch MKCompile_h Scripts
+          # Patch MKCompile Scripts
           # ==============================
           for UTC in common/scripts/mkcompile_h msm-kernel/scripts/mkcompile_h; do
             if [[ -f "$UTC" ]]; then
@@ -1954,7 +1946,7 @@ jobs:
                 perl -pi -e "s{UTS_VERSION=\"\\\$\\(.*?\\)\"}{UTS_VERSION=\"#1 SMP PREEMPT $DATESTR\"}" "$UTC"
               else
 
-                # Otherwise, Inject UTS Version Definition Safely
+                # Otherwise, Inject UTS Version Definition 
                 perl -0777 -pi -e "s{cat <<EOF}{cat <<EOF\n#undef UTS_VERSION\n#define UTS_VERSION \"#1 SMP PREEMPT $DATESTR\" } unless /UTS_VERSION/" "$UTC"
               fi
 
@@ -1976,7 +1968,7 @@ jobs:
             sed -i '/obj-y.*gpueb/d' "$GPUEB_MAKEFILE"
             echo "✅ GPUEB Disabled Successfully"
           else
-            echo "⚠ Makefile Not Found: $GPUEB_MAKEFILE — Skipping GPUEB Disable"
+            echo "❌ Makefile Not Found: $GPUEB_MAKEFILE — Skipping GPUEB Disable"
           fi
       
       - name: Build Kernel (Fast)
