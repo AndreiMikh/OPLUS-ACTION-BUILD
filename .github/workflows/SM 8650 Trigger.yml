@@ -173,7 +173,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
     steps:
-      - name: Generate sm8750 Device Matrix
+      - name: Generate SM8650 Device Matrix
         id: set-matrix
         run: |
           FILE_LIST=(
