@@ -68,7 +68,7 @@ on:
         
       BUILD_TIME:
         type: string
-        description: "Custom Build Time (Input 'UTC' to Use Current UTC Time)"
+        description: "Custom Build Time (Input 'F' to Use Current UTC Time)"
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
         
