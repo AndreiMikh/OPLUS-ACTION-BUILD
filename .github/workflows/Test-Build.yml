@@ -66,7 +66,7 @@ on:
         required: true
         default: "AndreiMikh"
         
-      BUILD_TIME:
+      BUILDTIME:
         type: string
         description: "Custom Build Time (Input 'F' to Use Current UTC Time)"
         required: false
@@ -518,7 +518,7 @@ jobs:
               echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
               echo "KSU-META          : ${{ github.event.inputs.KSU-META }}"
               echo "ZRAM              : ${{ github.event.inputs.ZRAM }}"
-              echo "BUILD_TIME        : ${{ github.event.inputs.BUILD_TIME }}"
+              echo "BUILDTIME        : ${{ github.event.inputs.BUILDTIME }}"
               echo "SUFFIX            : ${{ github.event.inputs.SUFFIX }}"
               echo "LSM               : ${{ github.event.inputs.LSM }}"
               echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
@@ -532,7 +532,7 @@ jobs:
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
               
               # Unicode Inspection (Whitespace / Hidden Character Detection)
-              print_unicode "BUILD_TIME" "${{ github.event.inputs.BUILD_TIME }}"
+              print_unicode "BUILDTIME" "${{ github.event.inputs.BUILDTIME }}"
               print_unicode "SUFFIX" "${{ github.event.inputs.SUFFIX }}"
 
       - name: Check Disk Space
@@ -1926,7 +1926,7 @@ jobs:
           # ==============================
           # Determine Build Timestamp
           # ==============================
-          INPUT_TIME="${{ github.event.inputs.BUILD_TIME }}"
+          INPUT_TIME="${{ github.event.inputs.BUILDTIME }}"
           if [[ -n "$INPUT_TIME" && "$INPUT_TIME" != "F" && "$INPUT_TIME" != "f" ]]; then
             DATESTR="$INPUT_TIME"
             echo "Using Input Build Time: $DATESTR"
@@ -1938,8 +1938,8 @@ jobs:
           # ==============================
           # Export Build Environment Variables
           # ==============================
-          echo "KBUILD_BUILD_TIMESTAMP=${DATESTR}" >> "$GITHUB_ENV"
-          echo "KBUILD_BUILD_VERSION=1" >> "$GITHUB_ENV"
+          echo "KBUILD-BUILD-TIMESTAMP=${DATESTR}" >> "$GITHUB_ENV"
+          echo "KBUILD-BUILD-VERSION=1" >> "$GITHUB_ENV"
 
           cd kernel_workspace/kernel_platform/
 
