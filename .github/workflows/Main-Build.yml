@@ -1690,6 +1690,27 @@ jobs:
             # Notify that ADIOS I/O Scheduler is Disabled
             echo "❌ ADIOS I/O Scheduler is Disabled"  
           fi
+
+          # ==============================
+          # Enable sBalance CPU Governor
+          # ==============================
+          echo "Checking sBalance CPU Governor Support for Kernel Version $KERNEL_VERSION..."
+
+          # Ensure sBalance is Available & Enable it in the Configuration
+          if [[ "$KERNEL_VERSION" == "6.6" || "$KERNEL_VERSION" == "6.12" ]]; then
+            echo "Enabling sBalance CPU Governor..."
+    
+            # Add the Necessary Configuration Options for sBalance
+            echo "CONFIG_SBALANCE=y" >> "$DEFCONFIG"
+            echo "CONFIG_CPU_FREQ_GOV_SBALANCE=y" >> "$DEFCONFIG"
+
+            # Fine-Tune the CPU Governor to Ensure an Optimal Balance between Performance & Power
+            echo "CONFIG_CPU_FREQ_DEFAULT_GOV='interactive'" >> "$DEFCONFIG"  # Use the interactive governor for better balance
+            echo "✅ sBalance CPU Governor & Interactive Governor Configurations Applied"
+          else
+            # Notify if sBalance is Not Available for the Given Kernel Version
+            echo "❌ sBalance CPU Governor Not Supported for this Kernel Version ($KERNEL_VERSION)"
+          fi
           
           # ==============================
           # KSU Meta Configuration
