@@ -1314,9 +1314,7 @@ jobs:
           # ==============================
           # Apply KernelSU 10 Enable SUSFS Patch
           # ==============================
-          if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" || \
-                "${{ github.event.inputs.KSU_META }}" == "KernelSU-Next" ]]; then
-          
+          if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then          
               echo "KernelSU Type Detected, Preparing SUSFS Enable Patch..."
           
               if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
@@ -1737,14 +1735,6 @@ jobs:
           CONFIG_KSU_SUSFS_TRY_UMOUNT=y
           CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
           EOF
-            fi
-
-            # ==============================
-            # KernelSU-Next Special Handling
-            # ==============================
-            if [[ "$KSU_META" == "KernelSU-Next" ]]; then
-              echo "Detected KernelSU-Next → Disabling KPROBES Hook"
-              echo "CONFIG_KSU_KPROBES_HOOK=n" >> "$CONFIG_FILE"
             fi
 
           else
