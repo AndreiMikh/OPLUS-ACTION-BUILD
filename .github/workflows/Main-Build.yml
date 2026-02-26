@@ -169,7 +169,7 @@ on:
       ADIOS:
         type: boolean
         description: "Apply ADIOS I/O Scheduler"
-        required: true
+        required: false
         default: false
         
       XUS_FIX:
