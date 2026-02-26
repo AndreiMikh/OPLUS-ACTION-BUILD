@@ -75,9 +75,8 @@ on:
         type: choice
         description: SUSFS for OGKI (susfs4oki) / SUSFS for GKI (susfs4ksu)
         required: true
-        default: OGKI
+        default: GKI
         options:
-          - OGKI
           - GKI
       
       ZRAM:
