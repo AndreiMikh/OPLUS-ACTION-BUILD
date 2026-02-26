@@ -270,23 +270,22 @@ jobs:
           echo "Timeout waiting for $FILE"
           exit 1
 
-
 # =========================
-# Collect & Upload ZIPs (No Fusion)
+# Collect & Upload ZIPs (Robust Version)
 # =========================
   wait-and-package:
     needs: build
     runs-on: ubuntu-latest
-
+  
     steps:
       - uses: actions/checkout@v4
-
+  
       - name: Setup Tools
         run: |
           sudo apt update
           sudo apt install -y gh curl jq
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
+  
       - name: Debug - List Existing Artifacts
         run: |
           RUN_ID="${{ github.run_id }}"
@@ -295,46 +294,46 @@ jobs:
             repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
             --jq '.artifacts[].name')
           echo "Artifacts found: $ARTIFACTS"
-
-      - name: Download Artifacts From Current Run Only
+  
+      - name: Download Artifacts From Current Run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p final_zips
-
           RUN_ID="${{ github.run_id }}"
-          echo "Fetching artifacts for run ID: $RUN_ID"
-
+  
           ARTIFACTS=$(gh api \
             repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
             --jq '.artifacts[].name')
-
+  
           if [[ -z "$ARTIFACTS" ]]; then
             echo "No artifacts found for this run. Exiting."
             exit 1
           fi
-
+  
           for ART in $ARTIFACTS; do
             echo "Downloading $ART"
             ARTIFACT_ID=$(gh api \
               repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
               --jq ".artifacts[] | select(.name==\"$ART\") | .id")
-
+  
+            # Sanitize File Name (Remove spaces & special characters)
+            SAFE_NAME=$(echo "$ART" | tr ' ' '_' | tr -cd '[:alnum:]_-')
             curl -L \
               -H "Authorization: token $GH_TOKEN" \
-              -o "final_zips/${ART}.zip" \
+              -o "final_zips/${SAFE_NAME}.zip" \
               "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
           done
-
-      - name: Debug - List files in final_zips
+  
+      - name: Debug - List files in Final ZIPs
         run: |
-          echo "Listing the files in final_zips directory:"
+          echo "Listing the Files in Final ZIPs Directory:"
           ls -al final_zips/
-
-      - name: Upload Device ZIPs (Separated)
+  
+      - name: Upload Device ZIPs (All Artifacts)
         uses: actions/upload-artifact@v4
         with:
           name: All-AnyKernel3-${{ github.event.inputs.KSU_META }}-sm8750
-          path: final_zips/*.zip
-
-        
+          path: final_zips/**/*.zip
+          if-no-files-found: warn
+          compression-level: 6
