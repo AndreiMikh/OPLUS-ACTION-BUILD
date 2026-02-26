@@ -135,7 +135,7 @@ on:
         
       XUS_FIX:
         type: boolean
-        description: "Prevent Generation of 5US Error Files?"
+        description: "Prevent Generation of XUS Error Files?"
         required: true
         default: true
         
@@ -153,7 +153,7 @@ on:
         
       BUILD_NOCCACHE:
         type: boolean
-        description: "Disable Ccache Update?"
+        description: "Disable Compiler Cache Update?"
         required: true
         default: false
 
