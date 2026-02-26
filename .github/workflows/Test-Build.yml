@@ -60,7 +60,7 @@ on:
         required: false
         default: ""
         
-      DYNAMIC_REPO:
+      DYNAMIC-REPOSITORY:
         type: string
         description: "Dynamic Inventory Warehouse Owner"
         required: true
@@ -104,7 +104,7 @@ on:
          - WildKSU-Canary-Spoofed
          - KernelSU-Main
          
-      SUSFS_VERSION:
+      SUSFS-VERSION:
         type: choice
         description: SUSFS for OGKI, Only Available for Version android14-6.1, android15-6.6 & android16-6.12 (susfs4oki)? / SUSFS for GKI (susfs4ksu)?
         required: true
@@ -208,8 +208,8 @@ jobs:
        github.event.inputs.KSU_META == 'ReSukiSU' && ' ReSukiSU' ||
        github.event.inputs.KSU_META == 'KernelSU-Next' && ' KSUNext' ||
        github.event.inputs.KSU_META == 'WildKSU' && ' WildKSU' || '',
-       github.event.inputs.SUSFS_VERSION == 'OGKI' && ' OKI' ||
-       github.event.inputs.SUSFS_VERSION == 'GKI' && ' GKI' || '',
+       github.event.inputs.SUSFS-VERSION == 'OGKI' && ' OKI' ||
+       github.event.inputs.SUSFS-VERSION == 'GKI' && ' GKI' || '',
        github.event.inputs.KPM == 'KPM' && ' KPM' ||
        github.event.inputs.KPM == 'KPN' && ' KPN' ||
        github.event.inputs.KPM == 'None' && ' None' || '',
@@ -246,7 +246,7 @@ jobs:
         id: extract_info
         env:
           FILE: ${{ github.event.inputs.FILE }}
-          DYNAMIC_REPO_INPUT: ${{ github.event.inputs.DYNAMIC_REPO }}
+          REPOSITORY-OWNER-INPUT: ${{ github.event.inputs.DYNAMIC-REPOSITORY }}
         run: |
           set -e
           cd "$GITHUB_WORKSPACE"
@@ -298,19 +298,19 @@ jobs:
             # ==============================
             # Only Register Dynamic Repository if Input is Not Empty
             # ==============================
-            if [[ -n "$DYNAMIC_REPO_INPUT" ]]; then
+            if [[ -n "$REPOSITORY-OWNER-INPUT" ]]; then
              
               # Remove https://github.com/ if User Pasted full URL
-              DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT#https://github.com/}"
-              DYNAMIC_REPO_INPUT="${DYNAMIC_REPO_INPUT%/}"
+              REPOSITORY-OWNER-INPUT="${REPOSITORY-OWNER-INPUT#https://github.com/}"
+              REPOSITORY-OWNER-INPUT="${REPOSITORY-OWNER-INPUT%/}"
               
-              if [[ "$DYNAMIC_REPO_INPUT" =~ ^[^/]+/[^/]+$ ]]; then
-                echo "Dynamic Repository Detected: $DYNAMIC_REPO_INPUT"
-                REPOS["Dynamic"]="${DYNAMIC_REPO_INPUT}|kernel_manifest"
+              if [[ "$REPOSITORY-OWNER-INPUT" =~ ^[^/]+/[^/]+$ ]]; then
+                echo "Dynamic Repository Detected: $REPOSITORY-OWNER-INPUT"
+                REPOS["Dynamic"]="${REPOSITORY-OWNER-INPUT}|kernel_manifest"
               else
                 echo "WARNING: Invalid Dynamic Repository Format"
                 echo "Expected: OWNER/REPO"
-                echo "Provided: $DYNAMIC_REPO_INPUT"
+                echo "Provided: $REPOSITORY-OWNER-INPUT"
                 echo "Skipping Dynamic Repository Instead of Failing"
               fi
             fi
@@ -523,7 +523,7 @@ jobs:
               echo "LSM               : ${{ github.event.inputs.LSM }}"
               echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
               echo "BBR_ECN           : ${{ github.event.inputs.BBR_ECN }}"
-              echo "SUSFS_VERSION     : ${{ github.event.inputs.SUSFS_VERSION }}"
+              echo "SUSFS-VERSION     : ${{ github.event.inputs.SUSFS-VERSION }}"
               echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
               echo "FAST_BUILD        : ${{ github.event.inputs.FAST_BUILD }}"
               echo "FENGCHI             : ${{ github.event.inputs.FENGCHI }}"
@@ -1203,7 +1203,7 @@ jobs:
           # ==============================
           # Clone Correct SUSFS Repository (Select Between SUSFS OGKI / GKI)
           # ==============================
-          if [[ ("$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12") && "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+          if [[ ("$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12") && "${{ github.event.inputs.SUSFS-VERSION }}" == "OGKI" ]]; then
               echo "If Both Conditions are Met, Executing Specific Logic of SUSFS OGKI Repository"
 
               # Check for SUSFS OGKI Development Branch if Selected
@@ -1219,7 +1219,7 @@ jobs:
                      -b oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}
               fi
           
-          elif [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "GKI" ]]; then
+          elif [[ "${{ github.event.inputs.SUSFS-VERSION }}" == "GKI" ]]; then
               echo "Using SUSFS GKI Repository"
 
               # Check for GKI Development Branch if Selected
@@ -1315,7 +1315,7 @@ jobs:
           if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then          
               echo "KernelSU Type Detected, Preparing SUSFS Enable Patch..."
           
-              if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+              if [[ "${{ github.event.inputs.SUSFS-VERSION }}" == "OGKI" ]]; then
                   PATCH_URL="https://raw.githubusercontent.com/cctv18/susfs4oki/oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
               else
                   PATCH_URL="https://gitlab.com/simonpunk/susfs4ksu/-/raw/gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
