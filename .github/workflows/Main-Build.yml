@@ -11,49 +11,35 @@ on:
         required: true
         default: oneplus_13_b
         options:
-          - oneplus_10r_v
-          - oneplus_nord_3_v
-          - oneplus_ace_v
-          - oneplus_ace_race_v
-          - oneplus_10_pro_V
-          - oneplus_10t_v
-          - oneplus_11r_b
-          - oneplus_ace2_b
-          - oneplus_pad_lite_v
-          - oneplus_pad_mt6983_b
-          - oneplus_ace_2v_v
-          - oneplus_ace_pro_v
-          - oneplus_11_b
-          - oneplus_12r_b
-          - oneplus_ace2_pro_b
-          - oneplus_ace3_b
-          - oneplus_open_b
-          - oneplus_nord_ce4_b
-          - oneplus_pad_go_2_b
-          - oneplus_nord_ce4_lite_5g_v    # SM 6375 Kernel Version 
-          - oneplus_nord_4_b
-          - oneplus_ace_3v_b
-          - oneplus_pad_mt6897_v
+          - oneplus_10_pro_u               # SM 8450 - Kernel Version
+          - oneplus_10t_v                  # SM 8475 - Kernel Version
+          - oneplus_11r_b                  # SM 8475 - Kernel Version
+          - oneplus_ace2_b                 # SM 8475 - Kernel Version
+          - oneplus_11_b                  # SM 8550 - Kernel Version
+          - oneplus_12r_b                 # SM 8550 - Kernel Version
+          - oneplus_ace2_pro_b            # SM 8550 - Kernel Version
+          - oneplus_ace3_b                # SM 8550 - Kernel Version
+          - oneplus_open_b                # SM 8550 - Kernel Version
+          - oneplus_nord_ce4_b            # SM 7550 - Kernel Version
+          - oneplus_nord_ce4_lite_5g_v    # SM 6375 - Kernel Version 
+          - oneplus_nord_4_b              # SM 7675 - Kernel Version
+          - oneplus_ace_3v_b              # SM 7675 - Kernel Version
           - oneplus_12_b                  # SM8650 - Kernel Version 6.1.118
           - oneplus_13r_b                 # SM8650 - Kernel Version 6.1.118
           - oneplus_ace3_pro_b            # SM8650 - Kernel Version 6.1.118
           - oneplus_ace5_b                # SM8650 - Kernel Version 6.1.118
           - oneplus_pad_pro_b             # SM8650 - Kernel Version 6.1.118
           - oneplus_pad2_b                # SM8650 - Kernel Version 6.1.118
-          - oneplus_nord_ce5_b
-          - oneplus_nord_5_b
+          - oneplus_nord_5_b              # SM 8635 - Kernel Version
           - oneplus_ace5_pro_b            # SM8750 - Kernel Version 6.6.89
           - oneplus_13_b                  # SM8750 - Kernel Version 6.6.89
           - oneplus_13t_b                 # SM8750 - Kernel Version 6.6.89
           - oneplus_13s_b                 # SM8750 - Kernel Version 6.6.89
           - oneplus_pad_2_pro_b           # SM8750 - Kernel Version 6.6.89
           - oneplus_pad_3_b               # SM8750 - Kernel Version 6.6.89
-          - oneplus_ace5_race_b
-          - oneplus_ace5_ultra_b
-          - oneplus_pad2_mt6991_b
           - oneplus_ace_6                 # SM8750 - Kernel Version 6.6.89
-          - oneplus_ace_6t
-          - oneplus_ace_6t_aosp
+          - oneplus_ace_6t                # SM8845 - Kernel Version
+          - oneplus_ace_6t_aosp           # SM8845 - Kernel Version
           - oneplus_15                    # SM8850 - Kernel Version 6.12
           - oneplus_15_t_aosp             # SM8850 - Kernel Version 6.12
           - oneplus_15_wild               # SM8850 - Kernel Version 6.12
