@@ -164,7 +164,7 @@ permissions:
 jobs:
 
 # =========================
-# Generate sm8750 Matrix
+# Generate SM8650 Matrix
 # =========================
 
   generate-matrix:
