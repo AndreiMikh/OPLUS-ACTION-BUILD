@@ -1312,14 +1312,20 @@ jobs:
           fi
 
           # ==============================
-          # Apply KernelSU Enable SUSFS Patch
+          # Apply KernelSU Enable SUSFS Patch (Auto OGKI / GKI)
           # ==============================
           if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" || \
                 "${{ github.event.inputs.KSU_META }}" == "KernelSU-Next" ]]; then
           
-              echo "KernelSU Type Detected (${{ github.event.inputs.KSU_META }}), Checking 10 Enable SUSFS Patch..."
+              echo "KernelSU Type Detected, Preparing SUSFS Enable Patch..."
           
-              PATCH_URL="https://raw.githubusercontent.com/cctv18/susfs4oki/oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+              if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+                  PATCH_URL="https://raw.githubusercontent.com/cctv18/susfs4oki/oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+              else
+                  PATCH_URL="https://gitlab.com/simonpunk/susfs4ksu/-/raw/gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+              fi
+          
+              echo "Downloading from: $PATCH_URL"
           
               wget -q "$PATCH_URL" -O 10_enable_susfs_for_ksu.patch || true
           
@@ -1327,18 +1333,23 @@ jobs:
                   echo "Patch downloaded. Applying inside $KDIR"
           
                   cd "$KDIR" || exit 1
-          
                   patch -p1 < ../../10_enable_susfs_for_ksu.patch || true
-          
                   cd - >/dev/null
+          
+                  rm -f 10_enable_susfs_for_ksu.patch
           
                   echo "✅ 10 Enable SUSFS Patch Applied!"
               else
-                  echo "⚠️ Remote KernelSU Enable Patch Not Found, Skipping"
+                  echo "⚠️ Patch Not Found for Selected Base, Skipping"
               fi
+          
           else
-              echo "❌ No 10 Enable SUSFS Patch Needed"
+              echo "❌ KernelSU Not Selected, Skipping SUSFS Enable Patch"
           fi
+
+          cd - >/dev/null
+
+          echo "SUSFS Applied Successfully"        
           
           # ==============================
           # Pull ZRAM Patches
