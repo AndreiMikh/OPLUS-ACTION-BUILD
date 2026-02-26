@@ -166,7 +166,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
     steps:
-      - name: Generate SM8550 Device Matrix
+      - name: Generate SM8850 & SM8845 Device Matrix
         id: set-matrix
         run: |
           FILE_LIST=(
