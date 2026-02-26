@@ -54,7 +54,7 @@ on:
           - KPN
           - None
           
-      SUSFS_META:
+      SUSFS-META:
         type: string
         description: "Rollback SUSFS (Enter Hash or Number or -1 to Turn Off)"
         required: false
@@ -154,7 +154,7 @@ on:
         required: true
         default: true
         
-      UNICODE_BYPASS:
+      UNICODE-BYPASS:
         type: boolean
         description: "Add Fix for Unicode Invisible Code Point Bypass Read Vulnerability?"
         required: true
@@ -172,25 +172,25 @@ on:
         required: true
         default: false        
         
-      XUS_FIX:
+      XUS-ERROR-FIX:
         type: boolean
         description: "Prevent Generation of XUS Error Files?"
         required: true
         default: false
         
-      SUSFS_DEV:
+      SUSFS-DEV-BRANCH:
         type: boolean
         description: "Extract SUSFS-Dev Branch?"
         required: true
         default: false
         
-      SPACE_NOCLEAN:
+      DISABLE-SPACE-CLEAN:
         type: boolean
         description: "Disable Space Cleaning?"
         required: true
         default: false
         
-      BUILD_NOCCACHE:
+      DISABLE-COMPILER-CACHE:
         type: boolean
         description: "Disable Compiler Cache Update?"
         required: true
@@ -232,7 +232,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Maximize Build Space
-        if: ${{ github.event.inputs.SPACE_NOCLEAN == 'false' }}
+        if: ${{ github.event.inputs.DISABLE-SPACE-CLEAN == 'false' }}
         uses: easimon/maximize-build-space@master
         with:
           root-reserve-mb: 8192
@@ -514,22 +514,22 @@ jobs:
               echo "--- GitHub Inputs ---"
               echo "FILE              : ${{ github.event.inputs.FILE }}"
               echo "KPM               : ${{ github.event.inputs.KPM }}"
-              echo "KSU-META-SOURCE    : ${{ github.event.inputs.KSU-META-SOURCE }}"
-              echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
+              echo "KSU-META-SOURCE   : ${{ github.event.inputs.KSU-META-SOURCE }}"
+              echo "SUSFS-META        : ${{ github.event.inputs.SUSFS-META }}"
               echo "KSU-META          : ${{ github.event.inputs.KSU-META }}"
               echo "ZRAM              : ${{ github.event.inputs.ZRAM }}"
-              echo "BUILDTIME        : ${{ github.event.inputs.BUILDTIME }}"
+              echo "BUILDTIME         : ${{ github.event.inputs.BUILDTIME }}"
               echo "SUFFIX            : ${{ github.event.inputs.SUFFIX }}"
               echo "LSM               : ${{ github.event.inputs.LSM }}"
               echo "NETFILTER         : ${{ github.event.inputs.NETFILTER }}"
               echo "BBR-ECN           : ${{ github.event.inputs.BBR-ECN }}"
               echo "SUSFS-VERSION     : ${{ github.event.inputs.SUSFS-VERSION }}"
-              echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
-              echo "FASTBUILD        : ${{ github.event.inputs.FASTBUILD }}"
-              echo "FENGCHI             : ${{ github.event.inputs.FENGCHI }}"
+              echo "SUSFS-DEV-BRANCH  : ${{ github.event.inputs.SUSFS-DEV-BRANCH }}"
+              echo "FASTBUILD         : ${{ github.event.inputs.FASTBUILD }}"
+              echo "FENGCHI           : ${{ github.event.inputs.FENGCHI }}"
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
-              echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
-              echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
+              echo "UNICODE-BYPASS    : ${{ github.event.inputs.UNICODE-BYPASS }}"
+              echo "XUS-ERROR-FIX     : ${{ github.event.inputs.XUS-ERROR-FIX }}"
               
               # Unicode Inspection (Whitespace / Hidden Character Detection)
               print_unicode "BUILDTIME" "${{ github.event.inputs.BUILDTIME }}"
@@ -548,7 +548,7 @@ jobs:
           free -h
 
       - name: Set Cache Environment
-        if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
+        if: ${{ github.event.inputs.DISABLE-COMPILER-CACHE == 'false' }}
         run: |
           echo "CCACHE_DIR=$HOME/.ccache_${{ github.event.inputs.FILE }}" >> $GITHUB_ENV
           mkdir -p "$HOME/.ccache_${{ github.event.inputs.FILE }}"
@@ -586,7 +586,7 @@ jobs:
           execute_install_scripts: true
 
       - name: Load Ccache
-        if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
+        if: ${{ github.event.inputs.DISABLE-COMPILER-CACHE == 'false' }}
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
@@ -596,7 +596,7 @@ jobs:
             ${{ github.event.inputs.FASTBUILD == 'true' && 'alpha' || 'beta' }}-16.2
 
       - name: Setup Compiler Cache
-        if: ${{ github.event.inputs.BUILD_NOCCACHE == 'false' }}
+        if: ${{ github.event.inputs.DISABLE-COMPILER-CACHE == 'false' }}
         run: |
           INIT_FLAG="${{ env.CCACHE_DIR }}/.ccache_initialized"
 
@@ -1163,7 +1163,7 @@ jobs:
           fi
 
       - name: Apply SUSFS Patches (Auto Official / Fallback) & Other Patches
-        if: ${{ github.event.inputs.SUSFS_META != '-1' }}
+        if: ${{ github.event.inputs.SUSFS-META != '-1' }}
         run: |
           set -e
 
@@ -1207,7 +1207,7 @@ jobs:
               echo "If Both Conditions are Met, Executing Specific Logic of SUSFS OGKI Repository"
 
               # Check for SUSFS OGKI Development Branch if Selected
-              if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+              if [[ "${{ github.event.inputs.SUSFS-DEV-BRANCH }}" == "true" ]]; then
                   echo "Cloning SUSFS OGKI Development Branch"
                   git clone --depth=1 \
                      https://github.com/cctv18/susfs4oki.git susfs4ksu \
@@ -1223,7 +1223,7 @@ jobs:
               echo "Using SUSFS GKI Repository"
 
               # Check for GKI Development Branch if Selected
-              if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+              if [[ "${{ github.event.inputs.SUSFS-DEV-BRANCH }}" == "true" ]]; then
                   echo "Cloning SUSFS GKI Development Branch"
                   git clone --depth=1 \
                      https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
@@ -1252,11 +1252,11 @@ jobs:
           # ==============================
           cd susfs4ksu
 
-          if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
-            if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
-              git checkout HEAD~${{ github.event.inputs.SUSFS_META }}
+          if [ -n "${{ github.event.inputs.SUSFS-META }}" ]; then
+            if [[ "${{ github.event.inputs.SUSFS-META }}" =~ ^[0-9]+$ ]]; then
+              git checkout HEAD~${{ github.event.inputs.SUSFS-META }}
             else
-              git checkout "${{ github.event.inputs.SUSFS_META }}"
+              git checkout "${{ github.event.inputs.SUSFS-META }}"
             fi
           fi
 
@@ -1400,7 +1400,7 @@ jobs:
           # ==============================
           # 6.6.0–6.6.30 TrustyOS Missing Fix
           # ==============================
-          if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS_META }}" != "-1" ]]; then
+          if [[ "${{ env.KV2 }}" == "66" && "${{ env.KV3 }}" -le 6630 && "${{ github.event.inputs.SUSFS-META }}" != "-1" ]]; then
             TRUSTY_EXISTS="false"
 
             # Check if TrustyOS Exist in the Manifest
@@ -1420,7 +1420,7 @@ jobs:
             fi
           fi
 
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
+          if [ "${{ github.event.inputs.SUSFS-META }}" != "-1" ]; then
 
             # ==============================
             # Fake Patch Workaround to Prevent Patch Failures
@@ -1491,8 +1491,8 @@ jobs:
             # ==============================
             # Optional XUS fix
             # ==============================
-            if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && \
-               [ "${{ github.event.inputs.XUS_FIX }}" = "true" ]; then
+            if [ "${{ github.event.inputs.SUSFS-META }}" != "-1" ] && \
+               [ "${{ github.event.inputs.XUS-ERROR-FIX }}" = "true" ]; then
 
               cp ../../AndreiMikh-Kernel-Lab/patches/XUS-Fix.patch ./
               patch -p1 < XUS-Fix.patch || true
@@ -1524,7 +1524,7 @@ jobs:
           echo "Conversion Completed"
       
       - name: Unicode Bypass
-        if: ${{ github.event.inputs.UNICODE_BYPASS == 'true' }}
+        if: ${{ github.event.inputs.UNICODE-BYPASS == 'true' }}
         run: |
           set -euo pipefail
 
@@ -1715,7 +1715,7 @@ jobs:
           # ==============================
           # Apply SUSFS Configuration
           # ==============================
-          if [[ "$SUSFS_META" != "-1" ]]; then
+          if [[ "$SUSFS-META" != "-1" ]]; then
 
             # Full vs Minimal SUSFS
             if [[ "$GKI_V" == "android14-6.1" || \
