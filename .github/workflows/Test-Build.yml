@@ -72,7 +72,7 @@ on:
         required: false
         default: "Sat Feb 14 07:17:27 UTC 2026"
         
-      KSU_META:
+      KSU-META:
         type: choice
         description: "KSU Meta"
         required: true
@@ -204,10 +204,10 @@ jobs:
        '{0}{1}{2}{3}{4}{5}-{6} {7}',
        github.event.inputs.FAST_BUILD == 'true' && ' Fast' || '',
        contains(github.event.inputs.FILE, '_aosp') && ' AOSP' || '',
-       github.event.inputs.KSU_META == 'SukiSU-Ultra' && ' SukiSU' ||
-       github.event.inputs.KSU_META == 'ReSukiSU' && ' ReSukiSU' ||
-       github.event.inputs.KSU_META == 'KernelSU-Next' && ' KSUNext' ||
-       github.event.inputs.KSU_META == 'WildKSU' && ' WildKSU' || '',
+       github.event.inputs.KSU-META == 'SukiSU-Ultra' && ' SukiSU' ||
+       github.event.inputs.KSU-META == 'ReSukiSU' && ' ReSukiSU' ||
+       github.event.inputs.KSU-META == 'KernelSU-Next' && ' KSUNext' ||
+       github.event.inputs.KSU-META == 'WildKSU' && ' WildKSU' || '',
        github.event.inputs.SUSFS-VERSION == 'OGKI' && ' OKI' ||
        github.event.inputs.SUSFS-VERSION == 'GKI' && ' GKI' || '',
        github.event.inputs.KPM == 'KPM' && ' KPM' ||
@@ -516,7 +516,7 @@ jobs:
               echo "KPM               : ${{ github.event.inputs.KPM }}"
               echo "MANAGER_SOURCE    : ${{ github.event.inputs.MANAGER_SOURCE }}"
               echo "SUSFS_META        : ${{ github.event.inputs.SUSFS_META }}"
-              echo "KSU_META          : ${{ github.event.inputs.KSU_META }}"
+              echo "KSU-META          : ${{ github.event.inputs.KSU-META }}"
               echo "ZRAM              : ${{ github.event.inputs.ZRAM }}"
               echo "BUILD_TIME        : ${{ github.event.inputs.BUILD_TIME }}"
               echo "SUFFIX            : ${{ github.event.inputs.SUFFIX }}"
@@ -861,7 +861,7 @@ jobs:
         id: manager
         run: |
           MANAGER_SOURCE="${{ github.event.inputs.MANAGER_SOURCE }}"
-          KSU_META="${{ github.event.inputs.KSU_META }}"
+          KSU-META="${{ github.event.inputs.KSU-META }}"
 
           # ==============================
           # Re-Solve KSU Meta Downloader Branch + Artifact
@@ -924,7 +924,7 @@ jobs:
           # ==============================
           # Re-Solve Actual Repository (Critical Fix)
           # ==============================
-          case "$KSU_META" in
+          case "$KSU-META" in
             SukiSU-Ultra)
               REPO="SukiSU-Ultra/SukiSU-Ultra"
               ;;
@@ -942,7 +942,7 @@ jobs:
               ;;
               
             *)
-              echo "Unsupported KSU Meta: $KSU_META"
+              echo "Unsupported KSU Meta: $KSU-META"
               exit 1
               ;;
           esac
@@ -963,7 +963,7 @@ jobs:
           cd kernel_workspace/kernel_platform || exit 1
 
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
-          KSU_META="${{ github.event.inputs.KSU_META }}"
+          KSU-META="${{ github.event.inputs.KSU-META }}"
 
           get_commit_count_version() {
             local repo="$1"
@@ -985,7 +985,7 @@ jobs:
               | cut -d'"' -f4
           }
 
-          if [[ "$KSU_META" == "SukiSU-Ultra" ]]; then
+          if [[ "$KSU-META" == "SukiSU-Ultra" ]]; then
             echo "Configuring SukiSU-Ultra..."
 
             REPO="ShirkNeko/SukiSU-Ultra"
@@ -1023,7 +1023,7 @@ jobs:
 
             echo "SukiSU-Ultra Version: v${KSU_API_VERSION}-${GIT_COMMIT_HASH}"
 
-          elif [[ "$KSU_META" == "ReSukiSU" ]]; then
+          elif [[ "$KSU-META" == "ReSukiSU" ]]; then
             echo "Configuring ReSukiSU..."
 
             REPO="ReSukiSU/ReSukiSU"
@@ -1061,7 +1061,7 @@ jobs:
             # ==============================
             printf 'CONFIG_KSU_FULL_NAME_FORMAT="ReSukiSU-%%TAG_NAME%%[%s]"\n' "$KSU_VERSION" >> "$DEFCONFIG"
             
-          elif [[ "$KSU_META" == "KernelSU-Next" ]]; then
+          elif [[ "$KSU-META" == "KernelSU-Next" ]]; then
             echo "Configuring KernelSU-Next..."
 
             REPO="KernelSU-Next/KernelSU-Next"
@@ -1112,7 +1112,7 @@ jobs:
 
             echo "All KernelSU-Next Patches Processed"
 
-          elif [[ "$KSU_META" == "WildKSU" ]]; then
+          elif [[ "$KSU-META" == "WildKSU" ]]; then
             echo "Configuring WildKSU..."
 
             REPO="WildKernels/Wild_KSU"
@@ -1136,7 +1136,7 @@ jobs:
               "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
               kernel/Kbuild
 
-          elif [[ "$KSU_META" == "KernelSU" ]]; then
+          elif [[ "$KSU-META" == "KernelSU" ]]; then
             echo "Configuring KernelSU..."
 
             REPO="tiann/KernelSU"
@@ -1312,7 +1312,7 @@ jobs:
           # ==============================
           # Apply KernelSU 10 Enable SUSFS Patch
           # ==============================
-          if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then          
+          if [[ "${{ github.event.inputs.KSU-META }}" == "KernelSU" ]]; then          
               echo "KernelSU Type Detected, Preparing SUSFS Enable Patch..."
           
               if [[ "${{ github.event.inputs.SUSFS-VERSION }}" == "OGKI" ]]; then
@@ -1689,10 +1689,10 @@ jobs:
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"  # Enable KernelSU Support
 
           # Check if KSU Meta is Either SukiSU-Ultra or ReSukiSU
-          if [[ "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ]]; then
+          if [[ "$KSU-META" == "SukiSU-Ultra" || "$KSU-META" == "ReSukiSU" ]]; then
             # Enable Multi-Manager Support if the Condition is True
             echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"
-            echo "Multi-Manager Support Enabled for $KSU_META"
+            echo "Multi-Manager Support Enabled for $KSU-META"
           else
              echo "Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"
           fi
