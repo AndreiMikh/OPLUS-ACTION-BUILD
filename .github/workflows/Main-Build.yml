@@ -1646,34 +1646,37 @@ jobs:
           # Set the Path to the Configuration File
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
 
-          # Get the Kernel Version & Manager Branch from Environment Variables & GitHub Actions
+          # Get Environment Variables & GitHub Actions
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
+          KSU_META="${{ github.event.inputs.KSU_META }}"
+          SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
+          ADIOS="${{ github.event.inputs.ADIOS }}"        
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
           # ==============================
           # ADIOS I/O Scheduler Configuration
           # ==============================
-          if [[ "${{ github.event.inputs.ADIOS }}" == "true" ]]; then 
+          if [[ "$ADIOS" == "true" ]]; then 
             # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
             sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
             sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
 
             # Check if DefConfig is Set & the File Exists
             if [[ -z "$DEFCONFIG" ]] || [[ ! -f "$DEFCONFIG" ]]; then
-                echo "❌ Error: DefCondig File Not Found or Path is Incorrect!"
-                exit 1
+              echo "❌ Error: DefCondig File Not Found or Path is Incorrect!"
+              exit 1
             fi
             
             # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
             echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
             echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
 
-            # Confirm that the Configuration has been Applied   
+            # Confirm that the Configuration has been Applied             
             echo "✅ ADIOS I/O Scheduler Configuration Applied"            
           else
-              # Notify that ADIOS I/O Scheduler is Disabled
-              echo "❌ ADIOS I/O Scheduler is Disabled"  
+            # Notify that ADIOS I/O Scheduler is Disabled
+            echo "❌ ADIOS I/O Scheduler is Disabled"  
           fi
           
           # ==============================
