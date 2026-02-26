@@ -1692,25 +1692,78 @@ jobs:
           fi
 
           # ==============================
-          # Enable sBalance CPU Governor
+          # CPU Frequency & Core Settings
           # ==============================
-          echo "Checking sBalance CPU Governor Support for Kernel Version $KERNEL_VERSION..."
+          echo "Configuring CPU Frequencies for Snapdragon 8 Elite (Gen 4) / Gen 5..."
 
-          # Ensure sBalance is Available & Enable it in the Configuration
-          if [[ "$KERNEL_VERSION" == "6.6" || "$KERNEL_VERSION" == "6.12" ]]; then
-            echo "Enabling sBalance CPU Governor..."
-    
-            # Add the Necessary Configuration Options for sBalance
-            echo "CONFIG_SBALANCE=y" >> "$DEFCONFIG"
-            echo "CONFIG_CPU_FREQ_GOV_SBALANCE=y" >> "$DEFCONFIG"
+          # Check if Android/Kernel Version is "android16-6.12" (Snapdragon 8 Elite Gen 5)
+          if [[ "$GKI_V" == "android16-6.12" ]]; then
+            echo "✅ Using Snapdragon 8 Elite Gen 5 Frequencies..."
 
-            # Fine-Tune the CPU Governor to Ensure an Optimal Balance between Performance & Power
-            echo "CONFIG_CPU_FREQ_DEFAULT_GOV='interactive'" >> "$DEFCONFIG"  # Use the interactive governor for better balance
-            echo "✅ sBalance CPU Governor & Interactive Governor Configurations Applied"
+            # Set Max Frequencies for Big Cores (Oryon Gen 3 Prime) & Small Cores (Oryon Gen 3 Performance)
+            echo "CONFIG_CPU_FREQ_DEFAULT_GOV_MAX_BIG_CORE=4610000" >> "$DEFCONFIG"  # 4.61 GHz for big cores
+            echo "CONFIG_CPU_FREQ_DEFAULT_GOV_MAX_SMALL_CORE=3630000" >> "$DEFCONFIG"  # 3.63 GHz for small cores
+
+          # Check if GKI_V is "android15-6.6" (Snapdragon 8 Elite Gen 4)
+          elif [[ "$GKI_V" == "android15-6.6" ]]; then
+            echo "✅ Using Snapdragon 8 Elite Gen 4 Frequencies..."
+
+            # Set Max Frequencies for Big Cores (Oryon Phoenix L) & Small Cores (Oryon Phoenix M)
+            echo "CONFIG_CPU_FREQ_DEFAULT_GOV_MAX_BIG_CORE=4320000" >> "$DEFCONFIG"  # 4.32 GHz for big cores
+            echo "CONFIG_CPU_FREQ_DEFAULT_GOV_MAX_SMALL_CORE=3530000" >> "$DEFCONFIG"  # 3.53 GHz for small cores
+
           else
-            # Notify if sBalance is Not Available for the Given Kernel Version
-            echo "❌ sBalance CPU Governor Not Supported for this Kernel Version ($KERNEL_VERSION)"
+            echo "❌ Unknown Android/Kernel Version: $GKI_V, Frequencies will Not be Set"
           fi
+
+          # ==============================
+          # Enable CPU Hotplugs & Idle States
+          # ==============================
+          echo "🔋 Enabling CPU Hotplug and Idle States for Power Efficiency..."
+
+          # Enable CPU Hotplugs to Dynamically Disable unused Cores
+          echo "CONFIG_CPU_HOTPLUG=y" >> "$DEFCONFIG"
+          # Enable CPU Idle States for Power Savings when Cores are Idle
+          echo "CONFIG_CPU_IDLE=y" >> "$DEFCONFIG"
+
+          echo "✅ CPU Hotplug & Idle Configuration Applied"
+
+          # ==============================
+          # CPU Governor and Frequency Scaling
+          # ==============================
+          echo "⚡ Configuring CPU Governor for Dynamic Power/Performance Scaling..."
+
+          # Enable the Interactive Governor to Dynamically Scale CPU Frequencies Based on System Load
+          echo "CONFIG_CPU_FREQ_GOV_INTERACTIVE=y" >> "$DEFCONFIG"
+          # Enable sBalance for Better Balance between Power Efficiency & Performance
+          echo "CONFIG_CPU_FREQ_GOV_SBALANCE=y" >> "$DEFCONFIG"
+          # Default to Interactive Governor for Better Balance
+          echo "CONFIG_CPU_FREQ_DEFAULT_GOV='interactive'" >> "$DEFCONFIG"
+
+          echo "✅ CPU Governor & Frequency Scaling Applied"
+
+          # ==============================
+          # Thermal & Power Management
+          # ==============================
+          echo "🌡️ Enabling Thermal & Power Management for Snapdragon 8 Elite (Gen 4) / Gen 5..."
+
+          # Enable Thermal Management & Throttling to Prevent Overheating
+          echo "CONFIG_THERMAL=y" >> "$DEFCONFIG"
+          # Enable Efficient Voltage Scaling (Dynamic Voltage & Frequency Scaling) for Better Power Efficiency
+          echo "CONFIG_DVFS=y" >> "$DEFCONFIG"
+
+          echo "✅ Thermal & Power Management Configurations Applied"
+
+          # ==============================
+          # Core Scheduling Optimizations
+          # ==============================
+          echo "🔄 Enabling Core Scheduling Optimizations for Snapdragon..."
+
+          # Enable Heterogeneous Core Scheduling (Big & Small Scheduling) for Better Workload Distribution
+          echo "CONFIG_SCHED_HETEROGENEOUS_CORE_SCHEDULING=y" >> "$DEFCONFIG"
+          echo "✅ Core Scheduler Configurations Applied"
+
+          echo "✅ Snapdragon 8 Elite (Gen 4) / Gen 5 CPU Optimization Applied"
           
           # ==============================
           # KSU Meta Configuration
