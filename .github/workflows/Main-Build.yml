@@ -1312,7 +1312,7 @@ jobs:
           fi
 
           # ==============================
-          # Apply KernelSU Enable SUSFS Patch (Auto OGKI / GKI)
+          # Apply KernelSU 10 Enable SUSFS Patch
           # ==============================
           if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" || \
                 "${{ github.event.inputs.KSU_META }}" == "KernelSU-Next" ]]; then
@@ -1327,22 +1327,19 @@ jobs:
           
               echo "Downloading from: $PATCH_URL"
           
-              wget -q "$PATCH_URL" -O 10_enable_susfs_for_ksu.patch || true
+              wget -q "$PATCH_URL" -O enable_susfs.patch || true
           
-              if [[ -f "10_enable_susfs_for_ksu.patch" ]]; then
-                  echo "Patch downloaded. Applying inside $KDIR"
+              if [[ -f "enable_susfs.patch" ]]; then
+                  echo "Applying Patch Inside $KDIR"
           
-                  cd "$KDIR" || exit 1
-                  patch -p1 < ../../10_enable_susfs_for_ksu.patch || true
-                  cd - >/dev/null
+                  patch -d "$KDIR" -p1 --forward < enable_susfs.patch || true
           
-                  rm -f 10_enable_susfs_for_ksu.patch
+                  rm -f enable_susfs.patch
           
                   echo "✅ 10 Enable SUSFS Patch Applied!"
               else
-                  echo "⚠️ Patch Not Found for Selected Base, Skipping"
+                  echo "⚠️ Patch Not Found, Skipping"
               fi
-          
           else
               echo "❌ KernelSU Not Selected, Skipping SUSFS Enable Patch"
           fi
