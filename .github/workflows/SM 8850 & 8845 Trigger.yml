@@ -173,8 +173,8 @@ jobs:
             "oneplus_15"
             "oneplus_15_t_aosp"
             "oneplus_15_wild"
+            "oneplus_15r"
             "oneplus_ace_6t"
-            "oneplus_ace_6t_aosp"
           )
 
           MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
@@ -286,7 +286,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DEVICES=("oneplus_15" "oneplus_15_t_aosp" "oneplus_15_wild" "oneplus_ace_6t" "oneplus_ace_6t_aosp")
+          DEVICES=("oneplus_15" "oneplus_15_t_aosp" "oneplus_15_wild" "oneplus_15r" "oneplus_ace_6t")
   
           for DEVICE in "${DEVICES[@]}"; do
             echo "Processing Device: $DEVICE"
