@@ -127,12 +127,6 @@ on:
         required: true
         default: true
         
-      SCHED:
-        type: boolean
-        description: "Add Windspeed Driver v1.0 (Fengchi)?"
-        required: true
-        default: false
-        
       XUS_FIX:
         type: boolean
         description: "Prevent Generation of XUS Error Files?"
@@ -236,7 +230,6 @@ jobs:
               "BBR_ECN"          : "${{ github.event.inputs.BBR_ECN }}",
               "SUSFS_DEV"        : "${{ github.event.inputs.SUSFS_DEV }}",
               "FAST_BUILD"       : "${{ github.event.inputs.FAST_BUILD }}",
-              "SCHED"            : "${{ github.event.inputs.SCHED }}",
               "UNICODE_BYPASS"   : "${{ github.event.inputs.UNICODE_BYPASS }}",
               "SPACE_NOCLEAN"    : "${{ github.event.inputs.SPACE_NOCLEAN }}",
               "BUILD_NOCCACHE"   : "${{ github.event.inputs.BUILD_NOCCACHE }}",
@@ -273,6 +266,7 @@ jobs:
 # =========================
 # Wait-and-Package Job (Per-Device Loop)
 # =========================
+
   wait-and-package:
     needs: build
     runs-on: ubuntu-latest
