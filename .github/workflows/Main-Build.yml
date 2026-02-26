@@ -1646,7 +1646,7 @@ jobs:
           # Set the Path to the Configuration File
           CONFIG_FILE=./arch/arm64/configs/gki_defconfig
 
-          # Get Environment Variables & GitHub Actions
+          # Get Environment Variables & GitHub Actions Inputs
           KERNEL_VERSION="${{ env.KERNEL_VERSION }}"
           MANAGER_BRANCH="${{ steps.manager.outputs.MANAGER_BRANCH }}"
           KSU_META="${{ github.event.inputs.KSU_META }}"
@@ -1662,24 +1662,24 @@ jobs:
           elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
             DEFCONFIG="../arch/arm64/configs/gki_defconfig"
           else
-            echo "GKI DefConfig Not Found!"
+            echo "❌ DefConfig Not Found!"
             exit 1
           fi
-          
+
           # ==============================
           # ADIOS I/O Scheduler Configuration
           # ==============================
           if [[ "$ADIOS" == "true" ]]; then 
+            # Check if DefConfig is Set & the File Exists
+            if [[ -z "$DEFCONFIG" ]] || [[ ! -f "$DEFCONFIG" ]]; then
+              echo "❌ Error: DefConfig File Not Found or Path is Incorrect!"
+              exit 1
+            fi
+
             # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
             sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
             sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
 
-            # Check if DefConfig is Set & the File Exists
-            if [[ -z "$DEFCONFIG" ]] || [[ ! -f "$DEFCONFIG" ]]; then
-              echo "❌ Error: DefCondig File Not Found or Path is Incorrect!"
-              exit 1
-            fi
-            
             # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
             echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
             echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
