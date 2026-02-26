@@ -160,7 +160,7 @@ on:
         required: true
         default: true
         
-      SCHED:
+      FENGCHI:
         type: boolean
         description: "Apply HMBIRD? (SM-8750)"
         required: true
@@ -214,7 +214,7 @@ jobs:
        github.event.inputs.KPM == 'KPN' && ' KPN' ||
        github.event.inputs.KPM == 'None' && ' None' || '',
        github.event.inputs.LSM == 'true' && ' LSM' || '',
-       github.event.inputs.SCHED == 'true' && ' Fengchi' || '',
+       github.event.inputs.FENGCHI == 'true' && ' Fengchi' || '',
        github.event.inputs.ADIOS == 'true' && ' ADIOS' || '',
        startsWith(github.event.inputs.ZRAM, '1/') && ' ZRAM' || '',
        github.event.inputs.FILE,
@@ -526,7 +526,7 @@ jobs:
               echo "SUSFS_VERSION     : ${{ github.event.inputs.SUSFS_VERSION }}"
               echo "SUSFS_DEV         : ${{ github.event.inputs.SUSFS_DEV }}"
               echo "FAST_BUILD        : ${{ github.event.inputs.FAST_BUILD }}"
-              echo "SCHED             : ${{ github.event.inputs.SCHED }}"
+              echo "FENGCHI             : ${{ github.event.inputs.FENGCHI }}"
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
@@ -1500,7 +1500,7 @@ jobs:
           fi        
             
       - name: Apply Conversion
-        if: ${{ env.KERNEL_VERSION == '6.6' && github.event.inputs.SCHED == 'false' }}
+        if: ${{ env.KERNEL_VERSION == '6.6' && github.event.inputs.FENGCHI == 'false' }}
         run: |
           PATCH_DIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
 
@@ -1577,8 +1577,8 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo "LZ4K Patches Complete"
 
-      - name: Windspeed Driver
-        if: ${{ github.event.inputs.SCHED == 'true' }}
+      - name: Fengchi (SM-8750)
+        if: ${{ github.event.inputs.FENGCHI == 'true' }}
         env:
           FILE: ${{ github.event.inputs.FILE }}
         run: |
@@ -2221,7 +2221,7 @@ jobs:
       - name: Set Zip Suffix
         id: suffix
         run: |
-          echo "value=${{ env.ZRAM_ALGO_U && format('_{0}', env.ZRAM_ALGO_U) || '' }}${{ github.event.inputs.KPM == 'KPM' && '_KPM' || github.event.inputs.KPM == 'KPN' && '_KPN' || '' }}${{ github.event.inputs.LSM == 'true' && '_LSM' || '' }}_ILH${{ github.event.inputs.SCHED== 'true' && '_SCHED' || '' }}" >> $GITHUB_OUTPUT
+          echo "value=${{ env.ZRAM_ALGO_U && format('_{0}', env.ZRAM_ALGO_U) || '' }}${{ github.event.inputs.KPM == 'KPM' && '-KPM' || github.event.inputs.KPM == 'KPN' && '-KPN' || '' }}${{ github.event.inputs.LSM == 'true' && '-BBG' || '' }}-ILH${{ github.event.inputs.FENGCHI== 'true' && '-Fengchi' || '' }}" >> $GITHUB_OUTPUT
 
       # Upload AnyKernel3 Artifact
       - name: Upload AnyKernel3
