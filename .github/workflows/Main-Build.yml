@@ -1569,7 +1569,7 @@ jobs:
           patch -p1 -F 3 < "${PATCH_DIR}/lz4k_oplus.patch" || true
           echo "LZ4K Patches Complete"
 
-      - name: Scheduler
+      - name: Windspeed Driver
         if: ${{ github.event.inputs.SCHED == 'true' }}
         env:
           FILE: ${{ github.event.inputs.FILE }}
