@@ -170,7 +170,6 @@ jobs:
         id: set-matrix
         run: |
           FILE_LIST=(
-            "oneplus_15_custom"
             "oneplus_15_t_aosp"
             "oneplus_15_wild"
           )
@@ -284,7 +283,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DEVICES=("oneplus_15_custom" "oneplus_15_t_aosp" "oneplus_15_wild")
+          DEVICES=("oneplus_15_t_aosp" "oneplus_15_wild")
   
           for DEVICE in "${DEVICES[@]}"; do
             echo "Processing Device: $DEVICE"
