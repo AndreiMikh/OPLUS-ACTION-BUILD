@@ -1,4 +1,4 @@
-name: SM 8850 & 8845 Trigger
+name: SM-8850 Trigger
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
 
       TARGET_WORKFLOW:
         type: choice
-        description: "Select Workflow to Trigger for SM8650"
+        description: "Select Workflow to Trigger for SM-8850"
         required: true
         default: Main-Build.yml
         options:
@@ -157,7 +157,7 @@ permissions:
 jobs:
 
 # =========================
-# Generate SM8850 & SM8845 Matrix
+# Generate SM-8850 Matrix
 # =========================
 
   generate-matrix:
@@ -166,15 +166,13 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
     steps:
-      - name: Generate SM8850 & SM8845 Device Matrix
+      - name: Generate SM-8850 Device Matrix
         id: set-matrix
         run: |
           FILE_LIST=(
-            "oneplus_15"
+            "oneplus_15_custom"
             "oneplus_15_t_aosp"
             "oneplus_15_wild"
-            "oneplus_15r"
-            "oneplus_ace_6t"
           )
 
           MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
@@ -286,7 +284,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DEVICES=("oneplus_15" "oneplus_15_t_aosp" "oneplus_15_wild" "oneplus_15r" "oneplus_ace_6t")
+          DEVICES=("oneplus_15_custom" "oneplus_15_t_aosp" "oneplus_15_wild")
   
           for DEVICE in "${DEVICES[@]}"; do
             echo "Processing Device: $DEVICE"
