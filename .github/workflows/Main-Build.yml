@@ -11,10 +11,10 @@ on:
         required: true
         default: oneplus_13_b
         options:
-          - oneplus_10_pro_u               # SM 8450 - Kernel Version
-          - oneplus_10t_v                  # SM 8475 - Kernel Version
-          - oneplus_11r_b                  # SM 8475 - Kernel Version
-          - oneplus_ace2_b                 # SM 8475 - Kernel Version
+          - oneplus_10_pro_u              # SM 8450 - Kernel Version
+          - oneplus_10t_v                 # SM 8475 - Kernel Version
+          - oneplus_11r_b                 # SM 8475 - Kernel Version
+          - oneplus_ace2_b                # SM 8475 - Kernel Version
           - oneplus_11_b                  # SM 8550 - Kernel Version
           - oneplus_12r_b                 # SM 8550 - Kernel Version
           - oneplus_ace2_pro_b            # SM 8550 - Kernel Version
