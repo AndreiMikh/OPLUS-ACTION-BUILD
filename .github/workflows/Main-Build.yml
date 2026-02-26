@@ -1655,6 +1655,18 @@ jobs:
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
           # ==============================
+          # Detect DefConfig Path
+          # ==============================
+          if [[ -f ../common/arch/arm64/configs/gki_defconfig ]]; then
+            DEFCONFIG="../common/arch/arm64/configs/gki_defconfig"
+          elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
+            DEFCONFIG="../arch/arm64/configs/gki_defconfig"
+          else
+            echo "GKI DefConfig Not Found!"
+            exit 1
+          fi
+          
+          # ==============================
           # ADIOS I/O Scheduler Configuration
           # ==============================
           if [[ "$ADIOS" == "true" ]]; then 
