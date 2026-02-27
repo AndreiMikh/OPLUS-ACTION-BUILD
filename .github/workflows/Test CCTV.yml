@@ -165,6 +165,18 @@ on:
         required: true
         default: false
 
+      LZ4-ENABLE:
+        type: boolean
+        description: "Disable Space Cleaning?"
+        required: true
+        default: false
+        
+      REKERNEL:
+        type: boolean
+        description: "Disable Compiler Cache Update?"
+        required: true
+        default: false
+
 jobs:
   build:
     name: >
@@ -498,6 +510,9 @@ jobs:
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
+              echo "LZ4-ENABLE        : ${{ github.event.inputs.LZ4-ENABLE }}"
+              echo "REKERNEL          : ${{ github.event.inputs.REKERNEL }}"
+              
               
               # Unicode Inspection (Whitespace / Hidden Character Detection)
               print_unicode "BUILD_TIME" "${{ github.event.inputs.BUILD_TIME }}"
@@ -1313,7 +1328,7 @@ jobs:
           echo "SUSFS Applied Successfully"        
           
           # ==============================
-          # Pull ZRAM Patches
+          # Pull SukiSU ZRAM Patches
           # ==============================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "Pulling ZRAM Patches..."
