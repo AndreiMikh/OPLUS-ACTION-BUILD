@@ -1725,7 +1725,7 @@ jobs:
           # Check if KPM Input is "KPM", Enable KPM
           if [ "${{ github.event.inputs.KPM }}" = "KPM" ]; then
             echo "CONFIG_KPM=y" >> "$CONFIG_FILE"
-            echo "✅ KPM is Enabled"
+            echo "✅ KPM Enabled"
           fi
 
           # ==============================
@@ -1793,41 +1793,15 @@ jobs:
           echo "✅ Storage Optimizations Applied"
 
           # ==============================
-          # Scheduler Infrastructure
-          # ==============================
-          echo "Enabling safe scheduler infrastructure..."
-
-          cat >> "$CONFIG_FILE" << EOF
-          CONFIG_UCLAMP_TASK=y
-          CONFIG_ENERGY_MODEL=y
-          CONFIG_CPU_IDLE=y
-          CONFIG_SCHED_MC=y
-          CONFIG_SCHED_SMT=y
-          EOF
-
-          echo "✅ Scheduler Infrastructure Optimized"
-
-          # ==============================
           # Block Layer Optimizations
           # ==============================
-
           cat >> "$CONFIG_FILE" << EOF
-          CONFIG_BLK_DEV_ZONED=y
           CONFIG_BLK_WBT=y
           CONFIG_BLK_WBT_MQ=y
           EOF
 
           echo "✅ Block Layer Optimized"
 
-          # ==============================
-          # Thermal Framework
-          # ==============================
-          cat >> "$CONFIG_FILE" << EOF
-          CONFIG_THERMAL=y
-          EOF
-
-          echo "✅ Thermal Framework Ensured"
-          
           # ==============================
           # TMPFS Configuration (Mountify)
           # ==============================
@@ -1881,12 +1855,13 @@ jobs:
             echo "Enabling ZRAM-Related Kernel Options..."
 
             cat >> "$CONFIG_FILE" << EOF
+          CONFIG_ZSMALLOC=y
+          CONFIG_ZRAM=y
+          CONFIG_ZRAM_DEF_COMP_LZ4=y
+          CONFIG_CRYPTO_LZ4=y
           CONFIG_CRYPTO_LZ4HC=y
-          CONFIG_CRYPTO_LZ4K=y
-          CONFIG_CRYPTO_LZ4KD=y
-          CONFIG_CRYPTO_842=y
-          CONFIG_CRYPTO_LZ4K_OPLUS=y
-          CONFIG_ZRAM_WRITEBACK=y
+          CONFIG_CRYPTO_LZO=y
+          CONFIG_SWAP=y
           EOF
 
             echo "✅ ZRAM Configuration Applied"
