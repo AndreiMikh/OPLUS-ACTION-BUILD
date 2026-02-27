@@ -165,13 +165,13 @@ on:
         required: true
         default: false
 
-      LZ4-ENABLE:
+      ZRAM-LZ4:
         type: boolean
         description: "Disable Space Cleaning?"
         required: true
         default: false
         
-      REKERNEL:
+      RE-KERNEL:
         type: boolean
         description: "Disable Compiler Cache Update?"
         required: true
@@ -510,8 +510,8 @@ jobs:
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
-              echo "LZ4-ENABLE        : ${{ github.event.inputs.LZ4-ENABLE }}"
-              echo "REKERNEL          : ${{ github.event.inputs.REKERNEL }}"
+              echo "ZRAM-LZ4          : ${{ github.event.inputs.ZRAM-LZ4 }}"
+              echo "RE-KERNEL          : ${{ github.event.inputs.RE-KERNEL }}"
               
               
               # Unicode Inspection (Whitespace / Hidden Character Detection)
@@ -1457,8 +1457,7 @@ jobs:
               fi
 
               if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
-                echo "Missing #include <linux/dma-buf.h>, Adding Header"
-
+                echo "#include <linux/dma-buf.h> Line Not Found, Adding Missing Header"
                 sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
               fi
             fi
