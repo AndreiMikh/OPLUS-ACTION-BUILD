@@ -1326,6 +1326,25 @@ jobs:
           cd - >/dev/null
 
           echo "SUSFS Applied Successfully"        
+
+          # ==============================
+          # Pull LZ4 1.10.0 ZRAM Patches
+          # ==============================
+          if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
+            echo "Pulling ZRAM Patches..."
+
+            LZ4BASE="../AndreiMikh-Kernel-Lab/LiquidAndrei/patches"
+            MBASE="./common"
+
+            cp ./$LZ4BASE/patches/001-lz4.patch "$MBASE/"
+            cp ./$LZ4BASE/patches/lz4armv8.S "$MBASE/lib"
+            cp ./$LZ4BASE/patches/002-zstd.patch "MBASE/"
+            cd $KDIR
+            git apply -p1 < 001-lz4.patch || true
+            patch -p1 < 002-zstd.patch || true
+
+            echo "✅ LZ4 1.10.0 Patches Applied"
+          fi
           
           # ==============================
           # Pull SukiSU ZRAM Patches
@@ -1643,6 +1662,8 @@ jobs:
           SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
           ADIOS="${{ github.event.inputs.ADIOS }}"        
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+          LZ4-ENABLE="${{ github.event.inputs.LZ4-ENABLE }}"
+          REKERNEL="${{ github.event.inputs.REKERNEL }}"
 
           # ==============================
           # Detect DefConfig Path
@@ -1651,13 +1672,15 @@ jobs:
             DEFCONFIG="../common/arch/arm64/configs/gki_defconfig"
           elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
             DEFCONFIG="../arch/arm64/configs/gki_defconfig"
+          elif [[ -f ../common/build.config.gki ]]; then
+            DEFCONFIG="../common/build.config.gki"
           else
             echo "❌ DefConfig Not Found!"
             exit 1
           fi
 
           # ==============================
-          # ADIOS I/O Scheduler Configuration
+          # CCTV ADIOS I/O Scheduler Configuration
           # ==============================
           if [[ "$ADIOS" == "true" ]]; then 
             # Check if DefConfig is Set & the File Exists
@@ -1665,38 +1688,28 @@ jobs:
               echo "❌ Error: DefConfig File Not Found or Path is Incorrect!"
               exit 1
             fi
+              # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
+              echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
+              echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
 
-            # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
-            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
-            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
-
-            # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
-            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
-            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
-
-            # Confirm that the Configuration has been Applied             
-            echo "✅ ADIOS I/O Scheduler Configuration Applied"            
+              # Confirm that the Configuration has been Applied             
+              echo "✅ ADIOS I/O Scheduler Configuration Applied"            
           else
             # Notify that ADIOS I/O Scheduler is Disabled
             echo "❌ ADIOS I/O Scheduler is Disabled"  
           fi
           
           # ==============================
-          # KSU Meta Configuration
+          # CCTV KSU Meta Configuration
           # ==============================
           echo "CONFIG_KSU=y" >> "$CONFIG_FILE"  # Enable KernelSU Support
 
-          # Check if KSU Meta is Either SukiSU-Ultra or ReSukiSU
-          if [[ "$KSU_META" == "SukiSU-Ultra" || "$KSU_META" == "ReSukiSU" ]]; then
-            # Enable Multi-Manager Support if the Condition is True
-            echo "CONFIG_KSU_MULTI_MANAGER_SUPPORT=y" >> "$CONFIG_FILE"            
-            echo "✅ Multi-Manager Support Enabled for $KSU_META"
-        
-          else
+          # CCTV Enable O2 Compilation Optimization Configuration
+          echo "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y" >> "$CONFIG_FILE"
+          sed -i 's/check_defconfig//' "$CONFIG_FILE"
+          echo "CONFIG_HEADERS_INSTALL=n" >> "$CONFIG_FILE"
           
-             echo "❌ Multi-Manager Support Not Enabled, as KSU Meta is Neither SukiSU-Ultra nor ReSukiSU"  
-          fi
-
+          
           # ==============================
           # KPM Configuration
           # ==============================
@@ -1782,14 +1795,13 @@ jobs:
             cat >> "$CONFIG_FILE" << EOF
           CONFIG_TCP_CONG_ADVANCED=y
           CONFIG_TCP_CONG_BBR=y
-          CONFIG_NET_SCH_FQ=y
-          CONFIG_TCP_CONG_BIC=n
-          CONFIG_TCP_CONG_WESTWOOD=n
-          CONFIG_TCP_CONG_HTCP=n
-          CONFIG_IP_ECN=y
-          CONFIG_TCP_ECN=y
-          CONFIG_IPV6_ECN=y
-          CONFIG_IP_NF_TARGET_ECN=y
+          CONFIG_TCP_CONG_CUBIC=y
+          CONFIG_TCP_CONG_VEGAS=y
+          CONFIG_TCP_CONG_NV=y
+          CONFIG_TCP_CONG_WESTWOOD=y
+          CONFIG_TCP_CONG_HTCP=y
+          CONFIG_TCP_CONG_BRUTAL=y
+          CONFIG_DEFAULT_TCP_CONG=bbr
           EOF
 
             echo "✅ BBR & ECN Configuration Applied"
@@ -1821,7 +1833,7 @@ jobs:
           fi
 
           # ==============================
-          # IPSET & IPv6 NAT Configuration
+          # CCTV IPSET & IPv6 NAT Configuration
           # ==============================
           if [[ "${CPU}" == sm* && "${{ github.event.inputs.NETFILTER }}" == "true" ]]; then
 
