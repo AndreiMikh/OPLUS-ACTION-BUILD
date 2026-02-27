@@ -1776,6 +1776,41 @@ jobs:
             echo "❌ SUSFS Meta Disabled"
             echo "CONFIG_KSU_SUSFS=n" >> "$CONFIG_FILE"
           fi
+
+          # ==============================
+          # Storage Optimizations (Safe)
+          # ==============================
+          echo "Enabling Storage Optimizations..."
+
+          cat >> "$CONFIG_FILE" << EOF
+          CONFIG_BLK_INLINE_ENCRYPTION=y
+          CONFIG_FS_ENCRYPTION=y
+          CONFIG_UNICODE=y
+          EOF
+
+          echo "✅ Storage Optimizations Applied"
+
+          # ==============================
+          # Scheduler Infrastructure
+          # ==============================
+          echo "Enabling safe scheduler infrastructure..."
+
+          cat >> "$CONFIG_FILE" << EOF
+          CONFIG_UCLAMP_TASK=y
+          CONFIG_ENERGY_MODEL=y
+          CONFIG_CPU_IDLE=y
+          EOF
+
+          echo "✅ Scheduler Infrastructure Enabled"
+
+          # ==============================
+          # Thermal Framework
+          # ==============================
+          cat >> "$CONFIG_FILE" << EOF
+          CONFIG_THERMAL=y
+          EOF
+
+          echo "✅ Thermal Framework Ensured"
           
           # ==============================
           # TMPFS Configuration (Mountify)
@@ -1797,15 +1832,24 @@ jobs:
 
             cat >> "$CONFIG_FILE" << EOF
           CONFIG_TCP_CONG_ADVANCED=y
+
           CONFIG_TCP_CONG_BBR=y
+          CONFIG_DEFAULT_TCP_CONG="bbr"
+          CONFIG_DEFAULT_BBR=y
+
+          CONFIG_TCP_CONG_CUBIC=y
+
           CONFIG_NET_SCH_FQ=y
-          CONFIG_TCP_CONG_BIC=n
-          CONFIG_TCP_CONG_WESTWOOD=n
-          CONFIG_TCP_CONG_HTCP=n
+
           CONFIG_IP_ECN=y
           CONFIG_TCP_ECN=y
           CONFIG_IPV6_ECN=y
           CONFIG_IP_NF_TARGET_ECN=y
+
+          # Optional to Disable Legacy Ones
+          CONFIG_TCP_CONG_BIC=n
+          CONFIG_TCP_CONG_WESTWOOD=n
+          CONFIG_TCP_CONG_HTCP=n
           EOF
 
             echo "✅ BBR & ECN Configuration Applied"
@@ -1873,6 +1917,8 @@ jobs:
           EOF
 
             echo "✅ NETFILTER & IP Set Core Configuration Applied"
+          else
+            echo "❌ NETFILTER & IP Set Core Configuration Not Supported in Kernel"
           fi
      
           # ==============================
