@@ -1438,6 +1438,13 @@ jobs:
 
                 fake_patched=1
               fi
+              # Ensure <linux/dma-buf.h> is Present in fs/proc/base.c
+              if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+                echo "Injecting Missing <linux/dma-buf.h> header into fs/proc/base.c"
+
+                # Maintain Logical Include Order by Inserting after cpufreq_times.h
+                sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
+              fi
             fi
 
             # Handle Other Android Versions
@@ -1447,9 +1454,11 @@ jobs:
                 fake_patched=1
               fi
 
+              # Ensure <linux/dma-buf.h> is Present in fs/proc/base.c
               if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
-                echo "Missing #include <linux/dma-buf.h>, Adding Header"
+                echo "Injecting Missing <linux/dma-buf.h> header into fs/proc/base.c"
 
+                # Maintain Logical Include Order by Inserting after cpufreq_times.h
                 sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
               fi
             fi
