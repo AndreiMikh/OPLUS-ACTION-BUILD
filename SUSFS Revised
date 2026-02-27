@@ -1,0 +1,175 @@
+- name: Apply SUSFS Patches & ZRAM-LZ4
+  if: ${{ github.event.inputs.SUSFS_META != '-1' }}
+  run: |
+    set -e
+
+    cd kernel_workspace
+
+    echo "Cloning patch repositories..."
+
+    git clone --depth=1 https://github.com/ShirkNeko/SukiSU_patch.git
+    git clone --depth=1 https://github.com/AndreiMikh/AndreiMikh-Kernel-Lab.git
+
+    echo "Repositories ready"
+
+    GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+    echo "Detected: $GKI_V"
+
+    # Detect kernel directory
+    if [ -d "./kernel_platform/common" ]; then
+        KDIR="./kernel_platform/common"
+    elif [ -d "./common" ]; then
+        KDIR="./common"
+    else
+        echo "ERROR: kernel common directory missing"
+        exit 1
+    fi
+
+    echo "Kernel dir: $KDIR"
+
+    # Clone SUSFS
+    if [[ ("$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12") && "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+
+        if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+            git clone --depth=1 \
+              https://github.com/cctv18/susfs4oki.git susfs4ksu \
+              -b "oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
+        else
+            git clone --depth=1 \
+              https://github.com/cctv18/susfs4oki.git susfs4ksu \
+              -b "oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+        fi
+
+    elif [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "GKI" ]]; then
+
+        if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
+            git clone --depth=1 \
+              https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
+              -b "gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}-dev"
+        else
+            git clone --depth=1 \
+              https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu \
+              -b "gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
+        fi
+
+    else
+        echo "Invalid SUSFS version"
+        exit 1
+    fi
+
+    # Checkout specific commit if requested
+    cd susfs4ksu
+
+    if [ -n "${{ github.event.inputs.SUSFS_META }}" ]; then
+        if [[ "${{ github.event.inputs.SUSFS_META }}" =~ ^[0-9]+$ ]]; then
+            git checkout HEAD~${{ github.event.inputs.SUSFS_META }}
+        else
+            git checkout "${{ github.event.inputs.SUSFS_META }}"
+        fi
+    fi
+
+    cd ..
+
+    # Find SUSFS patch
+    SUS_PATCH=$(find ./susfs4ksu/kernel_patches -name "50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch" | head -n1)
+
+    if [ -z "$SUS_PATCH" ]; then
+        echo "SUSFS patch not found"
+        exit 1
+    fi
+
+    echo "Using: $SUS_PATCH"
+
+    cp "$SUS_PATCH" "$KDIR/"
+    cp -r ./susfs4ksu/kernel_patches/fs/* "$KDIR/fs/" || true
+    cp -r ./susfs4ksu/kernel_patches/include/linux/* "$KDIR/include/linux/" || true
+
+    cd "$KDIR"
+
+    echo "Applying SUSFS..."
+    patch -p1 --forward < "$(basename $SUS_PATCH)" || true
+
+    # Hide patch (supported bases only)
+    if [[ "$GKI_V" == "android14-6.1" || "$GKI_V" == "android15-6.6" ]]; then
+
+        wget -q \
+        https://raw.githubusercontent.com/AndreiMikh/AndreiMikh-Kernel-Lab/main/LiquidAndrei/patches/69_hide_stuff.patch \
+        -O hide.patch
+
+        patch -p1 --forward < hide.patch || true
+
+        rm -f hide.patch
+    fi
+
+    cd -
+
+    echo "SUSFS done"
+
+    # KernelSU integration
+    if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then
+
+        if [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "OGKI" ]]; then
+            PATCH_URL="https://raw.githubusercontent.com/cctv18/susfs4oki/oki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+        else
+            PATCH_URL="https://gitlab.com/simonpunk/susfs4ksu/-/raw/gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch"
+        fi
+
+        wget -q "$PATCH_URL" -O ksu.patch || true
+
+        if [ -f ksu.patch ]; then
+            patch -d "$KDIR" -p1 --forward < ksu.patch || true
+            rm -f ksu.patch
+        fi
+    fi
+
+    echo "KernelSU integration done"
+
+    # ZRAM-LZ4 from AndreiMikh repo
+    if [[ "${{ github.event.inputs.ZRAM-LZ4 }}" == "On" ]]; then
+
+        echo "Applying ZRAM-LZ4..."
+
+        cd "$KDIR"
+
+        mkdir -p lib
+
+        PATCH_DIR="../../AndreiMikh-Kernel-Lab/LiquidAndrei/patches"
+
+        cp "$PATCH_DIR/001-lz4.patch" .
+        cp "$PATCH_DIR/lz4armv8.S" lib/
+
+        if [[ "${{ env.KERNEL_VERSION }}" == "6.1" ]]; then
+            cp "$PATCH_DIR/002-zstd.patch" .
+        fi
+
+        git apply --check 001-lz4.patch 2>/dev/null && git apply 001-lz4.patch || true
+
+        if [[ -f 002-zstd.patch ]]; then
+            patch -p1 --forward < 002-zstd.patch || true
+        fi
+
+        echo "ZRAM-LZ4 applied"
+
+        cd -
+
+    else
+        echo "ZRAM-LZ4 disabled"
+    fi
+
+    # SukiSU ZRAM extensions
+    if [[ "${{ github.event.inputs.ZRAM-LZ4 }}" == "On" ]]; then
+
+        echo "Applying SukiSU ZRAM extensions..."
+
+        SRC="../SukiSU_patch/other/zram"
+        DEST="$KDIR"
+
+        cp -r "$SRC/lz4k/include/linux/" "$DEST/include/linux/" 2>/dev/null || true
+        cp -r "$SRC/lz4k/lib/" "$DEST/lib/" 2>/dev/null || true
+        cp -r "$SRC/lz4k/crypto/" "$DEST/crypto/" 2>/dev/null || true
+        cp -r "$SRC/lz4k_oplus/" "$DEST/lib/" 2>/dev/null || true
+
+        echo "SukiSU ZRAM applied"
+    fi
+
+    echo "All patches completed successfully"
