@@ -1665,36 +1665,11 @@ jobs:
             echo "❌ DefConfig Not Found!"
             exit 1
           fi
-
-          # ==============================
-          # ADIOS I/O Scheduler Configuration
-          # ==============================
-          if [[ "$ADIOS" == "true" ]]; then 
-            # Check if DefConfig is Set & the File Exists
-            if [[ -z "$DEFCONFIG" ]] || [[ ! -f "$DEFCONFIG" ]]; then
-              echo "❌ Error: DefConfig File Not Found or Path is Incorrect!"
-              exit 1
-            fi
-
-            # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
-            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
-            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
-
-            # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
-            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
-            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
-
-            # Confirm that the Configuration has been Applied             
-            echo "✅ ADIOS I/O Scheduler Configuration Applied"            
-          else
-            # Notify that ADIOS I/O Scheduler is Disabled
-            echo "❌ ADIOS I/O Scheduler is Disabled"  
-          fi
-
+          
           # ==============================
           # Snapdragon 8 Elite CPU Scheduler Configuration (Vendor-Safe)
           # ==============================
-        
+
           if [[ "$GKI_V" == "android15-6.6" || "$GKI_V" == "android16-6.12" ]]; then
               echo "Cleaning CPU Scheduler/Frequency Overrides for $GKI_V ⚙️"
               echo "⚙️ Applying Vendor-Safe CPU Scheduler Configuration for Snapdragon 8 Elite..."
@@ -1702,26 +1677,31 @@ jobs:
               # ==============================
               # Remove Forced CPU Governor Overrides
               # ==============================
-              # These can Break Qualcomm WALT Tuning if Forced Manually
               sed -i '/CONFIG_CPU_FREQ_DEFAULT_GOV_/d' "$DEFCONFIG"
               sed -i '/CONFIG_CPU_FREQ_GOV_/d' "$DEFCONFIG"
 
               echo "✅ Removed Forced CPU Governor Overrides"
 
               # ==============================
-              # Enable Qualcomm Scheduler Support 
+              # Clean existing scheduler-related configs first (IMPORTANT)
+              # ==============================
+              sed -i '/CONFIG_UCLAMP_TASK/d' "$DEFCONFIG"
+              sed -i '/CONFIG_ENERGY_MODEL/d' "$DEFCONFIG"
+              sed -i '/CONFIG_SCHED_CLASS_EXT/d' "$DEFCONFIG"
+              sed -i '/CONFIG_CPU_IDLE/d' "$DEFCONFIG"
+              sed -i '/CONFIG_THERMAL/d' "$DEFCONFIG"
+
+              # ==============================
+              # Enable Qualcomm Scheduler Support
               # ==============================
 
-              # Enable Utilization Clamping (Important for Snapdragon Performance Scaling)
               echo "CONFIG_UCLAMP_TASK=y" >> "$DEFCONFIG"
-
-              # Enable Energy Aware Scheduling (Required for Heterogeneous Oryon Cores)
               echo "CONFIG_ENERGY_MODEL=y" >> "$DEFCONFIG"
 
               echo "✅ Enabled UCLAMP and Energy Model"
 
               # ==============================
-              # Enable Scheduler Extensions Framework (Optional, only if Supported)
+              # Enable Scheduler Extensions Framework (if supported)
               # ==============================
 
               if grep -q "CONFIG_SCHED_CLASS_EXT" kernel/sched/Kconfig 2>/dev/null; then
@@ -1736,15 +1716,13 @@ jobs:
               # ==============================
 
               echo "CONFIG_CPU_IDLE=y" >> "$DEFCONFIG"
-
               echo "✅ CPU Idle Support Enabled"
 
               # ==============================
-              # Enable Thermal Framework (Critical for Stability)
+              # Enable Thermal Framework
               # ==============================
 
               echo "CONFIG_THERMAL=y" >> "$DEFCONFIG"
-
               echo "✅ Thermal Framework Enabled"
 
               # ==============================
@@ -1754,10 +1732,8 @@ jobs:
               echo "✅ Snapdragon 8 Elite Scheduler Configuration Complete"
               echo "✅ Vendor CPU Governor Preserved"
               echo "✅ Qualcomm WALT Compatibility Maintained"
-              echo "✅ UCLAMP Enabled"
-              echo "✅ Energy Model Enabled"
               echo "✅ No Unsafe CPU Overrides Applied"
-          fi
+          fi          
 
           # ==============================
           # KSU Meta Configuration
