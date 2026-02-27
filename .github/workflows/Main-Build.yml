@@ -1786,6 +1786,8 @@ jobs:
           CONFIG_BLK_INLINE_ENCRYPTION=y
           CONFIG_FS_ENCRYPTION=y
           CONFIG_UNICODE=y
+          CONFIG_QUOTA=y
+          CONFIG_QFMT_V2=y
           EOF
 
           echo "✅ Storage Optimizations Applied"
@@ -1799,9 +1801,23 @@ jobs:
           CONFIG_UCLAMP_TASK=y
           CONFIG_ENERGY_MODEL=y
           CONFIG_CPU_IDLE=y
+          CONFIG_SCHED_MC=y
+          CONFIG_SCHED_SMT=y
           EOF
 
-          echo "✅ Scheduler Infrastructure Enabled"
+          echo "✅ Scheduler Infrastructure Optimized"
+
+          # ==============================
+          # Block Layer Optimizations
+          # ==============================
+
+          cat >> "$CONFIG_FILE" << EOF
+          CONFIG_BLK_DEV_ZONED=y
+          CONFIG_BLK_WBT=y
+          CONFIG_BLK_WBT_MQ=y
+          EOF
+
+          echo "✅ Block Layer Optimized"
 
           # ==============================
           # Thermal Framework
@@ -1818,11 +1834,14 @@ jobs:
           echo "Applying TMPFS Configuration..."
 
           cat >> "$CONFIG_FILE" << EOF
+          CONFIG_FHANDLE=y
+          CONFIG_AUTOFS4_FS=y
+          CONFIG_TMPFS=y
           CONFIG_TMPFS_XATTR=y
           CONFIG_TMPFS_POSIX_ACL=y
           EOF
 
-          echo "✅ TMPFS Configuration Applied"
+          echo "✅ File System Optimized"
 
           # ==============================
           # BBR & ECN Configuration
