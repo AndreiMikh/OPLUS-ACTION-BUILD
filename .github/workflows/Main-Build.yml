@@ -1662,34 +1662,22 @@ jobs:
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
           # ==============================
-          # Detect DefConfig Path
-          # ==============================
-          if [[ -f ../common/arch/arm64/configs/gki_defconfig ]]; then
-            DEFCONFIG="../common/arch/arm64/configs/gki_defconfig"
-          elif [[ -f ../arch/arm64/configs/gki_defconfig ]]; then
-            DEFCONFIG="../arch/arm64/configs/gki_defconfig"
-          else
-            echo "❌ DefConfig Not Found!"
-            exit 1
-          fi
-
-          # ==============================
           # ADIOS I/O Scheduler Configuration
           # ==============================
           if [[ "$ADIOS" == "true" ]]; then 
             # Check if DefConfig is Set & the File Exists
-            if [[ -z "$DEFCONFIG" ]] || [[ ! -f "$DEFCONFIG" ]]; then
+            if [[ -z "$CONFIG_FILE" ]] || [[ ! -f "$CONFIG_FILE" ]]; then
               echo "❌ Error: DefConfig File Not Found or Path is Incorrect!"
               exit 1
             fi
 
             # Remove any Existing ADIOS I/O Scheduler Entries to Avoid Duplication
-            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$DEFCONFIG"
-            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$DEFCONFIG"
+            sed -i '/CONFIG_MQ_IOSCHED_ADIOS/d' "$CONFIG_FILE"
+            sed -i '/CONFIG_MQ_IOSCHED_DEFAULT_ADIOS/d' "$CONFIG_FILE"
 
             # Enable the Adaptive I/O Scheduler by Adding Necessary Configuration
-            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$DEFCONFIG"
-            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$DEFCONFIG"
+            echo "CONFIG_MQ_IOSCHED_ADIOS=y" >> "$CONFIG_FILE"
+            echo "CONFIG_MQ_IOSCHED_DEFAULT_ADIOS=y" >> "$CONFIG_FILE"
 
             # Confirm that the Configuration has been Applied             
             echo "✅ ADIOS I/O Scheduler Configuration Applied"            
@@ -1768,7 +1756,7 @@ jobs:
           CONFIG_KSU_SUSFS_TRY_UMOUNT=y
           CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
           EOF
-              echo "✅ SUSFS Based Configuration# Applied"
+              echo "✅ SUSFS Based Configuration Applied"
             fi
 
           else
