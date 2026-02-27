@@ -1,7 +1,7 @@
 # ===========================
 # OnePlus Kernel Action Build
 # ===========================
-name: Main (Adios)
+name: Main Build
 on:
   workflow_dispatch:
     inputs:
@@ -1437,6 +1437,12 @@ jobs:
                   ./fs/proc/task_mmu.c
 
                 fake_patched=1
+              fi
+
+              if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
+                echo "Missing #include <linux/dma-buf.h>, Adding Header"
+
+                sed -i '/#include <linux\/cpufreq_times.h>/a #include <linux\/dma-buf.h>' ./fs/proc/base.c
               fi
             fi
 
