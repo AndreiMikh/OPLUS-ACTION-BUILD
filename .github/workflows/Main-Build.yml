@@ -1737,25 +1737,25 @@ jobs:
           fi 
 
           # ==============================
-          # Enable Re-Kernel only for OnePlus 13
+          # Enable Re-Kernel 
           # ==============================
           echo "Enabling Re-Kernel Support (for Use with Freezer, NoActive, etc., to Improve Background App Freezing)..."
 
-          if [[ "${{ github.event.inputs.FILE }}" == "oneplus_13_andrei" && \
-                "${{ github.event.inputs.REKERNEL }}" == "true" ]]; then
+          if [[ "$FILE" == "oneplus_13_andrei" && "$REKERNEL" == "true" ]]; then
 
-                 # Use Already-Detected DEFCONFIG
-                if [ -f "$DEFCONFIG" ]; then
-                  # Prevent Duplicate Lines
-                    if ! grep -q "^CONFIG_REKERNEL=y" "$DEFCONFIG"; then
-                      echo "CONFIG_REKERNEL=y" >> "$DEFCONFIG"
-                      echo "✅ Re-Kernel Enabled"
-                    else
-                      echo "⏭ Re-Kernel Already Enabled"
-                    fi
-                else
-                  echo "❌ DefConfig Not Found, Cannot Enable Re-Kernel or Device Not Supported"
-                fi
+            echo "Enabling Re-Kernel Support to Enhance Background App Freezing…"
+          
+              # Prevent Duplicate Lines
+              if ! grep -q "^CONFIG_REKERNEL=y" "$CONFIG_FILE"; then
+                echo "CONFIG_REKERNEL=y" >> "$CONFIG_FILE"
+                echo "✅ Re-Kernel Enabled"
+              else
+                echo "⏭ Re-Kernel Already Enabled"
+              fi
+          
+          else
+            echo "⏭ Skipping Re-Kernel (Disabled)"
+          fi
           
           # ==============================
           # KSU Meta Configuration
