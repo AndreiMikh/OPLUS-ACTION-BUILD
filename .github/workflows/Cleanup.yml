@@ -10,6 +10,7 @@ on:
         default: 'Test'
         options:
           - Main
+          - Main-Build
           - Test
       cache_mode:
         type: choice
