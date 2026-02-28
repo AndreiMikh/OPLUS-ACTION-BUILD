@@ -1708,6 +1708,7 @@ jobs:
           SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
           ADIOS="${{ github.event.inputs.ADIOS }}" 
           FILE="${{ github.event.inputs.FILE }}" 
+          RE-KERNEL="${{ github.event.inputs.RE-KERNEL }}" 
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
           # ==============================
@@ -1734,6 +1735,27 @@ jobs:
             # Notify that ADIOS I/O Scheduler is Disabled
             echo "❌ ADIOS I/O Scheduler is Disabled"  
           fi 
+
+          # ==============================
+          # Enable Re-Kernel only for OnePlus 13
+          # ==============================
+          echo "Enabling Re-Kernel Support (for Use with Freezer, NoActive, etc., to Improve Background App Freezing)..."
+
+          if [[ "${{ github.event.inputs.FILE }}" == "oneplus_13_andrei" && \
+                "${{ github.event.inputs.REKERNEL }}" == "true" ]]; then
+
+                 # Use Already-Detected DEFCONFIG
+                if [ -f "$DEFCONFIG" ]; then
+                  # Prevent Duplicate Lines
+                    if ! grep -q "^CONFIG_REKERNEL=y" "$DEFCONFIG"; then
+                      echo "CONFIG_REKERNEL=y" >> "$DEFCONFIG"
+                      echo "✅ Re-Kernel Enabled"
+                    else
+                      echo "⏭ Re-Kernel Already Enabled"
+                    fi
+                else
+                  echo "❌ DefConfig Not Found, Cannot Enable Re-Kernel or Device Not Supported"
+                fi
           
           # ==============================
           # KSU Meta Configuration
