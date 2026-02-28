@@ -194,7 +194,7 @@ on:
       RE-KERNEL:
         type: boolean
         description: "Re-Kernel"
-        required: false
+        required: true
         default: false
         
       SPACE_NOCLEAN:
