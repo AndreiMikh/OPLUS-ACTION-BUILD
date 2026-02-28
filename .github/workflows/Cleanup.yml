@@ -12,6 +12,7 @@ on:
           - Main
           - Main-Build
           - Test
+          - KSU Meta V1
       cache_mode:
         type: choice
         description: 'Type of Cache to  Clean'
