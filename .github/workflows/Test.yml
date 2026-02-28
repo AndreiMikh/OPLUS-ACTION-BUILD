@@ -1397,8 +1397,9 @@ jobs:
           # ==============================          
           if [[ "${{ github.event.inputs.ZRAM }}" == 0* && \
                 "${{ github.event.inputs.ZRAM-LZ4 }}" == "true" && \
-                "${{ github.event.inputs.FILE }}" == "oneplus_13_custom" ]]; then
-          
+                ( "${{ env.KERNEL_VERSION }}" == "6.1" || "${{ env.KERNEL_VERSION }}" == "6.6" ) ]]; then
+                echo "Conditions Met"
+    
             echo "📦 Device oneplus_13_custom + ZRAM 0* + LZ4 Enabled"
           
             PATCH_BASE="./AndreiMikh-Kernel-Lab/patches"
