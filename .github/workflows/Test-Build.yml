@@ -1,7 +1,7 @@
 # ===========================
 # OnePlus Kernel Action Build
 # ===========================
-name: Main-Build
+name: Test
 on:
   workflow_dispatch:
     inputs:
