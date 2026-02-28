@@ -191,7 +191,7 @@ on:
         required: true
         default: false
 
-      RE-KERNEL:
+      RE_KERNEL:
         type: boolean
         description: "Re-Kernel"
         required: true
@@ -541,7 +541,7 @@ jobs:
               echo "SCHED             : ${{ github.event.inputs.SCHED }}"
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
-              echo "RE-KERNEL         : ${{ github.event.inputs.RE-KERNEL }}"
+              echo "RE_KERNEL         : ${{ github.event.inputs.RE_KERNEL }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
               
               # Unicode Inspection (Whitespace / Hidden Character Detection)
@@ -1715,7 +1715,7 @@ jobs:
           SUSFS_META="${{ github.event.inputs.SUSFS_META }}"
           ADIOS="${{ github.event.inputs.ADIOS }}" 
           FILE="${{ github.event.inputs.FILE }}" 
-          RE-KERNEL="${{ github.event.inputs.RE-KERNEL }}" 
+          RE_KERNEL="${{ github.event.inputs.RE_KERNEL }}" 
           GKI_V="${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}"
 
           # ==============================
