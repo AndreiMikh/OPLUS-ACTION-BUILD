@@ -33,7 +33,7 @@ on:
           - oneplus_nord_5_b              # SM8635 - Android/Kernel Version 
           - oneplus_ace5_pro_b            # SM8750 - Android/Kernel Version Android16 6.6.89 SUFS OKI (OnePlus Kernel Image) Supported 
           - oneplus_13_b                  # SM8750 - Android/Kernel Version Android16 6.6.89 SUFS OKI (OnePlus Kernel Image) Supported 
-          - oneplus_13_custom
+          - oneplus_13_andrei
           - oneplus_13t_b                 # SM8750 - Android/Kernel Version Android16 6.6.89 SUFS OKI (OnePlus Kernel Image) Supported 
           - oneplus_13s_b                 # SM8750 - Android/Kernel Version Android16 6.6.89 SUFS OKI (OnePlus Kernel Image) Supported 
           - oneplus_pad_2_pro_b           # SM8750 - Android/Kernel Version Android16 6.6.89 SUFS OKI (OnePlus Kernel Image) Supported 
@@ -43,7 +43,7 @@ on:
           - oneplus_15r                   # SM8845 - Android/Kernel Version Android16
           - oneplus_15_custom             # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported; Manifest Error
           - oneplus_15_t_aosp             # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported 
-          - oneplus_15_wild               # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported 
+          - oneplus_15_wild               # SM8850 - Android/Kernel Version Android16 6.12 SUFS OKI (OnePlus Kernel Image) Supported
           
       KPM:
         type: choice
@@ -119,6 +119,12 @@ on:
         description: "ZRAM (0 for Off, 1 for On)/Algorithm Name/Size"
         required: true
         default: "0/lz4kd/8589934592"
+
+      ZRAM-LZ4:
+        type: boolean
+        description: "Enable LZ4 if ZRAM if Off"
+        required: false
+        default: false
         
       SUFFIX:
         type: string
@@ -1345,7 +1351,7 @@ jobs:
           echo "SUSFS Applied Successfully"        
           
           # ==============================
-          # Pull ZRAM Patches
+          # Pull SukiSU ZRAM Patches
           # ==============================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
             echo "Pulling ZRAM Patches..."
@@ -1378,6 +1384,48 @@ jobs:
             fi
 
             echo "✅ All ZRAM Patches Applied"
+          fi
+
+          # ==============================
+          # Custom LZ4 / ZSTD Patches
+          # ==============================          
+          if [[ "${{ github.event.inputs.ZRAM }}" == 0* && \
+                "${{ github.event.inputs.ZRAM-LZ4 }}" == "true" && \
+                "${{ github.event.inputs.FILE }}" == "oneplus_13_andrei" ]]; then
+          
+            echo "📦 Device oneplus_13_andrei + ZRAM 0* + LZ4 Enabled"
+          
+            PATCH_BASE="./AndreiMikh-Kernel-Lab/patches"
+            KCOMMON="./kernel_platform/common"
+          
+            if [ ! -d "$KCOMMON" ]; then
+              KCOMMON="./common"
+            fi
+          
+            echo "Using Kernel Directory: $KCOMMON"
+          
+            cp "$PATCH_BASE/001-lz4.patch" "$KCOMMON/" || true
+            cp "$PATCH_BASE/002-zstd.patch" "$KCOMMON/" || true
+            cp "$PATCH_BASE/lz4armv8.S" "$KCOMMON/lib/" || true
+          
+            cd "$KCOMMON"
+          
+            if [[ "${{ env.KERNEL_VERSION }}" == "6.1" ]]; then
+              echo "📦 Applying LZ4 + ZSTD Patch (6.1)"
+              git apply -p1 001-lz4.patch || true
+              patch -p1 < 002-zstd.patch || true
+            fi
+          
+            if [[ "${{ env.KERNEL_VERSION }}" == "6.6" ]]; then
+              echo "📦 Applying LZ4 Patch (6.6)"
+              git apply -p1 001-lz4.patch || true
+            fi
+          
+            cd - >/dev/null
+            echo "✅ Custom ZRAM LZ4 Section Completed"
+          
+          else
+            echo "⏭ Skipping Custom LZ4 Patch Section"
           fi
           
           cd ./kernel_platform/common
