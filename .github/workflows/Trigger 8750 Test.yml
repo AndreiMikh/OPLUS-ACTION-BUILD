@@ -5,6 +5,11 @@ name: Test Triggers
 on:
   workflow_dispatch:
     inputs:
+      BUILD_ALL_DEVICES:
+        description: Build All SM-8750 Devices
+        type: boolean
+        default: true
+        
       FILE:
         type: choice
         description: "Kernel Manifest Configuration File"
@@ -209,6 +214,42 @@ on:
         default: false
 
 jobs:
+
+  generate-matrix:
+
+    if: ${{ github.event.inputs.BUILD_ALL_DEVICES == 'true' }}
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+    steps:
+
+      - id: set-matrix
+
+        run: |
+
+          FILE_LIST=(
+            "oneplus_13_b"
+            "oneplus_13s_b"
+            "oneplus_13_custom"
+            "oneplus_13t_b"
+            "oneplus_ace5_pro_b"
+            "oneplus_ace_6"
+            "oneplus_pad_2_pro_b"
+            "oneplus_pad_3_b"
+          )
+
+          MATRIX_JSON=$(printf '%s\n' "${FILE_LIST[@]}" | jq -R -s -c '
+            split("\n")[:-1] |
+            map({
+              file: .,
+              file_short: (sub("_[a-z]$"; ""))
+            })
+          ')
+
+          echo "Matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
   build:
     name: >
      ${{
