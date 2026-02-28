@@ -1749,19 +1749,15 @@ jobs:
           echo "Enabling Re-Kernel Support (for Use with Freezer, NoActive, etc., to Improve Background App Freezing)..."
 
           if [[ "$FILE" == "oneplus_13_custom" && "$RE-KERNEL" == "true" ]]; then
-
-            echo "Enabling Re-Kernel Support to Enhance Background App Freezing…"
-          
-              # Prevent Duplicate Lines
-              if ! grep -q "^CONFIG_REKERNEL=y" "$CONFIG_FILE"; then
-                echo "CONFIG_REKERNEL=y" >> "$CONFIG_FILE"
-                echo "✅ Re-Kernel Enabled"
-              else
-                echo "⏭ Re-Kernel Already Enabled"
-              fi
+            echo "Enabling Re-Kernel Support to Enhance Background App Freezing..."
+              echo "CONFIG_REKERNEL=y" >> "$CONFIG_FILE"
+              echo "✅ Re-Kernel Enabled"
+            else
+              echo "⏭ Re-Kernel Already Enabled"
+            fi
           
           else
-            echo "⏭ Skipping Re-Kernel (Disabled)"
+            echo "Skipping Re-Kernel (Disabled)"
           fi
 
           # ==============================
