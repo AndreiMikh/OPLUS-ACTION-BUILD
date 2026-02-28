@@ -190,6 +190,12 @@ on:
         description: "Extract SUSFS-Dev Branch?"
         required: true
         default: false
+
+      RE-KERNEL:
+        type: boolean
+        description: "Re-Kernel"
+        required: false
+        default: false
         
       SPACE_NOCLEAN:
         type: boolean
@@ -535,6 +541,7 @@ jobs:
               echo "SCHED             : ${{ github.event.inputs.SCHED }}"
               echo "ADIOS             : ${{ github.event.inputs.ADIOS }}"
               echo "UNICODE_BYPASS    : ${{ github.event.inputs.UNICODE_BYPASS }}"
+              echo "RE-KERNEL         : ${{ github.event.inputs.RE-KERNEL }}"
               echo "XUS_FIX           : ${{ github.event.inputs.XUS_FIX }}"
               
               # Unicode Inspection (Whitespace / Hidden Character Detection)
