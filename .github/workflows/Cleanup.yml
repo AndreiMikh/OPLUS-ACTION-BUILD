@@ -1,4 +1,4 @@
-name: Workflow & Cache Cleanup
+name: Workflow/Cache Cleaner
 
 on:
   workflow_dispatch:
