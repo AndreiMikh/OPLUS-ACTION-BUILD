@@ -1234,7 +1234,7 @@ jobs:
           elif [[ "${{ github.event.inputs.SUSFS_VERSION }}" == "GKI" ]]; then
               echo "Using SUSFS GKI Repository"
 
-              # Check for GKI Development Branch if Selected
+              # Check for SUSFS GKI Development Branch if Selected
               if [[ "${{ github.event.inputs.SUSFS_DEV }}" == "true" ]]; then
                   echo "Cloning SUSFS GKI Development Branch"
                   git clone --depth=1 \
@@ -1275,7 +1275,7 @@ jobs:
           cd ..
 
           # ==============================
-          # Detect SUSFS Patch File
+          # Detect Correct 50 Additional SUSFS Patch File
           # ==============================
           SUS_PATCH=$(ls ./susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ env.KANDROID_VERSION }}-${{ env.KERNEL_VERSION }}*.patch 2>/dev/null | head -n1)
 
@@ -1298,13 +1298,13 @@ jobs:
           cd $KDIR
 
           # ==============================
-          # Apply SUSFS Patch
+          # Apply 50 Additional SUSFS Patch
           # ==============================
           patch -p1 < "$(basename $SUS_PATCH)" || true
-          echo "✅ 50 Enable SUSFS Patch Applied!"
+          echo "✅ 50 Additional SUSFS Patch Applied!"
 
           # ==============================
-          # Hide Patch (Only Supported Bases)
+          # Hide Patch (Only for Supported Bases)
           # ==============================
           if [[ "$GKI_V" == "android14-6.1" || \
                 "$GKI_V" == "android15-6.1" || \
@@ -1322,7 +1322,7 @@ jobs:
           fi
 
           # ==============================
-          # Apply KernelSU 10 Enable SUSFS Patch
+          # Apply KernelSU / KernelSU-Next 10 Enable SUSFS Patch
           # ==============================
           if [[ "${{ github.event.inputs.KSU_META }}" == "KernelSU" ]]; then          
               echo "KernelSU Type Detected, Preparing SUSFS Enable Patch..."
@@ -1349,7 +1349,7 @@ jobs:
                   echo "⚠️ Patch Not Found, Skipping"
               fi
           else
-              echo "❌ KernelSU Not Selected, Skipping SUSFS Enable Patch"
+              echo "❌ KernelSU or KernelSU-Next Not Selected, Skipping SUSFS 10 Enable Patch"
           fi
 
           cd - >/dev/null
@@ -1360,7 +1360,7 @@ jobs:
           # Pull SukiSU ZRAM Patches
           # ==============================
           if [[ "${{ github.event.inputs.ZRAM }}" == 1* ]]; then
-            echo "Pulling ZRAM Patches..."
+            echo "Pulling SukiSU ZRAM Patches..."
 
             SRC_BASE="../SukiSU_patch/other/zram"
             DEST_BASE="./common"
@@ -1371,10 +1371,10 @@ jobs:
               echo "✅ Copied Linux Headers"
             fi
 
-            # Copy Lib Files
+            # Copy Library Files
             if [[ -d "$SRC_BASE/lz4k/lib" ]]; then
               cp -r "$SRC_BASE/lz4k/lib/" "$DEST_BASE/lib/"
-              echo "✅ Copied Lib Files"
+              echo "✅ Copied Library Files"
             fi
 
             # Copy Crypto Files
@@ -1383,7 +1383,7 @@ jobs:
               echo "✅ Copied Crypto Files"
             fi
 
-            # Copy OPlus-Specific Lib
+            # Copy OnePlus-Specific Lib
             if [[ -d "$SRC_BASE/lz4k_oplus" ]]; then
               cp -r "$SRC_BASE/lz4k_oplus/" "$DEST_BASE/lib/"
               echo "✅ Copied LZ4K OPlus Files"
@@ -1397,10 +1397,9 @@ jobs:
           # ==============================          
           if [[ "${{ github.event.inputs.ZRAM }}" == 0* && \
                 "${{ github.event.inputs.ZRAM-LZ4 }}" == "true" && \
-                ( "${{ env.KERNEL_VERSION }}" == "6.1" || "${{ env.KERNEL_VERSION }}" == "6.6" ) ]]; then
-                echo "Conditions Met"
-    
-            echo "📦 Device oneplus_13_custom + ZRAM 0* + LZ4 Enabled"
+                "${{ github.event.inputs.FILE }}" == "oneplus_13_custom" ]]; then
+          
+            echo "📦 Device OnePlus 13 + ZRAM 0* + LZ4 Enabled"
           
             PATCH_BASE="./AndreiMikh-Kernel-Lab/patches"
             KCOMMON="./kernel_platform/common"
