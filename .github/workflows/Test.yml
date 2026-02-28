@@ -1876,11 +1876,13 @@ jobs:
           # ==============================
           if [[ "${{ github.event.inputs.BBR_ECN }}" == "true" ]]; then
             echo "Enabling BBR Congestion Control & ECN Features..."
-
+          
+            # Base TCP and ECN options
             cat >> "$CONFIG_FILE" << EOF
-          CONFIG_TCP_CONG_ADVANCED=y
-          CONFIG_TCP_CONG_BBR=y
-          CONFIG_NET_SCH_FQ=y
+          CONFIG_TCP_CONG_ADVANCED=y 
+          CONFIG_TCP_CONG_BBR=y 
+          CONFIG_TCP_CONG_CUBIC=y
+          CONFIG_NET_SCH_FQ=y 
           CONFIG_TCP_CONG_BIC=n
           CONFIG_TCP_CONG_WESTWOOD=n
           CONFIG_TCP_CONG_HTCP=n
@@ -1889,7 +1891,26 @@ jobs:
           CONFIG_IPV6_ECN=y
           CONFIG_IP_NF_TARGET_ECN=y
           EOF
-
+          
+            # Additional Algorithms for OnePlus 13 Custom Kernel on Certain GKI Versions
+            if [[ ( "$KERNEL_VERSION" == "6.1" || "$KERNEL_VERSION" == "6.6" ) && "$FILE" == "oneplus_13_custom" ]]; then
+              cat >> "$CONFIG_FILE" << EOF
+          CONFIG_TCP_CONG_WESTWOOD=y
+          CONFIG_TCP_CONG_HTCP=y
+          CONFIG_TCP_CONG_VEGAS=y
+          CONFIG_TCP_CONG_NV=y
+          CONFIG_TCP_CONG_BRUTAL=y    
+          EOF
+          
+              # Set BBR as the Default Congestion Control
+              CONFIG_DEFAULT_TCP_CONG="bbr"
+              echo "BBR Set as Default Congestion Control Algorithm"
+            else
+              # Otherwise, use CUBIC as Default
+              CONFIG_DEFAULT_TCP_CONG="cubic"
+              echo "CUBIC Set as Default Congestion Control Algorithm" 
+            fi   
+          
             echo "✅ BBR & ECN Configuration Applied"
           fi
 
