@@ -3592,15 +3592,33 @@ jobs:
 
           # Validate NoMount Source
           NMSRCDIR="$NMREPODIR/kernel/src"
-
           [[ -d "$NMSRCDIR" ]] || {
             echo "⚠️ NoMount Kernel Source Directory Not Found:"
             echo "   $NMSRCDIR"
             exit 1
           }
+          
+          [[ -f "$NMSRCDIR/Kconfig" ]] || {
+            echo "⚠️ NoMount Kernel Configuration Not Found:"
+            echo "   $NMSRCDIR/Kconfig"
+            exit 1
+          }
+
+          [[ -f "$NMSRCDIR/Makefile" ]] || {
+            echo "⚠️ NoMount Makefile Not Found:"
+            echo "   $NMSRCDIR/Makefile"
+            exit 1
+          }
+
+          [[ -f "$NMSRCDIR/nomount.c" ]] || {
+            echo "⚠️ NoMount Source File Not Found:"
+            echo "   $NMSRCDIR/nomount.c"
+            exit 1
+          }
+
           echo "📂 NoMount Kernel Source: $NMSRCDIR"
 
-          # Remove Existing Integration
+          # Remove Existing Integration and Synchronize NoMount Sources
           echo "♻️ Synchronizing NoMount Kernel Sources..."
           rm -rf "$NMTARGETDIR"
           mkdir -p "$NMTARGETDIR"
@@ -3615,7 +3633,7 @@ jobs:
             echo "⚙️ NoMount Kernel Configuration Entry Added"
           fi
 
-          # Register Makefile
+          # Register NoMount Makefile
           if grep -qF 'obj-$(CONFIG_NOMOUNT) += nomount/' "$MAKEFILE"; then
             echo "⚠️ NoMount Makefile Entry Already Exists"
           else
@@ -3623,7 +3641,7 @@ jobs:
             echo "⚙️ NoMount Makefile Entry Added"
           fi
 
-          # Validate Integration
+          # Validate NoMount Integration
           echo "🔎 Verifying NoMount Integration..."
           grep -qF 'source "fs/nomount/Kconfig"' "$KCONFIGFILE" || {
             echo "⚠️ NoMount Kconfig Registration Missing"
@@ -3645,7 +3663,8 @@ jobs:
             exit 1
           }
 
-          echo "✔️ NoMount Kernel Integration Verified"
+          echo "➡️ NoMount Source Files Verified"
+          echo "➡️ NoMount Kernel Integration Verified"
           
           echo ""
           echo "🎉 NoMount Built-in Integration Completed Successfully"
