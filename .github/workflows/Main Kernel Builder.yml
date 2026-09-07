@@ -3553,13 +3553,18 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          # Define Paths
+          # Define Kernel Path
           WS="${GITHUB_WORKSPACE}/kernel_workspace"
           KDIR="${WS}/kernel_platform/common"
-          NMREPODIR="${WS}/NoMount"
+
           # Validate Kernel Source
           [[ -d "$KDIR" ]] || {
             echo "⚠️ Kernel Common Directory Not Found: $KDIR"
+            exit 1
+          }
+
+          [[ -d "$KDIR/fs" ]] || {
+            echo "⚠️ Kernel File System Directory Not Found: $KDIR/fs"
             exit 1
           }
 
@@ -3569,50 +3574,42 @@ jobs:
           echo "NoMount Built-in Integration"
           echo "------------------------------"
           echo "📂 Kernel Source : $KDIR"
-          echo "📂 NoMount       : $NMREPODIR"
           echo ""
 
-          # Clone NoMount Dev Branch
-          if [[ ! -d "$NMREPODIR/.git" ]]; then
-            echo "📥 Cloning NoMount..."
-            git clone --depth=1 \
-              --branch dev \
-              https://github.com/maxsteeel/nomount.git \
-              "$NMREPODIR"
-            echo "✔️ NoMount Repository Cloned"
-          else
-            echo "⚠️ NoMount Repository Already Exists"
-          fi
-
-          # Run Official NoMount Integration
+          # Run Official NoMount Setup
           echo "🚀 Running NoMount Setup File..."
-          cd "$NMREPODIR/kernel"
-          bash ./setup.sh dev "$KDIR"
+          curl -fsSL \
+            "https://raw.githubusercontent.com/maxsteeel/nomount/refs/heads/dev/kernel/setup.sh" \
+            | bash -s dev
 
-          # Verify Kernel Integration
+          # Verify NoMount Symlink
           echo "🔎 Verifying NoMount Integration..."
+          [[ -L "$KDIR/fs/nomount" ]] || {
+            echo "⚠️ NoMount Symlink Missing"
+            exit 1
+          }
+          
+          # Verify NoMount Source
           [[ -f "$KDIR/fs/nomount/Kconfig" ]] || {
             echo "⚠️ NoMount Kernel Config Missing"
             exit 1
           }
-
           [[ -f "$KDIR/fs/nomount/Makefile" ]] || {
             echo "⚠️ NoMount Makefile Missing"
             exit 1
           }
-
           [[ -f "$KDIR/fs/nomount/nomount.c" ]] || {
             echo "⚠️ NoMount Source Missing"
             exit 1
           }
-
+         
           # Verify Kernel Config Registration
           grep -qF 'source "fs/nomount/Kconfig"' \
             "$KDIR/fs/Kconfig" || {
             echo "⚠️ NoMount Kernel Config Registration Missing"
             exit 1
           }
-
+         
           # Verify Makefile Registration
           grep -qF 'obj-$(CONFIG_NOMOUNT) += nomount/' \
             "$KDIR/fs/Makefile" || {
@@ -3620,8 +3617,9 @@ jobs:
             exit 1
           }
 
-          echo "➡️ NoMount Source Files Verified"
-          echo "➡️ NoMount Kernel Integration Verified"
+          echo "🚀 NoMount Symlink Verified"
+          echo "🚀 NoMount Source Files Verified"
+          echo "🚀 NoMount Kernel Integration Verified"
 
           echo ""
           echo "🎉 NoMount Built-in Integration Completed Successfully"
