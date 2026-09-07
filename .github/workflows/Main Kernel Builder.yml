@@ -852,7 +852,7 @@ jobs:
           echo "REJECTCHECKER=$REJECTCHECKER" >> "$GITHUB_ENV"
 
           echo ""
-          echo "🔎 Reject Checker: $REJ_CHECKER"
+          echo "🔎 Reject Checker: $REJECTCHECKER"
 
       - name: 🔧 Install and Configure Cache-ECS
         run: |
