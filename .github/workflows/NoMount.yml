@@ -3539,6 +3539,116 @@ jobs:
 
           echo ""
           echo "🎉 NT Synchronization (Primitives) Done!"
+
+      - name: 🔧 NoMount Built-in Integration
+        if: ${{ github.event.inputs.NOMOUNT == 'true' }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          # Paths
+          WS="${GITHUB_WORKSPACE}/kernel_workspace"
+          KDIR="${WS}/kernel_platform/common"
+          NMREPODIR="${WS}/NoMount"
+          NMTARGETDIR="${KDIR}/fs/nomount"
+          KCONFIGFILE="${KDIR}/fs/Kconfig"
+          MAKEFILE="${KDIR}/fs/Makefile"
+
+          # Validate Kernel Source
+          [[ -d "$KDIR" ]] || {
+            echo "⚠️ Kernel Common Directory Not Found: $KDIR"
+            exit 1
+          }
+
+          [[ -f "$KCONFIGFILE" ]] || {
+            echo "⚠️ Kernel Kconfig Not Found: $KCONFIGFILE"
+            exit 1
+          }
+
+          [[ -f "$MAKEFILE" ]] || {
+            echo "⚠️ Kernel Makefile Not Found: $MAKEFILE"
+            exit 1
+          }
+
+          cd "$KDIR"
+
+          echo ""
+          echo "NoMount Built-in Integration"
+          echo "📂 Kernel Source   : $KDIR"
+          echo "📂 NoMount Source  : $NMREPODIR"
+          echo "📂 Target          : $NMTARGETDIR"
+          echo ""
+
+          # Clone NoMount
+          if [[ ! -d "$NMREPODIR/.git" ]]; then
+            echo "📥 Cloning NoMount..."
+            git clone --depth=1 \
+              https://github.com/maxsteeel/nomount.git \
+              "$NMREPODIR"
+            echo "✔️ NoMount Repository Cloned"
+          else
+            echo "⚠️ NoMount Repository Already Exists"
+          fi
+
+          # Validate NoMount Source
+          NMSRCDIR="$NMREPODIR/kernel/src"
+
+          [[ -d "$NMSRCDIR" ]] || {
+            echo "⚠️ NoMount Kernel Source Directory Not Found:"
+            echo "   $NMSRCDIR"
+            exit 1
+          }
+          echo "📂 NoMount Kernel Source: $NMSRCDIR"
+
+          # Remove Existing Integration
+          echo "♻️ Synchronizing NoMount Kernel Sources..."
+          rm -rf "$NMTARGETDIR"
+          mkdir -p "$NMTARGETDIR"
+          cp -af "$NMSRCDIR"/. "$NMTARGETDIR"/
+          echo "✔️ NoMount Sources Installed"
+
+          # Register NoMount Kernel Configuration
+          if grep -qF 'source "fs/nomount/Kconfig"' "$KCONFIGFILE"; then
+            echo "⚠️ NoMount Kernel Configuration Entry Already Exists"
+          else
+            printf '\n# NoMount Support\nsource "fs/nomount/Kconfig"\n' >> "$KCONFIGFILE"
+            echo "⚙️ NoMount Kernel Configuration Entry Added"
+          fi
+
+          # Register Makefile
+          if grep -qF 'obj-$(CONFIG_NOMOUNT) += nomount/' "$MAKEFILE"; then
+            echo "⚠️ NoMount Makefile Entry Already Exists"
+          else
+            printf '\n# NoMount Support\nobj-$(CONFIG_NOMOUNT) += nomount/\n' >> "$MAKEFILE"
+            echo "⚙️ NoMount Makefile Entry Added"
+          fi
+
+          # Validate Integration
+          echo "🔎 Verifying NoMount Integration..."
+          grep -qF 'source "fs/nomount/Kconfig"' "$KCONFIGFILE" || {
+            echo "⚠️ NoMount Kconfig Registration Missing"
+            exit 1
+          }
+
+          grep -qF 'obj-$(CONFIG_NOMOUNT) += nomount/' "$MAKEFILE" || {
+            echo "⚠️ NoMount Makefile Registration Missing"
+            exit 1
+          }
+
+          [[ -f "$NMTARGETDIR/Kconfig" ]] || {
+            echo "⚠️ NoMount Kernel Configuration File Missing"
+            exit 1
+          }
+
+          [[ -f "$NMTARGETDIR/Makefile" ]] || {
+            echo "⚠️ NoMount Makefile Missing"
+            exit 1
+          }
+
+          echo "✔️ NoMount Kernel Integration Verified"
+          
+          echo ""
+          echo "🎉 NoMount Built-in Integration Completed Successfully"
           
       - name: 🔧 Re-Kernel
         if: ${{ github.event.inputs.REKERNEL == 'true' }}
@@ -3696,6 +3806,7 @@ jobs:
           NET="${{ github.event.inputs.NETFILTER }}"
           LXC="${{ github.event.inputs.LXCDOCKERSUPPORT }}"
           NTSYNC="${{ github.event.inputs.NTSYNC }}"
+          NOMOUNT="${{ github.event.inputs.NOMOUNT }}"
           CPU="${{ env.CPU }}"
 
           MAKEFILE=./kernel/Makefile
@@ -3880,6 +3991,16 @@ jobs:
             echo "🎉 DroidspacesLXC Support Core Configuration Applied"       
           else
             echo "☘️ DroidspacesLXC Support Disabled — Skipping Configuration..."
+          fi
+
+          # NoMount Built-in Configuration
+          if [[ "$NOMOUNT" == "true" ]]; then
+            echo "🚀 Enabling NoMount Built-in Support..."
+            SETCONFIG "CONFIG_NOMOUNT=y"
+            echo "🎉 NoMount Built-in Support Enabled"
+          else
+            echo "☘️ NoMount Disabled, Skipping..."
+            SETCONFIG "CONFIG_NOMOUNT=n"
           fi
 
           # BBR + ECN Kernel Configuration with Brutal Default and Cubic Fallback
@@ -5239,6 +5360,7 @@ jobs:
           LXC="${{ github.event.inputs.LXCDOCKERSUPPORT }}"
           NETFILTER="${{ github.event.inputs.NETFILTER }}"
           NTSYNC="${{ github.event.inputs.NTSYNC }}"
+          NOMOUNT="${{ github.event.inputs.NOMOUNT }}"
           TCP="${{ github.event.inputs.TCPALGORITHM }}"
           UNICODE="${{ github.event.inputs.UNICODE }}"
           XUS="${{ env.XUS }}"
@@ -5305,9 +5427,10 @@ jobs:
           )
           SUFFIX+="${SCHEDMAP[$SCHED]:-}"
       
-          # Feature Flags Layer
+          # Bootlean Feature Flags Layer
           [[ "$REKERNEL" == "true" ]] && SUFFIX+="-ReKernel"
           [[ "$LSMBBG" == "true" ]] && SUFFIX+="-BBG"
+          [[ "$NOMOUNT" == "true" ]] && SUFFIX+="-NOMOUNT"
       
           case "$LXC" in
             "DroidSpacesLXC-Inject") SUFFIX+="-DS" ;;
