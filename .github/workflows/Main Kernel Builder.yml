@@ -3580,15 +3580,16 @@ jobs:
           echo "📂 Target          : $NMTARGETDIR"
           echo ""
 
-          # Clone NoMount
+          # Clone NoMount Dev Branch
           if [[ ! -d "$NMREPODIR/.git" ]]; then
             echo "📥 Cloning NoMount..."
             git clone --depth=1 \
+              --branch dev \
               https://github.com/maxsteeel/nomount.git \
               "$NMREPODIR"
-            echo "✔️ NoMount Repository Cloned"
+            echo "✔️ NoMount Repository Dev Branch Cloned"
           else
-            echo "⚠️ NoMount Repository Already Exists"
+            echo "⚠️ NoMount Repository Dev Branch Already Exists"
           fi
 
           # Validate NoMount Source
@@ -5454,7 +5455,7 @@ jobs:
           # Bootlean Feature Flags Layer
           [[ "$REKERNEL" == "true" ]] && SUFFIX+="-ReKernel"
           [[ "$LSMBBG" == "true" ]] && SUFFIX+="-BBG"
-          [[ "$NOMOUNT" == "true" ]] && SUFFIX+="-NOMOUNT"
+          [[ "$NOMOUNT" == "true" ]] && SUFFIX+="-NoMount"
       
           case "$LXC" in
             "DroidSpacesLXC-Inject") SUFFIX+="-DS" ;;
