@@ -297,6 +297,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: 🔧 Build Profile Flags
+        id: buildprofile
         shell: bash
         run: |
           set -euo pipefail
@@ -343,21 +344,27 @@ jobs:
               ;;
           esac
       
-          echo "PROFILE=$PROFILE"
           echo "CLEANSPACE=$CLEANSPACE"
           echo "BUILDCCACHE=$BUILDCCACHE"
           echo "XUS=$XUS"
           echo "GITRELEASE=$GITRELEASE"
       
-          # Export to GitHub environment
+          # Export to GitHub Environment
           echo "CLEANSPACE=$CLEANSPACE" >> "$GITHUB_ENV"
           echo "BUILDCCACHE=$BUILDCCACHE" >> "$GITHUB_ENV"
           echo "XUS=$XUS" >> "$GITHUB_ENV"
           echo "GITRELEASE=$GITRELEASE" >> "$GITHUB_ENV"
-          echo "PROFILE=$PROFILE" >> "$GITHUB_ENV"
+
+          # Export as Step Outputs
+          {
+            echo "CLEANSPACE=$CLEANSPACE"
+            echo "BUILDCCACHE=$BUILDCCACHE"
+            echo "XUS=$XUS"
+            echo "GITRELEASE=$GITRELEASE"
+          } >> "$GITHUB_OUTPUT"
         
       - name: 🔧 Maximize Build Space
-        if: ${{ env.CLEANSPACE == 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.CLEANSPACE == 'Disabled' }}
         uses: easimon/maximize-build-space@master
         with:
           root-reserve-mb: 8192         # Keep 8Gib Free for OS / System
@@ -886,7 +893,7 @@ jobs:
 
       - name: 🔧 Release Cache Restoration
         id: cache-restoration
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1030,7 +1037,7 @@ jobs:
     
       - name: 🔧 Local Cache Restoration (Fallback)
         id: ccache-restore
-        if: ${{ env.BUILDCCACHE != 'Disabled' && steps.cache-restoration.outputs.cache-restored != 'true' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' && steps.cache-restoration.outputs.cache-restored != 'true' }}
         uses: actions/cache/restore@v5
         with:
           path: ${{ env.CCACHE_DIR }}          
@@ -1045,7 +1052,7 @@ jobs:
             CCache-
   
       - name: 🔧 Configure and Setup Compiler Cache
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         shell: bash
         run: |
           set -euo pipefail 
@@ -1084,7 +1091,7 @@ jobs:
           ccache -s
            
       - name: 🔧 Cache Key and Status
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         run: |
           set -euo pipefail
           
@@ -5388,7 +5395,7 @@ jobs:
           NOMOUNT="${{ github.event.inputs.NOMOUNT }}"
           TCP="${{ github.event.inputs.TCPALGORITHM }}"
           UNICODE="${{ github.event.inputs.UNICODE }}"
-          XUS="${{ env.XUS }}"
+          XUS="${{ steps.buildprofile.outputs.XUS }}"
           WINDSPEED="${{ github.event.inputs.WINDSPEED }}"
       
           # Base Identity (Root Engine Map)
@@ -5496,7 +5503,7 @@ jobs:
           retention-days: 30
 
       - name: 🔧 Validate Compiler Cache
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -5543,7 +5550,7 @@ jobs:
           fi
       
       - name: 🔧 Compiler Cache Performance Summary
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -5685,7 +5692,8 @@ jobs:
           echo "🎉 Compiler Cache Statistics Generated Successfully"           
       
       - name: 🔧 Decide Compiler Cache Save Strategy
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        id: ccache-save
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -5756,11 +5764,14 @@ jobs:
       
           # Make Cache Saved Available to Subsequent Workflow Steps
           echo "CCACHESAVE=${CCACHESAVE}" >> "$GITHUB_ENV"
+
+          # Export Cache Save State as Step Output 
+          echo "CCACHESAVE=${CCACHESAVE}" >> "$GITHUB_OUTPUT"
       
       - name: 🔧 Save Compiler Cache
         if: ${{ success()
-              && env.BUILDCCACHE != 'Disabled'
-              && env.CCACHESAVE == 'true'
+              && steps.buildprofile.outputs.BUILDCCACHE != 'Disabled'
+              && steps.ccache-save.outputs.CCACHESAVE == 'true'
               && steps.cache-restoration.outputs.cache-restored != 'true' }}
         timeout-minutes: 10
         uses: actions/cache/save@v5
@@ -5769,7 +5780,7 @@ jobs:
           key: CCache-${{ runner.os }}-${{ env.MANIFESTBASEFILE }}-${{ env.CPU }}-${{ github.ref_name }}
       
       - name: 🔧 Create Compiler Cache Archive
-        if: ${{ env.BUILDCCACHE != 'Disabled' && env.CCACHESAVE == 'true' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' && steps.ccache-save.outputs.CCACHESAVE == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -5902,7 +5913,7 @@ jobs:
           echo "🎉 Compiler Cache Archive Created Successfully"
    
       - name: 🔧 Clean Old Compiler Cache
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -6258,7 +6269,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🔧 Upload Cache Tarball
-        if: ${{ env.BUILDCCACHE != 'Disabled' }}
+        if: ${{ steps.buildprofile.outputs.BUILDCCACHE != 'Disabled' }}
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.CPU }}
@@ -6305,7 +6316,7 @@ jobs:
             echo "| 🧪 SUSFS Development Branch      | $(bool "${{ github.event.inputs.SUSFSBRANCHDEV }}") |"
             echo "| 🩹 Kernel Patch Variant          | \`${{ github.event.inputs.KERNELPATCH }}\`          |"
             echo "| ⚡ Fast Kernel Build             | $(bool "${{ github.event.inputs.FASTBUILD }}")      |"
-            echo "| 💾 Compiler Cache                | \`${{ env.BUILDCCACHE }}\`                          |"
+            echo "| 💾 Compiler Cache                | \`${{ steps.buildprofile.outputs.BUILDCCACHE }}\`   |"
             echo ""
 
             # System Features
@@ -6334,13 +6345,13 @@ jobs:
             # Miscellaneous
             echo "#### 🧾 Miscellaneous"
             echo ""
-            echo "| Feature                                         | Reported Value                                |"
-            echo "|-------------------------------------------------|-----------------------------------------------|"
-            echo "| 🔤 Unicode Bypass Patch                         | $(bool "${{ github.event.inputs.UNICODE }}")  |"
-            echo "| 🧹 Disk Space Clean                             | \`${{ env.CLEANSPACE }}\`                     |"
-            echo "| 📂 XUS Patch                                    | \`${{ env.XUS }}\`                            |"
-            echo "| 🔁 Re-Kernel (Use with Freezer, NoActive, Etc.) | $(bool "${{ github.event.inputs.REKERNEL }}") |"
-            echo "| 🔤 NTSync Patch                                 | $(bool "${{ github.event.inputs.NTSYNC }}")   |"
-            echo "| 🔤 Built-in NoMount                             | $(bool "${{ github.event.inputs.NOMOUNT }}")   |"
-            echo "| 🆔 Workflow Run ID                              | \`${GITHUB_RUN_ID}\`                          |"
+            echo "| Feature                                         | Reported Value                                   |"
+            echo "|-------------------------------------------------|-----------------------------------------------   |"
+            echo "| 🔤 Unicode Bypass Patch                         | $(bool "${{ github.event.inputs.UNICODE }}")    |"
+            echo "| 🧹 Disk Space Clean                             | \`${{ steps.buildprofile.outputs.CLEANSPACE }}\`|"
+            echo "| 📂 XUS Patch                                    | \`${{ steps.buildprofile.outputs.XUS }}\`       |"
+            echo "| 🔁 Re-Kernel (Use with Freezer, NoActive, Etc.) | $(bool "${{ github.event.inputs.REKERNEL }}")   |"
+            echo "| 🔤 NTSync Patch                                 | $(bool "${{ github.event.inputs.NTSYNC }}")     |"
+            echo "| 🔤 Built-in NoMount                             | $(bool "${{ github.event.inputs.NOMOUNT }}")    |"
+            echo "| 🆔 Workflow Run ID                              | \`${GITHUB_RUN_ID}\`                            |"
           } >> $GITHUB_STEP_SUMMARY
