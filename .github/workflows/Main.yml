@@ -1,7 +1,7 @@
 # ===========================
 # OnePlus Kernel Build
 # ===========================
-name: ☘️ Main
+name: ☘️ NoMount Integration
 on:
   workflow_dispatch:
     inputs:
@@ -51,6 +51,7 @@ on:
           - oneplus_15r_canary
           - oneplus_15
           - oneplus_15_canary
+          - oneplus_15_w
           - oneplus_15t
           - oneplus_15t_canary
           - oneplus_pad3_pro_canary
@@ -151,9 +152,13 @@ on:
         required: true
         default: DroidSpacesLXC-Inject
         options:
-          - DroidSpacesLXC-WildPatch
           - DroidSpacesLXC-Inject
           - None        
+      NOMOUNT:
+        type: boolean
+        description: "NoMount Built-in Integration"
+        required: true
+        default: true
       NETFILTER:
         type: boolean
         description: "Network Feature Extensions (NetFilter)"
@@ -217,7 +222,7 @@ jobs:
     name: >
       ${{
         format(
-          '{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}{11}{12} {13}',
+          '{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}{11}{12}{13} {14}',
 
           (github.event.inputs.FASTBUILD == 'true' && 'Fast ' || ''),
           (github.event.inputs.NTSYNC == 'true' && 'NTSync ' || ''),
@@ -230,8 +235,7 @@ jobs:
             ''
           ),
           
-          (github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-WildPatch' && 'DS-Wild ' ||
-          github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-Inject' && 'DS-Inject ' || ''),
+          (github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-Inject' && 'DS ' || ''),
           (contains(github.event.inputs.FILE, '_aosp') && 'AOSP ' || ''),
 
           (
@@ -264,6 +268,7 @@ jobs:
           ),
 
           (github.event.inputs.LSMBBG == 'true' && 'LSM ' || ''),
+          (github.event.inputs.NOMOUNT == 'true' && 'NM ' || ''),
           (github.event.inputs.WINDSPEED == 'true' && 'Wind ' || ''),
 
           github.event.inputs.FILE,
@@ -377,7 +382,6 @@ jobs:
             gawk
             git
             kmod
-            kotlin
             lld
             llvm
             libdw-dev
@@ -394,6 +398,47 @@ jobs:
 
           # Required for Cache-APT-PKGS-Action
           execute_install_scripts: true
+
+      - name: 🔧 Setup Kotlin
+        run: |
+          set -euo pipefail
+
+          KOTLINVER="2.4.10"
+          KOTLINHOME="$HOME/kotlinc"
+          KOTLINURL="https://github.com/JetBrains/kotlin/releases/download/v${KOTLINVER}/kotlin-compiler-${KOTLINVER}.zip"
+
+          # Reuse the Installed Compiler when the Requested Version is Already Available
+          if [[ -x "$KOTLINHOME/bin/kotlinc" ]] && \
+             "$KOTLINHOME/bin/kotlinc" -version 2>&1 | grep -q "$KOTLINVER"; then
+            echo "✔️ Kotlin ${KOTLINVER} is Already Installed"
+          else
+            echo "Installing Kotlin Compiler ${KOTLINVER}..."
+            rm -rf "$KOTLINHOME"
+            rm -f kotlinc.zip
+            curl --fail \
+                 --location \
+                 --silent \
+                 --show-error \
+                 --retry 3 \
+                 --retry-delay 2 \
+                 "$KOTLINURL" \
+                 -o kotlinc.zip
+            unzip -q kotlinc.zip -d "$HOME"
+            rm -f kotlinc.zip
+
+            [[ -x "$KOTLINHOME/bin/kotlinc" ]] || {
+              echo "⚠️ ERROR: Kotlin Compiler Installation Failed"
+              exit 1
+            }
+          fi
+
+          # Make Kotlin Available to All Following Workflow Steps
+          echo "$KOTLINHOME/bin" >> "$GITHUB_PATH"
+
+          echo "KOTLINHOME=$KOTLINHOME" >> "$GITHUB_ENV"
+          echo "🎉 Kotlin Installation Completed Successfully..."
+
+          "$KOTLINHOME/bin/kotlinc" -version
 
       - name: 🔧 Extract Manifest Information (Token/No-Token + LS-Remote Fallback)
         id: extract_info
@@ -701,6 +746,7 @@ jobs:
               echo "Suffix                : ${{ github.event.inputs.SUFFIX }}"
               echo "LSM Baseband Guard    : ${{ github.event.inputs.LSMBBG }}"
               echo "LXC Support           : ${{ github.event.inputs.LXCDOCKERSUPPORT }}"
+              echo "NoMount               : ${{ github.event.inputs.NOMOUNT }}"
               echo "Netfilter             : ${{ github.event.inputs.NETFILTER }}"
               echo "TCP                   : ${{ github.event.inputs.TCPALGORITHM }}"
               echo "SuSFS Repository      : ${{ github.event.inputs.SUSFSVARIANT }}"
@@ -1463,93 +1509,98 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-      
-          # Paths
+
+          # Kernel Platform Directory
           KDIR="kernel_workspace/kernel_platform"
-          FCONFIG="${KDIR}/common/build.config.constants"
-          RUSTBIN="${KDIR}/prebuilts/rust/linux-x86/bin/rustc"
-      
+
           # State
           ENABLERUSTC="false"
           VERSIONRUSTC=""
           RAWRUSTC=""
-      
+
           # Validate Kernel Directory
           if [[ ! -d "$KDIR" ]]; then
             echo "⚠️ Kernel Directory Not Found: $KDIR"
             exit 1
           fi
-      
+
           cd "$KDIR"
-      
-          # Detect RUST from Build Configuration Constants
-          if [[ -f "$FCONFIG" ]]; then      
-            echo "🔎 Checking Build Configuration Constants..."      
-            # Prefer Modern AOSP Key: RUSTC Version
+
+          # Paths Relative to Kernel Platform
+          FCONFIG="./common/build.config.constants"
+          RUSTBIN="./prebuilts/rust/linux-x86/bin/rustc"
+
+          # Detect Rust from Build Configuration Constants
+          if [[ -f "$FCONFIG" ]]; then
+            echo "🔎 Checking Build Configuration Constants..."
+            # Prefer Modern AOSP Key
             RAWRUSTC="$(
               awk -F= '/^RUSTC_VERSION=/{print $2}' "$FCONFIG" \
-              | tr -d '"' \
-              | head -n1
+                | tr -d '"' \
+                | head -n1
             )"
-      
-            # Fallback to legacy/custom key: VERSIONRUSTC
+
+            # Fallback to Legacy / Custom Key: VERSIONRUSTC
             if [[ -z "$RAWRUSTC" ]]; then
               RAWRUSTC="$(
                 awk -F= '/^VERSIONRUSTC=/{print $2}' "$FCONFIG" \
-                | tr -d '"' \
-                | head -n1
+                  | tr -d '"' \
+                  | head -n1
               )"
             fi
-      
-            if [[ -n "$RAWRUSTC" ]]; then      
-              echo "📌 RUST Version from Configuration (Raw): $RAWRUSTC"      
-              # Extract Path-Safe Version (1.81.0 from 1.81.0-Google)
+
+            if [[ -n "$RAWRUSTC" ]]; then
+              echo "📌 RUST Version from Configuration (Raw): $RAWRUSTC"
+              # Extract Path-Safe Version
+              # Example: 1.81.0 from 1.81.0-Google
               VERSIONRUSTC="$(
                 echo "$RAWRUSTC" \
-                | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+'
+                  | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true
               )"
-      
-              # Fallback if Extraction Fails
-              [[ -z "$VERSIONRUSTC" ]] && VERSIONRUSTC="$RAWRUSTC"      
-              echo "📁 RUST Version for Paths: $VERSIONRUSTC"      
-              ENABLERUSTC="true"      
+
+              # Fallback if version extraction fails
+              [[ -z "$VERSIONRUSTC" ]] && VERSIONRUSTC="$RAWRUSTC"
+
+              echo "📁 RUST Version for Paths: $VERSIONRUSTC"
+              ENABLERUSTC="true"
             else
               echo "⚠️ No RUST Compiler Version Found in Configuration"
-            fi      
+            fi
           else
             echo "⚠️ Missing Build Configuration Constants"
           fi
-      
-          # Fallback: Toolchain Detection
-          if [[ "$ENABLERUSTC" == "false" ]]; then      
-            if [[ -x "$RUSTBIN" ]]; then      
-              echo "📦 Rust Toolchain Detected (Fallback)"      
-              RAWRUSTC="$("$RUSTBIN" --version | awk '{print $2}')"      
+
+          # Fallback: Detect Rust Toolchain Directly
+          if [[ "$ENABLERUSTC" == "false" ]]; then
+            if [[ -x "$RUSTBIN" ]]; then
+              echo "📦 Rust Toolchain Detected (Fallback)"
+              RAWRUSTC="$("$RUSTBIN" --version | awk '{print $2}')"
               VERSIONRUSTC="$(
                 echo "$RAWRUSTC" \
-                | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+'
+                  | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true
               )"
-      
-              [[ -z "$VERSIONRUSTC" ]] && VERSIONRUSTC="$RAWRUSTC"      
+
+              # Fallback if Version Extraction Fails
+              [[ -z "$VERSIONRUSTC" ]] && VERSIONRUSTC="$RAWRUSTC"
               echo "🔍 Detected Rustc Version: $RAWRUSTC"
-              echo "📁 RUST Version for Paths: $VERSIONRUSTC"      
-              ENABLERUSTC="true"      
+              echo "📁 RUST Version for Paths: $VERSIONRUSTC"
+              ENABLERUSTC="true"
             else
-              echo "⚠️ RUST Toolchain Not Found"
+              echo "⚠️ RUST Toolchain Not Found: $RUSTBIN"
             fi
           fi
-      
+
           # Final Defaults
           if [[ "$ENABLERUSTC" != "true" ]]; then
             VERSIONRUSTC="None"
             RAWRUSTC="None"
           fi
-      
+
           # Export to GitHub Environment
           echo "ENABLERUSTC=$ENABLERUSTC" >> "$GITHUB_ENV"
           echo "VERSIONRUSTC=$VERSIONRUSTC" >> "$GITHUB_ENV"
           echo "RAWRUSTC=$RAWRUSTC" >> "$GITHUB_ENV"
-      
+
           # Final Summary
           echo ""
           echo "------------------------------"
@@ -1559,7 +1610,7 @@ jobs:
           echo "Raw Version  : $RAWRUSTC"
           echo "Path Version : $VERSIONRUSTC"
           echo "------------------------------"
-          
+    
       - name: 🔧 Inject Custom Kernel Version Suffix
         if: ${{ github.event.inputs.SUFFIX != '' }}
         id: inject
@@ -1689,17 +1740,20 @@ jobs:
 
       - name: 🔧 Solve Root Engine Source
         id: manager
+        shell: bash
         run: |
+          set -Eeuo pipefail
+
           ROOTBRANCHSOURCE="${{ github.event.inputs.ROOTBRANCHSOURCE }}"
           ROOTENGINE="${{ github.event.inputs.ROOTENGINE }}"
 
-          # Solve KSU Meta Downloader Branch + Artifact
+          MANAGERBRANCH=""
+          BRANCHPATH=""
+          MANAGERARTIFACT=""
+          KSUREPO=""
+
+          # Resolve Root Source
           case "$ROOTBRANCHSOURCE" in
-            SukiSU-Ultra-Main)
-              MANAGERBRANCH="main"
-              BRANCHPATH="builtin"
-              MANAGERARTIFACT="manager"
-              ;;
             SukiSU-Ultra-Builtin)
               MANAGERBRANCH="main"
               BRANCHPATH="builtin"
@@ -1707,33 +1761,41 @@ jobs:
               ;;
             KernelSU-Next-Dev-SUSFS)
               MANAGERBRANCH="dev-susfs"
+              BRANCHPATH="pershoot/KernelSU-Next"
               MANAGERARTIFACT="manager"
               ;;
             KernelSU-Next-Dev)
               MANAGERBRANCH="dev"
+              BRANCHPATH="pershoot/KernelSU-Next"
               MANAGERARTIFACT="manager-spoofed"
               ;;
             KernelSU-Main)
               MANAGERBRANCH="main"
+              BRANCHPATH="tiann/KernelSU"
               MANAGERARTIFACT="manager"
               ;;
             ReSukiSU-Main)
               MANAGERBRANCH="main"
+              BRANCHPATH="ReSukiSU/ReSukiSU"
               MANAGERARTIFACT="Manager-release"
               ;;
             ReSukiSU-Dev)
               MANAGERBRANCH="dev"
+              BRANCHPATH="ReSukiSU/ReSukiSU"
               MANAGERARTIFACT="Manager-release"
+              ;;
+            *)
+              echo "⚠️ Unsupported Root Source: $ROOTBRANCHSOURCE"
+              exit 1
               ;;
           esac
 
-          # Re-Solve Actual Repository (Critical Fix)
+          # Resolve Root Engine Repository
           case "$ROOTENGINE" in
             SukiSU-Ultra)
               KSUREPO="SukiSU-Ultra/SukiSU-Ultra"
               ;;
             KernelSU-Next)
-              BRANCHPATH="pershoot/KernelSU-Next"
               KSUREPO="KernelSU-Next/KernelSU-Next"
               ;;
             ReSukiSU)
@@ -1741,253 +1803,138 @@ jobs:
               ;;
             KernelSU)
               KSUREPO="tiann/KernelSU"
-              ;;              
+              ;;
             *)
-              echo "⚠️ Unsupported KSU: $ROOTENGINE"
+              echo "⚠️ Unsupported Root Engine: $ROOTENGINE"
               exit 1
               ;;
           esac
 
-          echo "MANAGERBRANCH=$MANAGERBRANCH" >> "$GITHUB_OUTPUT"
-          echo "BRANCHPATH=${BRANCHPATH:-}" >> "$GITHUB_OUTPUT"
-          echo "MANAGERARTIFACT=$MANAGERARTIFACT" >> "$GITHUB_OUTPUT"
-          echo "KSUREPO=$KSUREPO" >> "$GITHUB_OUTPUT"
+          # Validate Resolution
+          [[ -n "$MANAGERBRANCH" ]] || {
+            echo "⚠️ Failed to Resolve Manager Branch"
+            exit 1
+          }
+          [[ -n "$KSUREPO" ]] || {
+            echo "⚠️ Failed to Resolve Root Engine Repository"
+            exit 1
+          }
+          [[ -n "$BRANCHPATH" ]] || {
+            echo "⚠️ Failed to Resolve Setup Repository"
+            exit 1
+          }
+          {
+            echo "MANAGERBRANCH=$MANAGERBRANCH"
+            echo "BRANCHPATH=$BRANCHPATH"
+            echo "MANAGERARTIFACT=$MANAGERARTIFACT"
+            echo "KSUREPO=$KSUREPO"
+          } >> "$GITHUB_OUTPUT"
 
           echo "------------------------------"
-          echo "✔️ Resolved:"
-          echo "📂 Repository  : $KSUREPO"
-          echo "📂 Branch      : $MANAGERBRANCH"
-          echo "📂 Artifact    : $MANAGERARTIFACT"
+          echo "✔️ Root Engine Source Resolved"
+          echo "📦 Engine     : $ROOTENGINE"
+          echo "📂 Repository : $KSUREPO"
+          echo "🌿 Branch     : $MANAGERBRANCH"
+          echo "📁 Setup Repo : $BRANCHPATH"
+          echo "📦 Artifact   : $MANAGERARTIFACT"
           echo "------------------------------"
-          echo ""
+
 
       - name: 🔧 Configure Root Engine
+        shell: bash
         run: |
-          set -euo pipefail
-      
-          # Enter Kernel Workspace
-          cd kernel_workspace/kernel_platform || exit 1
+          set -Eeuo pipefail
 
-          # Set Github Inputs and Outputs
+          cd "${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform"
+
           MANAGERBRANCH="${{ steps.manager.outputs.MANAGERBRANCH }}"
           BRANCHPATH="${{ steps.manager.outputs.BRANCHPATH }}"
           KSUREPO="${{ steps.manager.outputs.KSUREPO }}"
           ROOTENGINE="${{ github.event.inputs.ROOTENGINE }}"
-          ROOTBRANCH="${{ github.event.inputs.ROOTBRANCHSOURCE }}"
           SUSFS="${{ github.event.inputs.SUSFSREPOSITORY }}"
-
-          # Kernel and Patch Directories
           KCDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
-          DEFCONFIG="${KCDIR}/arch/arm64/configs/gki_defconfig" 
-          
-          # Helper Functions      
-          # Get Commit-Count-Based Version
-          gitcommitcountversion() {
-            local KSUREPO="$1"
-            local MANAGERBRANCH="$2"
-            local OFFSET="$3"          
-            local LASTPAGE          
-            LASTPAGE=$(
-              curl -sI \
-                "https://api.github.com/repos/${KSUREPO}/commits?sha=${MANAGERBRANCH}&per_page=1" \
-              | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p'
-            )          
-            [[ "$LASTPAGE" =~ ^[0-9]+$ ]] || LASTPAGE=0         
-            echo $((LASTPAGE + OFFSET))
-          }
-      
-          # Get Latest Git Tag
+          DEFCONFIG="${KCDIR}/arch/arm64/configs/gki_defconfig"
+
+          # Helpers
           gitlatesttag() {
-            local KSUREPO="$1"          
-            local TAG
-            TAG=$(git ls-remote --tags --sort="v:refname" "https://github.com/${KSUREPO}.git" \
+            local repo="$1"
+            local tag
+            tag="$(
+              git ls-remote --tags --sort="v:refname" \
+                "https://github.com/${repo}.git" 2>/dev/null \
               | awk '{print $2}' \
               | sed 's#refs/tags/##' \
               | grep -v '\^{}' \
-              | tail -n1)          
-            if [[ -z "$TAG" ]]; then
-              echo "v0.0.0"
-            else
-              echo "$TAG"
-            fi
+              | tail -n1 \
+              || true
+            )"
+            echo "${tag:-v0.0.0}"
+          }
+          getcommitcount() {
+            git rev-list --count HEAD 2>/dev/null || echo 0
+          }
+          setupengine() {
+            local repo="$1"
+            local branch="$2"
+            local argument="$3"
+            echo "🔗 Setup Repository : $repo"
+            echo "🌿 Setup Branch     : $branch"
+            echo "📌 Setup Argument   : $argument"
+            curl -fsSL \
+              "https://raw.githubusercontent.com/${repo}/${branch}/kernel/setup.sh" \
+              | bash -s -- "$argument"
           }
 
-          downloadsetup() {
-            local urlsource1="$1"
-            local urlsource2="${2:-}"
-            local setupfile="setup.sh"
-            local temporaryfile    
-            temporaryfile="$(mktemp)"
-            urlfetch() {
-              local url="$1"
-              echo "🌐 Using Source: $url"          
-              for i in {1..5}; do
-                echo "📥 Attempt $i/5: $url"          
-                if curl -fsSL \
-                  --retry 3 \
-                  --retry-delay 2 \
-                  --connect-timeout 10 \
-                  --max-time 60 \
-                  "$url" -o "$temporaryfile"; then          
-                  # Validation
-                  if [[ -s "$temporaryfile" ]] \
-                    && head -n1 "$temporaryfile" | grep -q "^#"; then          
-                    # Reject HTML
-                    if ! grep -qi "<html" "$temporaryfile"; then
-                      mv "$temporaryfile" "$setupfile"
-                      return 0
-                    fi
-                  fi
-                fi          
-                sleep $((i * 2))
-              done      
-              return 1
-            }
-          
-            if urlfetch "$urlsource1"; then
-              echo "📃 Primary Setup Downloaded"
-            elif [[ -n "$urlsource2" ]] && urlfetch "$urlsource2"; then
-              echo "📃 Fallback Setup Downloaded"
-            else
-              echo "⚠️ Failed to Download Setup Script from All Sources"
-              exit 1
-            fi
-          
-            [[ -s "$setupfile" ]] || { echo "⚠️ Empty Script"; exit 1; }         
-            chmod +x "$setupfile"          
-            echo "🔧 Executing Setup Script..."
-            bash "$setupfile" "$MANAGERBRANCH" "${BRANCHPATH-}"
-          }
-
-          downloadfile() {
-            local url="$1"
-            local output="$2"
-            for i in {1..5}; do
-              echo "📥 Attempt $i/5: $url"
-              if curl -fsSL \
-                --retry 3 \
-                --retry-delay 2 \
-                --connect-timeout 10 \
-                --max-time 60 \
-                "$url" -o "$output"; then
-                [[ -s "$output" ]] && return 0
-              fi
-              sleep $((i * 2))
-            done
-            return 1
-          }
-      
-          # SukiSU-Ultra Setup
+          # SukiSU-Ultra
           if [[ "$ROOTENGINE" == "SukiSU-Ultra" ]]; then
             echo "🚀 Setting Up SukiSU-Ultra..."
-
-            # Validate Resolved Values
-            [[ -n "${KSUREPO:-}" ]] || {
-              echo "⚠️ SukiSU-Ultra Manager is Empty"
-              exit 1
-            }
-
-            [[ -n "${MANAGERBRANCH:-}" ]] || {
-              echo "⚠️ Main Branch is Empty"
-              exit 1
-            }
-
-            [[ -n "${BRANCHPATH:-}" ]] || {
-              echo "⚠️ Builtin Branch is Empty"
-              exit 1
-            }
-
-            echo "📂 Repository      : $KSUREPO"
-            echo "📂 Manager Branch  : $MANAGERBRANCH"
-            echo "📂 Builtin Branch  : $BRANCHPATH"
-            echo "📂 Root Source     : $ROOTBRANCH"
-
-            # Download and execute the official SukiSU-Ultra setup script
-            SETUP_URL="https://raw.githubusercontent.com/${KSUREPO}/${MANAGERBRANCH}/kernel/setup.sh"
-            echo "🌐 Setup URL: $SETUP_URL"
-            downloadsetup "$SETUP_URL"
-
-            # Setup sh File Should Create the Directory
+            setupengine \
+              "$KSUREPO" \
+              "$MANAGERBRANCH" \
+              "$BRANCHPATH"
             cd KernelSU || {
-              echo "⚠️ SukiSU-Ultra Directory was Not Created"
+              echo "⚠️ SukiSU-Ultra KernelSU Directory was Not Created"
               exit 1
             }
 
-            echo "📍 KernelSU Source: $(pwd)"
+            GITHASH="$(git rev-parse --short HEAD)"
+            COMMITCOUNT="$(getcommitcount)"
+            echo "🌐 Fetching Latest Release Version..."
+            KSU_VERSION_TAG="$(
+              curl -fsSL \
+                "https://api.github.com/repos/${KSUREPO}/releases/latest" \
+              | grep '"tag_name":' \
+              | sed -E 's/.*"tag_name":[[:space:]]*"v?([^"]+)".*/\1/' \
+              | head -n1 \
+              || true
+            )"
 
-            # Get the actual checked-out commit
-            GIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || true)
-
-            if [[ -z "$GIT_HASH" ]]; then
-              echo "⚠️ Failed to determine SukiSU-Ultra commit hash"
-              exit 1
-            fi
-
-            echo "🔖 Git Hash: $GIT_HASH"
-
-            # Fetch the Latest SukiSU-Ultra Release Version
-            # Minimum Fallback Version is 3.1.7
-            echo "🌐 Fetching Latest SukiSU-Ultra Release Version..."
-
-            KSU_VERSION_TAG=""
-            for i in {1..3}; do
-              KSU_VERSION_TAG=$(
-                curl -fsSL \
-                  --retry 2 \
-                  --retry-delay 2 \
-                  --connect-timeout 10 \
-                  --max-time 30 \
-                  "https://api.github.com/repos/${KSUREPO}/releases/latest" \
-                | grep '"tag_name":' \
-                | sed -E 's/.*"v?([^"]+)".*/\1/' \
-                | head -n1 \
-                || true
-              )
-
-              if [[ -n "$KSU_VERSION_TAG" ]]; then
-                break
-              fi
-
-              echo "⚠️ Failed to Fetch Release Version, Retrying..."
-              sleep "$i"
-            done
-
-            # Keep 3.1.7 as the Minimum Supported Fallback Version
-            if [[ -z "$KSU_VERSION_TAG" || \
-              "$(printf '%s\n' "$KSU_VERSION_TAG" "3.1.7" \
-                | sort -V \
-                | head -n1)" != "3.1.7" ]]; then
+            # Minimum supported fallback
+            if [[ -z "$KSU_VERSION_TAG" ]] || \
+              [[ "$(printf '%s\n' "$KSU_VERSION_TAG" "3.1.7" | sort -V | head -n1)" != "3.1.7" ]]; then
               KSU_VERSION_TAG="3.1.7"
             fi
 
-            echo "KSU_VERSION_TAG=$KSU_VERSION_TAG" >> "$GITHUB_ENV"
-            echo "KSU_API_VERSION=$KSU_VERSION_TAG" >> "$GITHUB_ENV"
-            echo "🔖 KSU API Version: $KSU_VERSION_TAG"
+            VERSION_FULL="v${KSU_VERSION_TAG}-${GITHASH}@${BRANCHPATH}"
 
-            # Build Version String
-            # SukiSU is Kept in the Version Information for Clarity
-            VERSION_FULL="v${KSU_VERSION_TAG}-${GIT_HASH}@${BRANCHPATH}"
+            {
+              echo "KSU_VERSION_TAG=$KSU_VERSION_TAG"
+              echo "KSU_API_VERSION=$KSU_VERSION_TAG"
+            } >> "$GITHUB_ENV"
 
-            echo "🏷️ Full Version: $VERSION_FULL"
+            echo "🏷️ Release Version : $KSU_VERSION_TAG"
+            echo "🔖 Commit Hash     : $GITHASH"
+            echo "📦 Full Version    : $VERSION_FULL"
 
-            # Escape Values Before Using them with Sed
-            ESC_VERSION_FULL=$(
-              printf '%s' "$VERSION_FULL" | sed 's/[&|\\/]/\\&/g'
-            )
-
-            ESC_KSU_VERSION_TAG=$(
-              printf '%s' "$KSU_VERSION_TAG" | sed 's/[&|\\/]/\\&/g'
-            )
-
-            # Remove Old Custom Version Definitions First
+            # Remove Old Custom Version Function
             sed -i \
               '/^define get_ksu_version_full$/,/^endef$/d' \
               kernel/Makefile
 
-            # Update or Insert Full KSU Version
+            # Set Full Version
             if grep -q '^KSU_VERSION_FULL := ' kernel/Makefile; then
               sed -i \
-                "s|^KSU_VERSION_FULL := .*|KSU_VERSION_FULL := $ESC_VERSION_FULL|" \
+                "s|^KSU_VERSION_FULL := .*|KSU_VERSION_FULL := $VERSION_FULL|" \
                 kernel/Makefile
             else
               awk -v full="$VERSION_FULL" '
@@ -2000,19 +1947,18 @@ jobs:
                 }
                 { print }
                 END {
-                  if (!done) {
-                    print ""
+                  if (!done)
                     print "KSU_VERSION_FULL := " full
-                  }
                 }
               ' kernel/Makefile > kernel/Makefile.tmp
+
               mv kernel/Makefile.tmp kernel/Makefile
             fi
 
-            # Update or Insert KSU API Version
+            # Set API Version
             if grep -q '^KSU_VERSION_API := ' kernel/Makefile; then
               sed -i \
-                "s|^KSU_VERSION_API := .*|KSU_VERSION_API := $ESC_KSU_VERSION_TAG|" \
+                "s|^KSU_VERSION_API := .*|KSU_VERSION_API := $KSU_VERSION_TAG|" \
                 kernel/Makefile
             else
               awk -v api="$KSU_VERSION_TAG" '
@@ -2024,153 +1970,180 @@ jobs:
                 }
                 { print }
                 END {
-                  if (!done) {
+                  if (!done)
                     print "KSU_VERSION_API := " api
-                  }
                 }
               ' kernel/Makefile > kernel/Makefile.tmp
-
               mv kernel/Makefile.tmp kernel/Makefile
             fi
 
-            # Generate KSU Version Number from the Checked-out Source
-            # Use the Actual Head History Instead of Main Branch Because
-            # Setup Script may Check out Builtin Branch or Another Commit
-            COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || true)
-
-            if [[ "$COMMIT_COUNT" =~ ^[0-9]+$ ]]; then
-              KSUVERSION=$((COMMIT_COUNT + 37185))
+            # Preserve existing version scheme
+            if [[ "$COMMITCOUNT" =~ ^[0-9]+$ ]]; then
+              KSUVERSION=$((COMMITCOUNT + 37185))
             else
-              echo "⚠️ Failed to Determine Commit Count, Using Fallback"
-              KSUVERSION=$((13000 + 37185))
+              KSUVERSION=50185
+            fi
+
+            {
+              echo "KSUVERSION=$KSUVERSION"
+              echo "KSUVER=$KSUVERSION"
+            } >> "$GITHUB_ENV"
+          
+            echo "🔢 KSU Version      : $KSUVERSION"
+            echo "🎉 SukiSU-Ultra Ready"
+
+          # ReSukiSU
+          elif [[ "$ROOTENGINE" == "ReSukiSU" ]]; then
+            echo "🚀 Setting Up ReSukiSU..."
+            setupengine \
+              "$BRANCHPATH" \
+              "$MANAGERBRANCH" \
+              "$MANAGERBRANCH"
+            cd KernelSU || {
+              echo "⚠️ ReSukiSU Directory was Not Created"
+              exit 1
+            }
+
+            CURRENTBRANCH="$(git branch --show-current || true)"
+            CURRENTBRANCH="${CURRENTBRANCH:-HEAD}"
+            COMMITCOUNT="$(getcommitcount)"
+            if [[ "$COMMITCOUNT" =~ ^[0-9]+$ ]]; then
+              KSUVERSION=$((COMMITCOUNT + 30700))
+            else
+              KSUVERSION=30700
             fi
 
             echo "KSUVERSION=$KSUVERSION" >> "$GITHUB_ENV"
-            echo "KSUVER=$KSUVERSION" >> "$GITHUB_ENV"
 
-            # Final Verification
-            echo "SukiSU-Ultra Final Version Information"
-            echo "Repository       : $KSUREPO"
-            echo "Manager Branch   : $MANAGERBRANCH"
-            echo "Builtin Branch   : $BRANCHPATH"
-            echo "Root Source      : $ROOTBRANCH"
-            echo "Git Hash         : $GIT_HASH"
-            echo "API Version      : $KSU_VERSION_TAG"
-            echo "Full Version     : $VERSION_FULL"
-            echo "KSU Version      : $KSUVERSION"
-
-            echo ""
-            echo "Makefile Entries:"
-            grep -nE \
-              '^(REPO_OWNER|REPO_NAME|REPO_BRANCH|KSU_VERSION_API|KSU_VERSION_FULL|VERSION_TAG|GIT_BIN|CURL_BIN)' \
-              kernel/Makefile \
-              || true
-            echo "🎉 SukiSU-Ultra Ready"
-      
-          # ReSukiSU Setup
-          elif [[ "$ROOTENGINE" == "ReSukiSU" ]]; then
-            echo "🚀 Setting Up ReSukiSU..."    
-            # Download and Run Setup Script (Official Source)
-            echo "🌐 Using Official Source"
-            echo "🌐 URL: https://raw.githubusercontent.com/${KSUREPO}/${MANAGERBRANCH}/kernel/setup.sh"
-            downloadsetup \
-              "https://raw.githubusercontent.com/${KSUREPO}/${MANAGERBRANCH}/kernel/setup.sh"
-      
-            cd KernelSU || exit 1
-      
-            # Generate Version
-            CURRENTBRANCH=$(git branch --show-current)
-            KSUVERSION=$(( $(git rev-list --count "$CURRENTBRANCH") + 30700 ))
-            echo "KSUVERSION=$KSUVERSION" >> "$GITHUB_ENV"
-      
-            # Clean Old Entry and Add New Format
-            sed -i '/CONFIG_KSU_FULL_NAME_FORMAT/d' "$DEFCONFIG"
-            printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%%"\n' >> "$DEFCONFIG"     
+            # Force Simple Tag-Based Full-Name Format
+            if [[ -f "$DEFCONFIG" ]]; then
+              sed -i '/^CONFIG_KSU_FULL_NAME_FORMAT=/d' "$DEFCONFIG"
+              printf 'CONFIG_KSU_FULL_NAME_FORMAT="%%TAG_NAME%%"\n' >> "$DEFCONFIG"
+            fi
+           
+            echo "🌿 Branch           : $CURRENTBRANCH"
+            echo "🔢 KSU Version      : $KSUVERSION"
             echo "🎉 ReSukiSU Setup Complete"
-      
-          # KernelSU-Next Setup
+
+          # KernelSU-Next
           elif [[ "$ROOTENGINE" == "KernelSU-Next" ]]; then
             echo "🚀 Setting Up KernelSU-Next..."
-            # Download and Run Setup Script
-            echo "🌐 Using Fork Source Only for KernelSU-Next"
-            echo "🌐 URL: https://raw.githubusercontent.com/${BRANCHPATH}/${MANAGERBRANCH}/kernel/setup.sh"            
-            downloadsetup \
-              "https://raw.githubusercontent.com/${BRANCHPATH}/${MANAGERBRANCH}/kernel/setup.sh"
-      
-            cd KernelSU-Next || exit 1
-      
-            KSUVERSION=$(gitcommitcountversion "$KSUREPO" "$MANAGERBRANCH" 30000)
-            echo "KSUVERSION=$KSUVERSION" >> "$GITHUB_ENV"      
-            sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSUVERSION/" kernel/Kbuild      
-            KSU_GIT_TAG=$(gitlatesttag "$KSUREPO")
-            sed -i "s/KSU_VERSION_TAG_FALLBACK := v0.0.1/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" kernel/Kbuild
-
-            # Static SELinux Patch
-            STATICSELINUX="kernel/feature/selinux_hide.c"            
-            # Ensure Target Source File Exists Before Modifying
-            if [[ -f "$STATICSELINUX" ]]; then
-              echo "🔧 Checking KernelSU-Next SELinux Fix..."            
-              # Apply Fix Only If Any Static Declaration Exists
-              if grep -qE '^static (int|void) security_(context_to_sid|sid_to_context|compute_av_user)_with_policy\(' "$STATICSELINUX"; then
-                perl -0777 -i -pe '
-                  s/^static int security_context_to_sid_with_policy\(/int security_context_to_sid_with_policy(/mg;
-                  s/^static int security_sid_to_context_with_policy\(/int security_sid_to_context_with_policy(/mg;
-                  s/^static void security_compute_av_user_with_policy\(/void security_compute_av_user_with_policy(/mg;
-                ' "$STATICSELINUX"            
-                echo "✔️ KernelSU-Next SELinux Fix Applied"
-              else
-                echo "ℹ️ KernelSU-Next SELinux Fix Already Applied"
-              fi
+            setupengine \
+              "$BRANCHPATH" \
+              "$MANAGERBRANCH" \
+              "$MANAGERBRANCH"
+            cd KernelSU-Next || {
+              echo "⚠️ KernelSU-Next Directory was Not Created"
+              exit 1
+            }
+            
+            COMMITCOUNT="$(getcommitcount)"
+            if [[ "$COMMITCOUNT" =~ ^[0-9]+$ ]]; then
+              KSUVERSION=$((COMMITCOUNT + 30000))
             else
-              echo "⚠️ ${STATICSELINUX} Not Found, Skipping KernelSU-Next SELinux Fix..."
+              KSUVERSION=30000
             fi
 
-            # Report SUSFS Inline Hook Mode
-            if [[ "$SUSFS" != "-1" && -f kernel/supercall/dispatch.c ]]; then
-              echo "🔧 Setting Hook Mode to Inline..."
+            echo "KSUVERSION=$KSUVERSION" >> "$GITHUB_ENV"
+            # Version Fallback
+            if grep -q '^KSU_VERSION_FALLBACK := ' kernel/Kbuild; then
+              sed -i \
+                "s/^KSU_VERSION_FALLBACK := .*/KSU_VERSION_FALLBACK := $KSUVERSION/" \
+                kernel/Kbuild
+            fi
+
+            # Tag fallback
+            KSU_GIT_TAG="$(gitlatesttag "$KSUREPO")"
+            if grep -q '^KSU_VERSION_TAG_FALLBACK := ' kernel/Kbuild; then
+              sed -i \
+                "s/^KSU_VERSION_TAG_FALLBACK := .*/KSU_VERSION_TAG_FALLBACK := $KSU_GIT_TAG/" \
+                kernel/Kbuild
+            fi
+
+            # KernelSU-Next SELinux Fix
+            STATICSELINUX="kernel/feature/selinux_hide.c"
+            if [[ -f "$STATICSELINUX" ]] && \
+              grep -qE \
+                '^static (int|void) security_(context_to_sid|sid_to_context|compute_av_user)_with_policy\(' \
+                "$STATICSELINUX"; then
+              perl -0777 -i -pe '
+                s/^static int security_context_to_sid_with_policy\(/int security_context_to_sid_with_policy(/mg;
+                s/^static int security_sid_to_context_with_policy\(/int security_sid_to_context_with_policy(/mg;
+                s/^static void security_compute_av_user_with_policy\(/void security_compute_av_user_with_policy(/mg;
+              ' "$STATICSELINUX"
+              echo "✔️ KernelSU-Next SELinux Fix Applied"
+            fi
+
+            # SUSFS Inline Hook Mode
+            if [[ "$SUSFS" != "-1" ]] && \
+              [[ -f kernel/supercall/dispatch.c ]]; then
               perl -0777 -i -pe '
                 s/#ifdef CONFIG_HAVE_SYSCALL_TRACEPOINTS.*?#endif/
                 strscpy(cmd.mode, "Inline", sizeof(cmd.mode));
                 /s
               ' kernel/supercall/dispatch.c
-              echo "✔️ Hook Mode Updated..."
+              echo "✔️ SUSFS Hook Mode Set to Inline"
             fi
-           
+            
+            echo "🌿 Branch           : $MANAGERBRANCH"
+            echo "🏷️ Latest Tag       : $KSU_GIT_TAG"
+            echo "🔢 KSU Version      : $KSUVERSION"
             echo "🎉 KernelSU-Next Setup Complete"
-      
-          # Official KernelSU Setup
+
+          # KernelSU
           elif [[ "$ROOTENGINE" == "KernelSU" ]]; then
-            echo "🚀 Setting Up KernelSU..."      
-            # Download and Run Setup Script (Official Source)
-            echo "🌐 Using Official Source"
-            echo "🌐 URL: https://raw.githubusercontent.com/${KSUREPO}/${MANAGERBRANCH}/kernel/setup.sh"
-            downloadsetup \
-              "https://raw.githubusercontent.com/${KSUREPO}/${MANAGERBRANCH}/kernel/setup.sh"
-      
-            cd KernelSU || exit 1
-      
-            KSUVERSION=$(gitcommitcountversion "$KSUREPO" "$MANAGERBRANCH" 30000)
-            echo "KSUVERSION=$KSUVERSION" >> "$GITHUB_ENV"      
-            sed -i "s/KSU_VERSION_FALLBACK := 1/KSU_VERSION_FALLBACK := $KSUVERSION/" kernel/Kbuild
-            sed -i \
-              -E "s/^DKSU_VERSION *= *[0-9]+$/DKSU_VERSION=${KSUVERSION}/" \
-              kernel/Kbuild
+            echo "🚀 Setting Up KernelSU..."
+            setupengine \
+              "$BRANCHPATH" \
+              "$MANAGERBRANCH" \
+              "$MANAGERBRANCH"
+            cd KernelSU || {
+              echo "⚠️ KernelSU Directory was Not Created"
+              exit 1
+            }
+
+            COMMITCOUNT="$(getcommitcount)"
+            if [[ "$COMMITCOUNT" =~ ^[0-9]+$ ]]; then
+              KSUVERSION=$((COMMITCOUNT + 30000))
+            else
+              KSUVERSION=30000
+            fi
+
+            echo "KSUVERSION=$KSUVERSION" >> "$GITHUB_ENV"
+            # KernelSU version fallback
+            if grep -q '^KSU_VERSION_FALLBACK := ' kernel/Kbuild; then
+              sed -i \
+                "s/^KSU_VERSION_FALLBACK := .*/KSU_VERSION_FALLBACK := $KSUVERSION/" \
+                kernel/Kbuild
+            fi
+
+            # DKSU Version
+            if grep -qE '^DKSU_VERSION[[:space:]]*=' kernel/Kbuild; then
+              sed -i \
+                -E \
+                "s/^DKSU_VERSION[[:space:]]*=.*$/DKSU_VERSION=${KSUVERSION}/" \
+                kernel/Kbuild
+            fi
+            
+            echo "🌿 Branch           : $MANAGERBRANCH"
+            echo "🔢 KSU Version      : $KSUVERSION"
             echo "🎉 KernelSU Setup Complete"
-      
-          # No Selection
           else
-            echo "⚠️ No KSU Root Engine Selected, Skipping..."
+            echo "⚠️ No Supported KSU Root Engine Selected"
+            exit 1
           fi
-          
+
+          echo ""
           echo "------------------------------"
           echo "🎉 Root Engine Configuration Complete"
           echo "------------------------------"
           echo "📦 Engine     : $ROOTENGINE"
-          echo "📦 Branch     : $MANAGERBRANCH"
+          echo "📂 Repository : $KSUREPO"
+          echo "🌿 Branch     : $MANAGERBRANCH"
+          echo "📁 Setup Repo : $BRANCHPATH"
           echo "📦 Version    : ${KSUVERSION:-Unknown}"
           echo "------------------------------"
-          echo ""
-
+      
       - name: 🔧 Apply Fake Patches
         if: ${{ github.event.inputs.SUSFSREPOSITORY != '-1' }}
         shell: bash
@@ -2181,9 +2154,14 @@ jobs:
           PDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/scripts"
           WORKDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           SCRIPT="${PDIR}/FakePatches.kts"
+          
+          # Kotlin Environment
+          KOTLINHOME="${KOTLINHOME:-$HOME/kotlinc}"
+          KOTLINC="${KOTLINHOME}/bin/kotlinc"
 
           echo "📌 Script   : $SCRIPT"
           echo "📌 Work Dir : $WORKDIR"
+          echo "📌 Compiler : $KOTLINC"
 
           [[ -f "$SCRIPT" ]] || {
             echo "⚠️ FakePatches Kotlin Script Not Found"
@@ -2195,9 +2173,18 @@ jobs:
             exit 1
           }
 
-          echo "🔧 Applying Fake Patches..."
-          kotlinc -script "$SCRIPT" apply "$WORKDIR"
+          [[ -x "$KOTLINC" ]] || {
+            echo "⚠️ Kotlin Compiler Not Found or Not Executable: $KOTLINC"
+            exit 1
+          }
 
+          # Verify Kotlin
+          echo "☕ Kotlin Compiler:"
+          "$KOTLINC" -version
+
+          echo "🔧 Applying Fake Patches..."
+          "$KOTLINC" -script "$SCRIPT" apply "$WORKDIR"
+         
           echo ""
           echo "🎉 Fake Patches Applied Successfully"
      
@@ -2564,8 +2551,13 @@ jobs:
           WORKDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           SCRIPT="${PDIR}/FakePatches.kts"
 
+          # Kotlin Environment
+          KOTLINHOME="${KOTLINHOME:-$HOME/kotlinc}"
+          KOTLINC="${KOTLINHOME}/bin/kotlinc"
+
           echo "📌 Script   : $SCRIPT"
           echo "📌 Work Dir : $WORKDIR"
+          echo "📌 Compiler : $KOTLINC"
 
           [[ -f "$SCRIPT" ]] || {
             echo "⚠️ FakePatches Kotlin Script Not Found"
@@ -2577,10 +2569,19 @@ jobs:
             exit 1
           }
 
-          echo "🔧 Reversing Fake Patches..."
-          kotlinc -script "$SCRIPT" postfix "$WORKDIR"
-          kotlinc -script "$SCRIPT" revert "$WORKDIR"
-     
+          [[ -x "$KOTLINC" ]] || {
+            echo "⚠️ Kotlin Compiler Not Found or Not Executable: $KOTLINC"
+            exit 1
+          }
+
+          # Verify Kotlin
+          echo "☕ Kotlin Compiler:"
+          "$KOTLINC" -version
+
+          echo "🔧 Reverting Fake Patches..."
+          "$KOTLINC" -script "$SCRIPT" postfix "$WORKDIR"
+          "$KOTLINC" -script "$SCRIPT" revert "$WORKDIR"
+
           echo ""
           echo "🎉 Fake Patches Reverted"          
 
@@ -3116,7 +3117,7 @@ jobs:
           echo "🚀 Fengchi Patch Applied Successfully"
 
       - name: 🔧 RTMutex CVE (Kernel 6.1 - 6.6 - 6.12)
-        if: ${{ env.KERNELVERSION == '6.1' || env.KERNELVERSION == '6.6' || env.KERNELVERSION == '6.12' }}
+        if: ${{ env.KERNELVERSION == '6.1' || env.KERNELVERSION == '6.6' || env.KERNELVERSION != '6.12' }}
         run: |
           set -euo pipefail
 
@@ -3403,20 +3404,6 @@ jobs:
             echo "⚠️ Missing Scheduler Header File: $SCHEDFILE"
             exit 1
           fi
-
-          # Backup and Rollback Protection
-          BACKUPDIR="$(mktemp -d)"
-          cp -af "$SCHEDFILE" "$BACKUPDIR/"
-          cp -af "$USERFILE" "$BACKUPDIR/"
-          RESTORE=1
-          cleanup() {
-            if [[ "$RESTORE" == "1" ]]; then
-              echo "⚠️ Failure Detected — ♻️ Restoring Original Files..."
-              cp -af "$BACKUPDIR/"* "$(dirname "$SCHEDFILE")/"
-            fi
-          }
-
-          trap cleanup EXIT
        
           echo "⚙️ Disabling Original System V IPC Struct Fields..."
           sed -i 's/^\(\t\)struct sysv_sem\b.*sysvsem;/\1\/\/ struct sysv_sem\t\t\tsysvsem;/' "$SCHEDFILE"
@@ -3432,7 +3419,7 @@ jobs:
           # ABI Layout Detection (Shared Logic)
           elif grep -q "sched_dl_entity.*\*dl_server" "$SCHEDFILE"; then
             echo "♻️ Detected DL Server Pointer — ☘️ Using Packed Union Strategy"
-            sed -i 's|\tstruct sched_entity\t\tse;|#ifdef CONFIG_SYSVIPC\n\tunion {\n\t\tchar __kabi_ignored_0;\n\t\tstruct sysv_sem\t\t\tsysvsem;\n\t} __attribute__((packed));\n\tunion {\n\t\tchar __kabi_ignored_1;\n\t\tstruct sysv_shm\t\t\tsysvshm;\n\t} __attribute__((packed));\n#endif\n\n\tstruct sched_entity\t\tse;|' "$SCHEDFILE"
+            sed -i 's|\tstruct sched_entity\t\tse;|#ifdef CONFIG_SYSVIPC\n\tunion {\n\t\tchar __kabi_ignored_0;\n\t\tstruct sysv_sem\t\t\tsysvsem;\n\t}__attribute__((packed));\n\tunion {\n\t\tchar __kabi_ignored_1;\n\t\tstruct sysv_shm\t\t\tsysvshm;\n\t}__attribute__((packed));\n#endif\n\n\tstruct sched_entity\t\tse;|' "$SCHEDFILE"
           elif grep -q "ANDROID_KABI_USE(1," "$SCHEDFILE"; then
             echo "♻️ Detected Kernel ABI USE(1) — ☘️ Using Slots 6, 7 and 8"
             sed -i -e '/ANDROID_KABI_RESERVE(6);/{N;N;s|\tANDROID_KABI_RESERVE(6);\n\tANDROID_KABI_RESERVE(7);\n\tANDROID_KABI_RESERVE(8);|#ifdef CONFIG_SYSVIPC\n\tANDROID_KABI_USE(6, struct sysv_sem sysvsem);\n\t_ANDROID_KABI_REPLACE(ANDROID_KABI_RESERVE(7); ANDROID_KABI_RESERVE(8), struct sysv_shm sysvshm);\n#else\n\tANDROID_KABI_RESERVE(6);\n\tANDROID_KABI_RESERVE(7);\n\tANDROID_KABI_RESERVE(8);\n#endif|;}' "$SCHEDFILE"
@@ -3444,7 +3431,7 @@ jobs:
             sed -i -e '/ANDROID_KABI_RESERVE(3);/{N;N;N;s|\tANDROID_KABI_RESERVE(3);\n\tANDROID_KABI_RESERVE(4);\n\tANDROID_KABI_RESERVE(5);\n\tANDROID_KABI_RESERVE(6);|#ifdef CONFIG_SYSVIPC\n\tANDROID_KABI_USE(3, struct sysv_sem sysvsem);\n\t_ANDROID_KABI_REPLACE(ANDROID_KABI_RESERVE(4); ANDROID_KABI_RESERVE(5), struct sysv_shm sysvshm);\n#else\n\tANDROID_KABI_RESERVE(3);\n\tANDROID_KABI_RESERVE(4);\n\tANDROID_KABI_RESERVE(5);\n#endif\n\tANDROID_KABI_RESERVE(6);|;}' "$SCHEDFILE"
           else
             echo "⚠️ Unable to Determine Compatible Kernel ABI Layout — Aborting..."
-            exit 1
+            exit 9
           fi
 
           # Verification
@@ -3552,165 +3539,47 @@ jobs:
 
           echo ""
           echo "🎉 NT Synchronization (Primitives) Done!"
-   
-      - name: 🔧 DroidSpacesLXC WildKernels Patch
-        if: ${{ github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-WildPatch' }}
-        shell: bash
+          
+      - name: 🔧 Re-Kernel
+        if: ${{ github.event.inputs.REKERNEL == 'true' }}
         run: |
           set -Eeuo pipefail
 
-          # Inputs and Variables
-          CPU="${CPU:-Unknown}"  
-          KERNELVERSION="${{ env.KERNELVERSION }}"
-          FULLVER="${FULLVER:-${{ env.FULLVERSION }}}"
-      
-          # Detect Kernel Root Directory
-          echo "🔍 Detecting Kernel Root..."
-      
-          possiblekerneldirectories=(
-            "${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
-            "${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform"
-            "${GITHUB_WORKSPACE}/kernel_workspace"
-          )
-      
-          KCDIR=""
-      
-          for directory in "${possiblekerneldirectories[@]}"; do
-            echo "🔎 Checking: $directory"
-      
-            if [[ -d "$directory" ]] && [[ -f "$directory/Makefile" ]]; then
-              KCDIR="$directory"
-              echo "📌 Kernel Root Detected: $KCDIR"
-              break
-            fi
-          done
-      
-          # Fail if Kernel Root is Not Found
-          if [[ -z "${KCDIR}" ]]; then
-            echo "⚠️ No Valid Kernel Root Found"
-            exit 1
-          fi
-      
-          # Move into Kernel Source Directory
-          cd "$KCDIR"
-      
-          # Patch Base Directory
-          DSPATCHDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
-      
-          # CPU-Based Patch Selection
-          echo "🔧 Applying SYS V IPC Kernel ABI Fixes..."
-          echo "------------------------------"
-          echo "📌 CPU Target   : ${CPU}"
-          echo "📌 Kernel Build : ${FULLVER}"
-          echo "------------------------------"
-          echo ""
-      
-          # Patch Helper Function
-          apply() {
-            local patchfile="$1"
-            local patchname      
-            patchname="$(basename "$patchfile")"      
-            echo "📦 Processing Patch:"
-            echo "   ${patchname}"
-      
-            # Validate Patch File
-            if [[ ! -f "$patchfile" ]]; then
-              echo "⚠️ Patch File Missing:"
-              echo "   ${patchfile}"
-              exit 1
-            fi
-      
-            # Apply Patch
-            if patch -p1 --dry-run --forward < "$patchfile" >/dev/null 2>&1; then
-              patch -p1 --forward < "$patchfile"      
-              echo "📌 Patch Applied Successfully"
-              echo ""
-      
-            # Already Applied
-            elif patch -p1 -R --dry-run < "$patchfile" >/dev/null 2>&1; then
-              echo "⚠️ Patch Already Applied"
-              echo ""
-      
-            # Failed
-            else
-              echo "⚠️ Patch Failed:"
-              echo "   ${patchname}"
-              exit 1
-            fi
-          }
-      
-          # CPU-Specific Patch Logic
-          case "${CPU}" in      
-            # Snapdragon SM-88xx Series
-            sm8850|sm8845)
-              echo "📌 High-End Snapdragon Branch Detected"
-              apply \
-                "$DSPATCHDIR/SYSVIPC-KABI-Android16-6.12.patch"
-              ;;      
-            # Snapdragon SM-85xx / SM-75xx Series
-            sm8550|sm7550)
-              echo "📌 Mid-Range Snapdragon Branch Detected"
-              apply \
-                "$DSPATCHDIR/SYSVIPC-KABI-1-2-3.patch"
-              ;;      
-            # Mixed SoC Group
-            sm8450|sm8475|mt6895|mt6983|mt6789)
-              echo "📌 Mixed SoC Branch Detected"
-              # Android 12 + Kernel 5.10 Legacy Handling
-              if [[ "${KERNELVERSION}" == "5.10" ]]; then
-                echo "📌 Legacy Android 12 / Kernel 5.10 Mode"
-                apply \
-                  "$DSPATCHDIR/SYSVIPC-Bypass-Android16-6.12-Below.patch"      
-                apply \
-                  "$DSPATCHDIR/KABI-Padding-Posix-Mqueue.patch"      
-              else
-                echo "📌 Standard Kernel ABI Layout Mode"
-                apply \
-                  "$DSPATCHDIR/SYSVIPC-KABI-6-7-8.patch"
-              fi
-              ;;      
-            # Default Fallback
-            *)
-              echo "📌 Unknown CPU Detected"
-              echo "📌 Falling Back to Default ABI Layout Patch"
-              apply \
-                "$DSPATCHDIR/SYSVIPC-KABI-6-7-8.patch"
-              ;;
-          esac
-      
-          # Midas Ghost Task Fix
-          echo "🧠 Applying Midas Ghost Task Fix"      
-          apply \
-            "$DSPATCHDIR/001-Ghost-Task-Midas.patch"
-      
-          echo ""
-          echo "🎉 DroidSpacesLXC Patch Complete!"
-          
-      - name: 🔧 Re-Kernel Setup
-        if: ${{ github.event.inputs.REKERNEL == 'true' }}
-        run: |
-          set -euo pipefail
-          
           # Paths
           WS="${GITHUB_WORKSPACE}/kernel_workspace"
           RKREPODIR="${WS}/Re-Kernel"
-          KCDDIR="${WS}/kernel_platform/common/drivers"
+          KDIR="${WS}/kernel_platform/common"
+          KCDDIR="${KDIR}/drivers"
           RKTARGETDIR="${KCDDIR}/rekernel"
           KCONFIGFILE="${KCDDIR}/Kconfig"
           MAKEFILE="${KCDDIR}/Makefile"
+          BUILDBAZEL="${KDIR}/BUILD.bazel"
 
-          # Basic Sanity Checks
-          [[ -d "$KCDDIR" ]] || { echo "⚠️ Missing Drivers Directory"; exit 1; }
-          [[ -f "$KCONFIGFILE" ]] || { echo "⚠️ Missing Kernel Configuration"; exit 1; }
-          [[ -f "$MAKEFILE" ]] || { echo "⚠️ Missing Makefile"; exit 1; }
+          # Validate Kernel Directories / Files
+          [[ -d "$KDIR" ]] || {
+            echo "⚠️ Kernel Common Directory Not Found: $KDIR"
+            exit 1
+          }
 
-          # Clone Repository
+          [[ -f "$KCONFIGFILE" ]] || {
+            echo "⚠️ Kernel Configuration Not Found: $KCONFIGFILE"
+            exit 1
+          }
+
+          [[ -f "$MAKEFILE" ]] || {
+            echo "⚠️ Makefile Not Found: $MAKEFILE"
+            exit 1
+          }
+
+          # Clone Re-Kernel if Needed
           if [[ ! -d "$RKREPODIR/.git" ]]; then
-            echo "📩 Cloning ReKernel Repository..."
-            git clone --depth=1 https://github.com/Sakion-Team/Re-Kernel.git "$RKREPODIR"
-            echo "✔️ Repository Cloned"
+            echo "📩 Cloning Re-Kernel..."
+            git clone --depth=1 \
+              https://github.com/Sakion-Team/Re-Kernel.git \
+              "$RKREPODIR"
+            echo "✔️ Re-Kernel Cloned"
           else
-            echo "⚠️ Repository Already Exists"
+            echo "⚠️ Re-Kernel Repository Already Exists"
           fi
 
           # Resolve Source Directory
@@ -3719,62 +3588,47 @@ jobs:
           else
             RKSRCDIR="$RKREPODIR"
           fi
-          
-          echo "📂 Source: $RKSRCDIR"
 
-          # Skip if Already Applied (Stronger Check)
-          if grep -q 'drivers/rekernel/Kconfig' "$KCONFIGFILE" && \
-             grep -q 'CONFIG_REKERNEL' "$MAKEFILE" && \
-             [[ -d "$RKTARGETDIR" ]] && \
-             [[ -n "$(ls -A "$RKTARGETDIR" 2>/dev/null)" ]]; then
-            echo "⚠️ Re-Kernel Already Applied"
-            exit 0
-          fi
+          echo "📂 Re-Kernel Source: $RKSRCDIR"
 
-          echo "⚙️ Applying Re-Kernel..."
+          [[ -d "$RKSRCDIR" ]] || {
+            echo "⚠️ Re-Kernel Source Directory Not Found"
+            exit 1
+          }
 
-          # Prepare Target Directory
-          mkdir -p "$RKTARGETDIR"
-
-          # Inject Kernel Configuration Entry (Idempotent)
-          if ! grep -q 'drivers/rekernel/Kconfig' "$KCONFIGFILE"; then
+          # Add Kernel Configuration Entry Only if Missing
+          if grep -qF 'source "drivers/rekernel/Kconfig"' "$KCONFIGFILE"; then
+            echo "⚠️ Re-Kernel Kernel Configuration Entry Already Exists"
+          else
             sed -i '/endmenu/i source "drivers/rekernel/Kconfig"' "$KCONFIGFILE"
-            echo "➕ Kernel Configuration Entry Added"
-          else
-            echo "⚠️ Kernel Configuration Already Present"
+            echo "⚙️ Re-Kernel Kconfig Entry Added"
           fi
 
-          # Inject Makefile Entry (Idempotent)
-          if ! grep -q "CONFIG_REKERNEL" "$MAKEFILE"; then
-            printf "\n# ReKernel Support\nobj-\$(CONFIG_REKERNEL) += rekernel/\n" >> "$MAKEFILE"
-            echo "➕ Makefile Entry Added"
+          # Add Makefile Entry Only if Missing
+          if grep -qF 'obj-$(CONFIG_REKERNEL) += rekernel/' "$MAKEFILE"; then
+            echo "⚠️ Re-Kernel Makefile Entry Already Exists"
           else
-            echo "⚠️ Makefile Already Present"
+            printf '\n# Re-Kernel Support\nobj-$(CONFIG_REKERNEL) += rekernel/\n' >> "$MAKEFILE"
+            echo "⚙️ Re-Kernel Makefile Entry Added"
           fi
 
-          # Sync All Re-Kernel Files and Directories
+          # Replace Existing Re-Kernel Source
+          echo "♻️ Syncing Re-Kernel Source..."
+          rm -rf "$RKTARGETDIR"
+          mkdir -p "$RKTARGETDIR"
           cp -af "$RKSRCDIR"/. "$RKTARGETDIR"/
-          echo "♻️ All Re-Kernel Files and Directories Synced!"
 
-          # Update Build Bazel (GKI)
-          BUILDBAZEL="${WS}/kernel_platform/common/BUILD.bazel"          
+          echo "✔️ Re-Kernel Source Synced"
+
+          # Patch BUILD Bazel if Present
           if [[ -f "$BUILDBAZEL" ]]; then
-            if grep -q 'drivers/rekernel/rekernel\.ko' "$BUILDBAZEL"; then
-              echo "⚠️ Build Bazel Already Patched"
-            else
-              echo "⚙️ Patching Build Bazel..."          
-              sed -i \
-                '0,/name = "kernel_aarch64",/{/module_implicit_outs/s|,$| + ["drivers/rekernel/rekernel.ko"],|}' \
-                "$BUILDBAZEL"          
-              if grep -q 'drivers/rekernel/rekernel\.ko' "$BUILDBAZEL"; then
-                echo "🚀 Build Bazel Patched"
-              else
-                echo "⚠️ Failed to Patch Build Bazel"
-                exit 1
-              fi
-            fi
+            echo "⚙️ Patching BUILD Bazel..."
+            sed -i \
+              '0,/name = "kernel_aarch64",/{/module_implicit_outs/s|,$| + ["drivers/rekernel/rekernel.ko"],|}' \
+              "$BUILDBAZEL"
+            echo "🚀 BUILD Bazel Patch Applied"
           else
-            echo "ℹ️ Build Bazel Not Found, Skipping..."
+            echo "ℹ️ BUILD Bazel Not Found, Skipping"
           fi
 
           echo ""
@@ -3805,7 +3659,7 @@ jobs:
           # Apply Required Compatibility Patches Only if Function Not Already Present in Source
           if [[ "${GKIVERSION}" == "android12-5.10" ]]; then
             if ! grep -qF 'int proc_dou8vec_minmax(' include/linux/sysctl.h; then
-              echo "Applying PROC-DOU8VEC-MINMAX Compatibility Patches..."
+              echo "⚙️ Applying PROC-DOU8VEC-MINMAX Compatibility Patches..."
               patch -p1 < "${PDIR}/sysctl_add_proc_dou8vec_minmax.patch"
               patch -p1 < "${PDIR}/sysctl_fix_data-races_in_proc_dou8vec_minmax.patch"
             else
@@ -3965,8 +3819,10 @@ jobs:
             echo "🎉 SukiSU-Ultra KernelPatch-Module Enabled (Supported KSU Root Engine: ReSukiSU and SukiSU-Ultra)"
           fi
 
-          # Check if SukiSU-Ultra KernelPatch Input is KernelPatch-Next (KPN) or None, Disable KernelPatch-Module
-          if [[ "$KERNELPATCH" == "KPN" || "$KERNELPATCH" == "None" ]]; then
+          # Check if SukiSU-Ultra KernelPatch Input is KernelPatch-Next (KPN) or None,
+          # Disable KernelPatch-Module
+          if [[ ( "$ROOT" == "SukiSU-Ultra" || "$ROOT" == "ReSukiSU" ) && \
+                ( "$KERNELPATCH" == "KPN" || "$KERNELPATCH" == "None" ) ]]; then
             SETCONFIG "CONFIG_KPM=n"
             echo "☘️ SukiSU-Ultra KernelPatch-Module Disabled (KernelPatch-Next or None Selected)"
           fi
@@ -4008,7 +3864,7 @@ jobs:
           echo "🎉 TMPFS Configuration Applied"
 
           # DroidspacesLXC Support Kernel Configuration
-          if [[ "$LXC" == "DroidSpacesLXC-WildPatch" || "$LXC" == "DroidSpacesLXC-Inject" ]]; then
+          if [[ "$LXC" == "DroidSpacesLXC-Inject" ]]; then
             echo "🚀 Applying DroidspacesLXC Support Kernel Configurations..."
             SETCONFIG "CONFIG_NTSYNC=y"
             SETCONFIG "CONFIG_SYSVIPC=y"
@@ -4196,55 +4052,89 @@ jobs:
           echo ""
           echo "🎉 IPv6 NAT Fix Stage Completed"
 
-      - name: 🔧 Setup Custom Build Time
+      - name: 🛠️ Setup Custom Build Time
         shell: bash
         run: |
-          set -euo pipefail
-      
-          # Determine Build Timestamp
-          TIMEINPUT="${{ github.event.inputs.BUILDTIME }}"      
-          if [[ -n "$TIMEINPUT" && "$TIMEINPUT" != [Ff] ]]; then
+          set -Eeuo pipefail
+
+          TIMEINPUT="${{ github.event.inputs.BUILDTIME }}"
+          if [[ -n "$TIMEINPUT" && "$TIMEINPUT" != "[Ff]" ]]; then
             DATESTR="$TIMEINPUT"
             echo "🔎 Using Input Build Time: $DATESTR"
           else
-            DATESTR="$(TZ='UTC' date +'%a %b %d %T %Z %Y')"
+            DATESTR="$(TZ='UTC' date '+%a %b %-d %H:%M:%S UTC %Y')"
             echo "🛠️ Using UTC Time as Fallback: $DATESTR"
           fi
-      
-          # Export Kernel Build Environment Variables
-          echo "KBUILD_BUILD_TIMESTAMP=${DATESTR}" >> "$GITHUB_ENV"
-          echo "KBUILD_BUILD_VERSION=1" >> "$GITHUB_ENV"      
+
+          {
+            echo "KBUILD_BUILD_TIMESTAMP=$DATESTR"
+            echo "KBUILD_BUILD_VERSION=1"
+          } >> "$GITHUB_ENV"
+
           KDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform"
-          cd "$KDIR" || { echo "⚠️ Kernel Directory Not Found: $KDIR"; exit 1; }
-      
-          # Patch MK Compile Scripts
-          SCRIPTS=(
-            "common/scripts/mkcompile_h"
-            "msm-kernel/scripts/mkcompile_h"
-          )      
-          for SCRIPT in "${SCRIPTS[@]}"; do
-            if [[ -f "$SCRIPT" ]]; then
-              echo "🚀 Patching MKCompile Script: $SCRIPT"      
-              # Replace Existing UTS Version
+          [[ -d "$KDIR" ]] || {
+            echo "⚠️ Kernel Directory Not Found: $KDIR"
+            exit 1
+          }
+
+          cd "$KDIR"
+
+          if [[ "$ANDROIDVERSION" == "android16" && "$KERNELVERSION" == "6.12" ]]; then
+            echo "ℹ️ Android 16 / 6.12 Detected"
+            echo "ℹ️ Using Kbuild Build Timestamp"
+            echo "ℹ️ Skipping MKCompile H Modification"
+          else
+            SCRIPTS=(
+              "common/scripts/mkcompile_h"
+              "msm-kernel/scripts/mkcompile_h"
+            )
+
+            PATCHED=0
+
+            for SCRIPT in "${SCRIPTS[@]}"; do
+              if [[ ! -f "$SCRIPT" ]]; then
+                echo "ℹ️ Script Not Found: $SCRIPT — Skipping"
+                continue
+              fi
+
+              echo "🚀 Patching MKCompile Script: $SCRIPT"
+
               if grep -q '^UTS_VERSION=' "$SCRIPT"; then
-                perl -pi -e "s{^UTS_VERSION=.*}{UTS_VERSION=\"#1 SMP PREEMPT $DATESTR\"}" "$SCRIPT"
+                perl -pi -e \
+                  "s{^UTS_VERSION=.*}{UTS_VERSION=\"#1 SMP PREEMPT $DATESTR\"}" \
+                  "$SCRIPT"
+
                 echo "✔ Replaced Existing UTS Version"
-              else
-                # Inject UTS Version if Missing
-                # Add After First 'CAT <<EOF'
-                perl -0777 -pi -e "
-                  s{(cat <<EOF)}{\$1\n#undef UTS_VERSION\n#define UTS_VERSION \"#1 SMP PREEMPT $DATESTR\"}ms
-                " "$SCRIPT"
+              elif grep -q 'cat <<EOF' "$SCRIPT"; then
+                perl -0777 -pi -e \
+                  "s{(cat <<EOF)}{\$1\n#undef UTS_VERSION\n#define UTS_VERSION \"#1 SMP PREEMPT $DATESTR\"}ms" \
+                  "$SCRIPT"
+
                 echo "✔ Injected UTS Version Definition"
-              fi      
+              else
+                echo "⚠️ UTS Version Injection Point Not Found: $SCRIPT"
+                continue
+              fi
+
+              PATCHED=$((PATCHED + 1))
+            done
+
+            if [[ "$PATCHED" -eq 0 ]]; then
+              echo "ℹ️ No MKCompile Scripts Required Patching"
+              echo "ℹ️ Kbuild Build Timestamp will be Used"
             else
-              echo "⚠️ Script Not Found: $SCRIPT — Skipping"
-            fi      
-          done
+              echo "🎉 Patched $PATCHED MKCompile Script(s)"
+            fi
+          fi
+
+          echo ""
+          echo "🔍 Build Environment:"
+          echo "   Build Timestamp=$DATESTR"
+          echo "   Build Version=1"
 
           echo ""
           echo "🎉 Custom Build Time Setup Completed"
-          
+     
       - name: 🔧 Disable GPU Embedded Bridge / Engine
         if: ${{ env.KERNELVERSION == '5.10' && startsWith(env.CPU, 'mt') }}
         shell: bash
@@ -4444,15 +4334,27 @@ jobs:
           # Rust Environment Setup
           if [[ "${ENABLERUSTC:-false}" == "true" ]]; then
             echo "🦀 Configuring Rust Environment..."
-            export RUSTPREBUILT="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/prebuilts/rust/linux-x86"
 
-            # Add Rust Toolchain to Path
-            if [[ -x "$RUSTPREBUILT/bin/rustc" ]]; then
-              export PATH="$RUSTPREBUILT/bin:$PATH"
+            # Rust Prebuilts Version           
+            RUSTPREBUILT="$GITHUB_WORKSPACE/kernel_workspace/kernel_platform/prebuilts/rust/linux-x86"
+            RUSTCPATH="$RUSTPREBUILT/$VERSIONRUSTC/bin/rustc"
+
+            # Validate Rust Compiler
+            if [[ -x "$RUSTCPATH" ]]; then
+              export PATH="$(dirname "$RUSTCPATH"):$PATH"
+              export RUSTC="$RUSTCPATH"
+
               echo "📌 Rust Compiler Detected"
-              echo "📦 Version: $("$RUSTPREBUILT/bin/rustc" --version)"
+              echo "📦 Binary : $RUSTCPATH"
+              echo "📦 Version: $("$RUSTCPATH" --version)"
             else
-              echo "⚠️ Rust Compiler Not Found in Prebuilts"
+              echo "⚠️ Rust Compiler Not Found"
+              echo "📌 Expected: $RUSTCPATH"
+              echo "📂 Rust Prebuilt Directory: $RUSTPREBUILT"
+              echo ""
+              echo "🔍 Available Rust Prebuilts:"
+              find "$RUSTPREBUILT" -maxdepth 4 -type f -name rustc -print 2>/dev/null || true
+              exit 1
             fi
 
             # Bindgen Detection and Automatic Fallback
@@ -4615,7 +4517,7 @@ jobs:
           )
 
           [[ "$USE_LLVM_IAS" == "true" ]] && MAKE_ARGS=(LLVM_IAS=1 "${MAKE_ARGS[@]}")
-          [[ "${ENABLERUSTC:-false}" == "true" ]] && MAKE_ARGS=(RUSTC=../../prebuilts/rust/linux-x86/$VERSIONRUSTC/bin/rustc "${MAKE_ARGS[@]}")          
+          [[ "${ENABLERUSTC:-false}" == "true" ]] && MAKE_ARGS=(RUSTC="$RUSTCPATH" "${MAKE_ARGS[@]}")
           # Kernel Configuration and Compilation
           echo ">> 🚀 Running GKI Default Configuration"
           if ! make O=out ARCH=arm64 "${MAKE_ARGS[@]}" gki_defconfig; then
@@ -4892,16 +4794,15 @@ jobs:
           set -euo pipefail
 
           echo "📂 Cloning AnyKernel3 Master Branch..."
-          git clone --depth=1 --branch master --single-branch https://github.com/AndreiMikh/AnyKernel3.git
+          git clone --depth=1 --branch master01-1 --single-branch https://github.com/AndreiMikh/AnyKernel3.git
 
           # Path to AnyKernel3 Folder
           AK3DIRECTORY="${GITHUB_WORKSPACE}/AnyKernel3"
 
-          # Ensure we are using master only
+          # Confirm AnyKernel3 Branch
           cd "$AK3DIRECTORY"
-          git checkout master
           echo "🌿 AnyKernel3 Branch: $(git branch --show-current)"
-
+        
           # Valid Kernel Output Path
           IMAGEPATH="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common/out/arch/arm64/boot/Image"
 
@@ -5409,8 +5310,7 @@ jobs:
           [[ "$LSMBBG" == "true" ]] && SUFFIX+="-BBG"
       
           case "$LXC" in
-            "DroidSpacesLXC-WildPatch") SUFFIX+="-DroidSpaces(Wild)" ;;
-            "DroidSpacesLXC-Inject") SUFFIX+="-DroidSpaces(Inject)" ;;
+            "DroidSpacesLXC-Inject") SUFFIX+="-DS" ;;
           esac
       
           [[ "$NETFILTER" == "true" ]] && SUFFIX+="-NetFilter"
