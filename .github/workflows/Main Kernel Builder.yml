@@ -187,13 +187,11 @@ on:
         default: true
       SCHEDULERS:
         type: choice
-        description: "CPU / I/O Scheduler | ADIOS = SM-8750* & SM-8650* | SSG = SM-8650* | BORE = for Testing (Unstable)*"
+        description: "CPU / I/O Scheduler | ADIOS = SM-8750* & SM-8650*"
         required: true
         default: None
         options:
           - ADIOS
-          - BORE
-          - SSG
           - None
       REKERNEL:
         type: boolean
@@ -244,11 +242,7 @@ jobs:
             github.event.inputs.ZRAMCUSTOMPATCH == 'LZ4-1.10.0-Patch-Update' && 'LZ4-Update ' || ''
           ),
           
-          (
-            github.event.inputs.SCHEDULERS == 'ADIOS' && 'ADIOS ' ||
-            github.event.inputs.SCHEDULERS == 'SSG' && 'SSG ' ||
-            github.event.inputs.SCHEDULERS == 'BORE' && 'BORE ' || ''
-          ),
+          (github.event.inputs.SCHEDULERS == 'ADIOS' && 'ADIOS ' || ''),
 
           (
             github.event.inputs.ROOTENGINE == 'SukiSU-Ultra' && 'SukiSU ' ||
@@ -847,6 +841,18 @@ jobs:
           echo ""
           echo "🎉 Directory Created and Git Configuration Applied:"
           git config --global --list
+
+      - name: 🔧 Setup Reject Checker
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          REJECTCHECKER="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/scripts/RejectChecker.sh"
+          chmod +x "$REJECTCHECKER"
+          echo "REJECTCHECKER=$REJECTCHECKER" >> "$GITHUB_ENV"
+
+          echo ""
+          echo "🔎 Reject Checker: $REJ_CHECKER"
 
       - name: 🔧 Install and Configure Cache-ECS
         run: |
@@ -2213,37 +2219,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Check for Patch Reject Files
-          checkrejects() {
-            local SEARCHDIR="${1:-.}"
-            local REJFILES         
-            REJFILES=$(find "$SEARCHDIR" -name "*.rej" 2>/dev/null)
-            [[ -z "$REJFILES" ]] && return 0
-          
-            while IFS= read -r REJFILE; do
-              local ORIGFILE="${REJFILE%.rej}"
-              ORIGFILE="${ORIGFILE#./}"          
-              local FAILEDHUNKS
-              FAILEDHUNKS=$(grep -c '^@@ ' "$REJFILE" 2>/dev/null)          
-              echo "⚠️ Patch Reject Detected"
-              echo "📝 Reject File  : $REJFILE"
-              echo "📄 Target File  : $ORIGFILE"
-              echo "⚠️ Failed Hunks : ${FAILEDHUNKS:-0}"
-              echo
-              cat "$REJFILE"
-            done <<< "$REJFILES"
-          }
-          
-          # Handle Patch Errors
-          rejecthandler() {
-            local EXITCODE=$?          
-            trap - ERR          
-            echo "⚠️ Patch Application Failed"
-            echo "🔍 Scanning for Reject Files..."          
-            checkrejects .          
-            exit "$EXITCODE"
-          }
-
           # Build derived variables in bash (NOT GitHub expressions)
           GKIVERSION="${ANDROIDVERSION}-${KERNELVERSION}"
 
@@ -2509,9 +2484,6 @@ jobs:
             echo "⚠️ Skipping KernelSU SUSFS Enable Patch (Root = $ROOTENGINE)"
           fi
 
-          # Verify Reject Files
-          checkrejects .
-
           echo ""
           echo "🎉 SUSFS Patches Complete"
           
@@ -2543,6 +2515,10 @@ jobs:
             patch -p1 < XUS-Fix.patch || true          
             echo "✔️ XUS Fix Patch Applied"
           fi
+
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
+          checkrejects .
 
           echo ""
           echo "🎉 Kernel Compatibility Fix Stage Completed"
@@ -2689,31 +2665,30 @@ jobs:
           fi
       
           # Patch Apply Helper Function
-          # Features:
-          #   - Validates Patch Existence
-          #   - Prevents Duplicate Patching
-          #   - Ignores Whitespace Conflicts
-          #   - Avoids CI Rerun Failures      
+          # Prevents Duplicate Patching and Detects Patch Conflicts
           applypatch() {
-            local PATCHFILE="$1"
-            local PATCHNAME     
-            # Extract Patch Filename
-            PATCHNAME="$(basename "$PATCHFILE")"      
+            local patchfile="$1"
+            local patchname
+            patchname="$(basename "$patchfile")"
             # Ensure Patch Exists
-            if [[ ! -f "$PATCHFILE" ]]; then
-              echo "⚠️ $PATCHNAME Not Found"
-              return
-            fi      
-            
-            echo "⚙️ Applying $PATCHNAME..."
-      
-            # Validate Patch Before Applying
-            if git apply --check -p1 "$PATCHFILE" >/dev/null 2>&1; then     
-              # Apply Patch
-              git apply --ignore-whitespace -p1 "$PATCHFILE"      
-              echo "✔️ $PATCHNAME Applied Successfully"      
+            if [[ ! -f "$patchfile" ]]; then
+              echo "⚠️ $patchname Not Found"
+              return 1
+            fi
+
+            echo "⚙️ Checking $patchname..."
+            # Check Whether Patch Can Be Applied
+            if git apply --check -p1 "$patchfile" >/dev/null 2>&1; then
+              echo "🚀 Applying $patchname..."
+              git apply --ignore-whitespace -p1 "$patchfile"
+              echo "✔️ $patchname Applied Successfully"
+            # Check Whether Patch Is Already Applied
+            elif git apply --reverse --check -p1 "$patchfile" >/dev/null 2>&1; then
+              echo "ℹ️ $patchname Already Applied"
+              echo "⏭️ Skipping..."
             else
-              echo "⚠️ $PATCHNAME Already Applied or Conflicts"
+              echo "⚠️ $patchname is Incompatible with the Current Kernel Source"
+              return 1
             fi
           }
       
@@ -2759,6 +2734,10 @@ jobs:
               echo "Patch Type     : $ZRAMPATCH"
               ;;
           esac
+
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
+          checkrejects .
       
           echo ""
           echo "🎉 LZ4 / ZSTD Setup Completed"
@@ -2769,7 +2748,7 @@ jobs:
         if: ${{ env.KERNELVERSION == '6.6' && github.event.inputs.WINDSPEED == 'false' && !endsWith(github.event.inputs.FILE, 'aosp') }}
         shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
 
           # Paths
           PDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
@@ -2791,7 +2770,7 @@ jobs:
 
           cd "$KCDIR"
 
-          # Validate Patch Before Modifying the Kernel Tree
+          # Validate Patch
           if [[ ! -f "$PFILE" ]]; then
             echo "⚠️ Patch File Not Found:"
             echo "$PFILE"
@@ -2799,7 +2778,7 @@ jobs:
             exit 0
           fi
 
-          # Detect an Already-Converted Scheduler
+          # Detect Already-Converted Scheduler
           if [[ -d "kernel/sched/hmbird" ]] || \
              [[ -d "vendor/oplus/kernel/cpu/sched_ext/hmbird" ]]; then
             echo "🔎 Hmbird Scheduler Already Present"
@@ -2815,26 +2794,31 @@ jobs:
 
           echo "🔍 Checking Hmbird Conversion Patch..."
 
-          # Check Whether Patch can be Applied Cleanly
-          if patch -p1 --dry-run -F 3 < "$PFILE" >/dev/null 2>&1; then
+          patchstatus=0
+          # Check Whether Patch Can Be Applied
+          if patch -p1 --dry-run -F3 < "$PFILE" >/dev/null 2>&1; then
             echo "✔️ Hmbird Patch is Applicable"
-            # Preserve Original Conversion Behavior:
-            # Add Object at the Beginning of Drivers/Makefile
+            # Add Hmbird Build Rule
             if grep -qE '^[[:space:]]*obj-y[[:space:]]*\+=.*hmbird_patch\.o' drivers/Makefile; then
-              echo "✔️ Hmbird Build Rule already Present"
+              echo "✔️ Hmbird Build Rule Already Present"
             else
               echo "🛠️ Injecting Hmbird Build Rule"
               sed -i '1iobj-y += hmbird_patch.o' drivers/Makefile
             fi
 
             echo "🚀 Applying Scheduler Conversion Patch..."
-            patch -p1 -F 3 < "$PFILE"
-            echo "✔️ Scheduler Conversion Applied Successfully"
-          # Check Whether Patch has Already Been Applied
-          elif patch -p1 -R --dry-run -F 3 < "$PFILE" >/dev/null 2>&1; then
+            patch -p1 -F3 < "$PFILE" || patchstatus=$?
+            if [[ "$patchstatus" -eq 0 ]]; then
+              echo "✔️ Scheduler Conversion Applied Successfully"
+            else
+              echo "⚠️ Scheduler Conversion Patch Failed"
+            fi
+
+          # Check Whether Patch Is Already Applied
+          elif patch -p1 -R --dry-run -F3 < "$PFILE" >/dev/null 2>&1; then
             echo "✔️ Hmbird Conversion Patch is Already Applied"
             echo "⏭️ Skipping Conversion"
-            # Make Sure Build Rule Still Exists
+            # Restore Hmbird Build Rule if Missing
             if grep -qE '^[[:space:]]*obj-y[[:space:]]*\+=.*hmbird_patch\.o' drivers/Makefile; then
               echo "✔️ Hmbird Build Rule Already Present"
             else
@@ -2848,6 +2832,15 @@ jobs:
             exit 1
           fi
 
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
+          checkrejects .
+
+          # Fail After Reject Check if Patch Failed
+          if [[ "$patchstatus" -ne 0 ]]; then
+            exit "$patchstatus"
+          fi
+
           echo ""
           echo "🎉 Scheduler Conversion Stage Completed"
 
@@ -2856,38 +2849,6 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-
-          # Check for Patch Reject Files
-          checkrejects() {
-            local SEARCHDIR="${1:-.}"
-            local REJFILES
-            REJFILES=$(find "$SEARCHDIR" -type f -name "*.rej" -print 2>/dev/null)
-            [[ -z "$REJFILES" ]] && return 0
-            while IFS= read -r REJFILE; do
-              local ORIGFILE="${REJFILE%.rej}"
-              ORIGFILE="${ORIGFILE#./}"
-              local FAILEDHUNKS
-              FAILEDHUNKS=$(grep -c '^@@ ' "$REJFILE" 2>/dev/null || true)
-              echo "⚠️ Patch Reject Detected"
-              echo "📝 Reject File  : $REJFILE"
-              echo "📄 Target File  : $ORIGFILE"
-              echo "⚠️ Failed Hunks : ${FAILEDHUNKS:-0}"
-              echo ""
-              cat "$REJFILE"
-              echo ""
-            done <<< "$REJFILES"
-            return 1
-          }
-
-          # Handle Patch Errors
-          rejecthandler() {
-            local EXITCODE=$?
-            trap - ERR
-            echo "⚠️ Patch Application Failed"
-            echo "🔍 Scanning for Reject Files..."
-            checkrejects . || true
-            exit "$EXITCODE"
-          }
 
           KCDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           PDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
@@ -2923,6 +2884,7 @@ jobs:
           )
 
           cd "$KCDIR"
+
           echo "🔎 Validating DRM Atomic Target Files..."
           for TARGET in "${TARGETS[@]}"; do
             if [[ ! -f "$TARGET" ]]; then
@@ -2934,14 +2896,11 @@ jobs:
             echo "✔️ Found: $TARGET"
           done
 
-          echo "🧪 Checking Whether DRM Atomic Flicker Fix can be Applied..."
+          echo "🧪 Checking Whether DRM Atomic Flicker Fix Can Be Applied..."
+
           if git apply --check -p1 "$PATCHFILE" >/dev/null 2>&1; then
             echo "🚀 Applying DRM Atomic Clone Validation Flicker Fix..."
-
-            trap rejecthandler ERR
             git apply --verbose -p1 "$PATCHFILE"
-            trap - ERR
-
             echo "✔️ DRM Atomic Flicker Fix Applied Successfully"
           elif git apply --reverse --check -p1 "$PATCHFILE" >/dev/null 2>&1; then
             echo "ℹ️ DRM Atomic Flicker Fix is Already Applied"
@@ -2953,8 +2912,8 @@ jobs:
             exit 1
           fi
 
-          # Verify Reject Files
-          echo "🔎 Checking for Patch Reject Files..."
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
           checkrejects .
 
           echo ""
@@ -2964,7 +2923,7 @@ jobs:
         if: ${{ github.event.inputs.UNICODE == 'true' }}
         shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
       
           # Paths
           PDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
@@ -3026,6 +2985,10 @@ jobs:
           else
             echo "✔️ Patch Already Applied or Not Required"
           fi
+
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
+          checkrejects .
       
           echo ""
           echo "🎉 Unicode Bypass Stage Completed"
@@ -3038,37 +3001,6 @@ jobs:
           CPUD: ${{ env.CPUD }}
         run: |
           set -Eeuo pipefail
-
-          # Check for Patch Reject Files
-          checkrejects() {
-            local SEARCHDIR="${1:-.}"
-            local REJFILES         
-            REJFILES=$(find "$SEARCHDIR" -name "*.rej" 2>/dev/null)
-            [[ -z "$REJFILES" ]] && return 0
-          
-            while IFS= read -r REJFILE; do
-              local ORIGFILE="${REJFILE%.rej}"
-              ORIGFILE="${ORIGFILE#./}"          
-              local FAILEDHUNKS
-              FAILEDHUNKS=$(grep -c '^@@ ' "$REJFILE" 2>/dev/null)          
-              echo "⚠️ Patch Reject Detected"
-              echo "📝 Reject File  : $REJFILE"
-              echo "📄 Target File  : $ORIGFILE"
-              echo "⚠️ Failed Hunks : ${FAILEDHUNKS:-0}"
-              echo
-              cat "$REJFILE"
-            done <<< "$REJFILES"
-          }
-          
-          # Handle Patch Errors
-          rejecthandler() {
-            local EXITCODE=$?          
-            trap - ERR          
-            echo "⚠️ Patch Application Failed"
-            echo "🔍 Scanning for Reject Files..."          
-            checkrejects .          
-            exit "$EXITCODE"
-          }
       
           # Enter Kernel Source Directory
           cd kernel_workspace/kernel_platform/common
@@ -3088,8 +3020,7 @@ jobs:
       
           # Clone Fengchi Patch Repository
           rm -rf SCHED_PATCH
-          echo "📥 Cloning Fengchi Patch Repository..."
-      
+          echo "📥 Cloning Fengchi Patch Repository..."      
           git clone --depth=1 https://github.com/Numbersf/SCHED_PATCH.git -b "$CPU" || {
             echo "⚠️ CPU Branch '$CPU' Does Not Exist"
             echo "⚠️ Fengchi Does Not Support This Device Yet"
@@ -3106,32 +3037,41 @@ jobs:
             exit 12
           }
       
-          # Copy and Apply Patch
+          # Apply Fengchi Scheduler Patch
           echo "🔧 Applying Fengchi Scheduler Patch..."
-      
+          
           cp "$PPATH" ./
-          dos2unix "$PFILE" 2>/dev/null || true
-          patch -p1 --forward -F3 < "$PFILE"
-      
+          dos2unix "$PFILE" 2>/dev/null || true   
+          patchstatus=0
+          patch -p1 --forward -F3 < "$PFILE" || patchstatus=$?
+          
           # Cleanup
           rm -f "$PFILE"
           rm -rf SCHED_PATCH
-
-          # Verify Reject Files
+          
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
           checkrejects .
+          
+          # Fail if Patch Application Failed
+          if [[ "$patchstatus" -ne 0 ]]; then
+            echo "⚠️ Fengchi Scheduler Patch Failed"
+            exit "$patchstatus"
+          fi
       
           echo ""
           echo "🚀 Fengchi Patch Applied Successfully"
 
       - name: 🔧 RTMutex CVE (Kernel 6.1 - 6.6 - 6.12)
-        if: ${{ env.KERNELVERSION == '6.1' || env.KERNELVERSION == '6.6' || env.KERNELVERSION != '6.12' }}
+        if: ${{ env.KERNELVERSION == '6.1' || env.KERNELVERSION == '6.6' || env.KERNELVERSION == '6.12' }}
+        shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
 
           # Kernel Source and Patch Directory
           KDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           PDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches/rtmutex-cve"
-          PATCHFILE="RTMutex-${{ env.KERNELVERSION }}.patch"
+          PATCHFILE="RTMutex-${KERNELVERSION}.patch"
           PATCH="${PDIR}/${PATCHFILE}"
 
           echo "🩹 Using Patch: ${PATCHFILE}"
@@ -3142,63 +3082,42 @@ jobs:
             echo "$KDIR"
             exit 1
           }
-                    
+
           [[ -f "$PATCH" ]] || {
             echo "⚠️ Patch Not Found:"
             echo "$PATCH"
             exit 1
           }
 
-          # Check for Patch Reject Files
-          checkrejects() {
-            local SEARCHDIR="${1:-.}"
-            local REJFILES         
-            REJFILES=$(find "$SEARCHDIR" -name "*.rej" 2>/dev/null)
-            [[ -z "$REJFILES" ]] && return 0
-          
-            while IFS= read -r REJFILE; do
-              local ORIGFILE="${REJFILE%.rej}"
-              ORIGFILE="${ORIGFILE#./}"          
-              local FAILEDHUNKS
-              FAILEDHUNKS=$(grep -c '^@@ ' "$REJFILE" 2>/dev/null)          
-              echo "⚠️ Patch Reject Detected"
-              echo "📝 Reject File  : $REJFILE"
-              echo "📄 Target File  : $ORIGFILE"
-              echo "⚠️ Failed Hunks : ${FAILEDHUNKS:-0}"
-              echo
-              cat "$REJFILE"
-            done <<< "$REJFILES"
-          }
-          
-          # Handle Patch Errors
-          rejecthandler() {
-            local EXITCODE=$?          
-            trap - ERR          
-            echo "⚠️ Patch Application Failed"
-            echo "🔍 Scanning for Reject Files..."          
-            checkrejects .          
-            exit "$EXITCODE"
-          }
-
           echo "📂 Entering Kernel Source Directory..."
           cd "$KDIR"
-          
-          echo "🔎 Checking Patch..."          
-          if patch -p1 --dry-run -F3 < "$PATCH" >/dev/null; then
+
+          echo "🔎 Checking Patch..."
+
+          if patch -p1 --dry-run -F3 < "$PATCH" >/dev/null 2>&1; then
             echo "🩹 Applying RTMutex CVE Fix..."
-            patch -p1 -F3 < "$PATCH"          
+            patchstatus=0
+            patch -p1 -F3 < "$PATCH" || patchstatus=$?
           elif patch -p1 --dry-run -R < "$PATCH" >/dev/null 2>&1; then
-            echo "ℹ️ RTMutex CVE Fix Already Applied..."          
+            echo "ℹ️ RTMutex CVE Fix Already Applied..."
+            patchstatus=0
           else
             echo "⚠️ Patch is Incompatible with Kernel Source..."
             exit 1
           fi
 
-          # Verify Reject Files
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
           checkrejects .
 
+          # Fail if Patch Application Failed
+          if [[ "$patchstatus" -ne 0 ]]; then
+            echo "⚠️ RTMutex CVE Fix Failed"
+            exit "$patchstatus"
+          fi
+
           echo ""
-          echo "🚀 RTMutex CVE Fix for Kernel 6.6 Applied Successfully"
+          echo "🚀 RTMutex CVE Fix for Kernel ${KERNELVERSION} Applied Successfully"
          
       - name: 🔧 Linux Security Module Baseband Guard
         if: ${{ github.event.inputs.LSMBBG == 'true' }}
@@ -3519,9 +3438,11 @@ jobs:
 
             echo "📄 Available Patches:"
             ls -la "$NTSYNCDIR"
+            
             # Function Patch Helper: Apply Patch
             applyntsyncpatch() {
               local ntsyncpatchfile="$1"
+
               if [[ ! -f "$NTSYNCDIR/$ntsyncpatchfile" ]]; then
                 echo "⚠️ Missing Patch: $ntsyncpatchfile"
                 return 0
@@ -3529,20 +3450,27 @@ jobs:
 
               cp "$NTSYNCDIR/$ntsyncpatchfile" ./
               echo "➡️ Applying $ntsyncpatchfile"
-              if ! patch -p1 < "$ntsyncpatchfile"; then
-                echo "⚠️ Patch Failed: $ntsyncpatchfile"
-                exit 1
-              fi
-
+              patchstatus=0
+              patch -p1 < "$ntsyncpatchfile" || patchstatus=$?
               rm -f "$ntsyncpatchfile"
               echo "🧹 Cleaned: $ntsyncpatchfile"
+              
+              if [[ "$patchstatus" -ne 0 ]]; then
+                echo "⚠️ Patch Failed: $ntsyncpatchfile"
+                return "$patchstatus"
+              fi
             }
 
             # Apply Patches
             applyntsyncpatch "$NTSYNCCOMPATPATCH"
             applyntsyncpatch "$NTSYNCBASEPATCH"
             echo "☘️ NT Synchronization Patch Process Completed Successfully"
+
           fi
+
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
+          checkrejects .
 
           echo ""
           echo "🎉 NT Synchronization (Primitives) Done!"
@@ -3722,39 +3650,58 @@ jobs:
         if: ${{ (github.event.inputs.TCPALGORITHM == 'BBRV1+BBRV3+ECN' || github.event.inputs.TCPALGORITHM == 'BBRV1+BBRV3+ECN+Brutal') && env.ANDROIDVERSION != 'android16' && env.KERNELVERSION != '6.12' }}
         shell: bash
         run: |
-          set -euo pipefail
-      
+          set -Eeuo pipefail
+
           # GKI Version Identifier
-          GKIVERSION="${{ env.ANDROIDVERSION }}-${{ env.KERNELVERSION }}"
-      
+          GKIVERSION="${ANDROIDVERSION}-${KERNELVERSION}"
+
           # Define Directories and Patch Files
           PDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches/BBRV3"
           KDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
           PFILE="${PDIR}/0001-net-tcp-backport-BBRv3-to-${GKIVERSION}.patch"
-      
+
           # Change to Kernel Source Directory
           cd "${KDIR}"
-      
+
           # Apply Main BBRV3 Backport Patch for Selected GKI Version
           echo "Applying BBRV3 Patch for ${GKIVERSION}..."
-          patch -p1 < "${PFILE}"
-      
+          patchstatus=0
+          patch -p1 < "${PFILE}" || patchstatus=$?
+
           # Android 12 (5.10) Kernels do Not Include PROC-DOU8VEC-MINMAX
           # Apply Required Compatibility Patches Only if Function Not Already Present in Source
           if [[ "${GKIVERSION}" == "android12-5.10" ]]; then
             if ! grep -qF 'int proc_dou8vec_minmax(' include/linux/sysctl.h; then
               echo "⚙️ Applying PROC-DOU8VEC-MINMAX Compatibility Patches..."
-              patch -p1 < "${PDIR}/sysctl_add_proc_dou8vec_minmax.patch"
-              patch -p1 < "${PDIR}/sysctl_fix_data-races_in_proc_dou8vec_minmax.patch"
+              compatstatus=0
+              patch -p1 < "${PDIR}/sysctl_add_proc_dou8vec_minmax.patch" || compatstatus=$?
+              
+              if [[ "$compatstatus" -eq 0 ]]; then
+                patch -p1 < "${PDIR}/sysctl_fix_data-races_in_proc_dou8vec_minmax.patch" || compatstatus=$?
+              fi
+
+              if [[ "$compatstatus" -ne 0 ]]; then
+                patchstatus="$compatstatus"
+              fi
             else
-              echo "🚀 PROC-DOU8VEC-MINMAX Already Exists, Skipping Compatibility Patches.."
+              echo "🚀 PROC-DOU8VEC-MINMAX Already Exists, Skipping Compatibility Patches..."
             fi
           else
             echo "☘️ Compatibility Patches are Not Required for ${GKIVERSION}"
           fi
 
+          # Load Reject Checker and Run Rejection Check
+          source "$REJECTCHECKER"
+          checkrejects .
+
+          # Fail if Any Patch Application Failed
+          if [[ "$patchstatus" -ne 0 ]]; then
+            echo "⚠️ BBRV3 Patch Application Failed"
+            exit "$patchstatus"
+          fi
+
           echo ""
-          echo "🎉BBRV3 Patches Applied Successfully"
+          echo "🎉 BBRV3 Patches Applied Successfully"
 
       - name: 🔧 Kernel Configuration
         run: |
@@ -3845,23 +3792,6 @@ jobs:
                   echo "🎉 ADIOS I/O Scheduler Enabled"
                 else
                   echo "🚩 ADIOS Requires Kernel 6.6"
-                fi
-                ;;
-              BORE)
-                if [[ "$KERNEL" == "6.6" ]]; then
-                  SETCONFIG "CONFIG_SCHED_BORE=y"
-                  echo "🎉 BORE CPU Scheduler Enabled"
-                else
-                  echo "🚩 BORE Requires Kernel 6.6"
-                fi
-                ;;
-              SSG)
-                if [[ "$KERNEL" == "6.1" ]]; then
-                  SETCONFIG "CONFIG_MQ_IOSCHED_SSG=y"
-                  SETCONFIG "CONFIG_MQ_IOSCHED_SSG_CGROUP=y"
-                  echo "🎉 SSG I/O Scheduler Enabled"
-                else
-                  echo "🚩 SSG Requires Kernel 6.1"
                 fi
                 ;;
               NONE|"")
@@ -5405,8 +5335,6 @@ jobs:
           # Scheduler Layer
           declare -A SCHEDMAP=(
             ["ADIOS"]="-Adios"
-            ["BORE"]="-Bore"
-            ["SSG"]="-SSG"
           )
           SUFFIX+="${SCHEDMAP[$SCHED]:-}"
       
