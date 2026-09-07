@@ -3816,7 +3816,7 @@ jobs:
 
       - name: 🔧 Kernel Configuration
         run: |
-          set euo pipefail
+          set -Eeuo pipefail
           
           # Navigate to the Correct Directory
           cd kernel_workspace/kernel_platform/common
@@ -3880,14 +3880,14 @@ jobs:
           
           trap FAKECONFIG EXIT
 
-          # Apply -O2 Compiler Optimization for Kernel 6.1 / 6.6
-          if [[ ("$KERNEL" == "6.1" || "$KERNEL" == "6.6") && ! "$FILE" =~ aosp$|AOSP$ ]]; then
-            echo "🔧 Enabling O2 Compiler Optimization for Kernel $KERNEL..."
-            SETCONFIG "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y"
-            echo "🎉 O2 Optimization Enabled for Kernel $KERNEL"
-          else
-            echo "☘️ O2 Optimization Disabled for Kernel $KERNEL"
-          fi
+          # Apply Kernel Compiler Optimization
+          echo "🔧 Enabling Performance Compiler Optimization..."
+          SETCONFIG "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE=y"
+          SETCONFIG "CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3=n"
+          SETCONFIG "CONFIG_OPTIMIZE_INLINING=y"
+          SETCONFIG "CONFIG_FRAME_WARN=0"
+          SETCONFIG "CONFIG_TRACEPOINTS=y"
+          echo "🎉 Performance Compiler Optimization Enabled"
 
           # Normalize Input: Uppercase and Remove Spaces
           SCHEDULERS="${SCHEDULERS// /}"  # Remove Spaces
@@ -4068,12 +4068,21 @@ jobs:
 
           # Additional TCP Congestion Control Configuration for BBRV3
           if [[ ("$TCP" == "BBRV1+BBRV3+ECN" || "$TCP" == "BBRV1+BBRV3+ECN+Brutal") &&
-                "$GKIVERSION" != "android16-6.12" ]]; then
+                "$GKI" != "android16-6.12" ]]; then
             HIDECONFIG "CONFIG_TCP_CONG_ADVANCED=y"
             SETCONFIG "CONFIG_TCP_CONG_BBR=y"
             SETCONFIG "CONFIG_TCP_CONG_BBR3=y"
             echo "🚀 Applying BBRV3 Specific Configurations..."
           fi
+
+          # Network Queuing Discipline Configuration
+          echo "🚀 Enabling Network Queuing Disciplines..."
+          SETCONFIG "CONFIG_NET_SCH_FQ=y"
+          SETCONFIG "CONFIG_NET_SCH_FQ_CODEL=y"
+          SETCONFIG "CONFIG_NET_SCH_CAKE=y"
+          SETCONFIG "CONFIG_NET_SCH_PIE=y"
+          SETCONFIG "CONFIG_NET_SCH_FQ_PIE=y"
+          echo "🎉 Network Queuing Discipline Support Enabled"
 
           # Linux Security Module Baseband Guard Configuration
           if [[ "$LSM" == "true" ]]; then
