@@ -1,7 +1,7 @@
 # ===========================
 # OnePlus Kernel Build
 # ===========================
-name: ☘️ Main Kernel Builder
+name: ☘️ NoMount Integration
 on:
   workflow_dispatch:
     inputs:
@@ -152,9 +152,13 @@ on:
         required: true
         default: DroidSpacesLXC-Inject
         options:
-          - DroidSpacesLXC-WildPatch
           - DroidSpacesLXC-Inject
           - None        
+      NOMOUNT:
+        type: boolean
+        description: "NoMount Built-in Integration"
+        required: true
+        default: true
       NETFILTER:
         type: boolean
         description: "Network Feature Extensions (NetFilter)"
@@ -218,7 +222,7 @@ jobs:
     name: >
       ${{
         format(
-          '{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}{11}{12} {13}',
+          '{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}{11}{12}{13} {14}',
 
           (github.event.inputs.FASTBUILD == 'true' && 'Fast ' || ''),
           (github.event.inputs.NTSYNC == 'true' && 'NTSync ' || ''),
@@ -231,8 +235,7 @@ jobs:
             ''
           ),
           
-          (github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-WildPatch' && 'DS-Wild ' ||
-          github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-Inject' && 'DS-Inject ' || ''),
+          (github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-Inject' && 'DS ' || ''),
           (contains(github.event.inputs.FILE, '_aosp') && 'AOSP ' || ''),
 
           (
@@ -265,6 +268,7 @@ jobs:
           ),
 
           (github.event.inputs.LSMBBG == 'true' && 'LSM ' || ''),
+          (github.event.inputs.NOMOUNT == 'true' && 'NM ' || ''),
           (github.event.inputs.WINDSPEED == 'true' && 'Wind ' || ''),
 
           github.event.inputs.FILE,
@@ -742,6 +746,7 @@ jobs:
               echo "Suffix                : ${{ github.event.inputs.SUFFIX }}"
               echo "LSM Baseband Guard    : ${{ github.event.inputs.LSMBBG }}"
               echo "LXC Support           : ${{ github.event.inputs.LXCDOCKERSUPPORT }}"
+              echo "NoMount               : ${{ github.event.inputs.NOMOUNT }}"
               echo "Netfilter             : ${{ github.event.inputs.NETFILTER }}"
               echo "TCP                   : ${{ github.event.inputs.TCPALGORITHM }}"
               echo "SuSFS Repository      : ${{ github.event.inputs.SUSFSVARIANT }}"
@@ -3534,139 +3539,140 @@ jobs:
 
           echo ""
           echo "🎉 NT Synchronization (Primitives) Done!"
-   
-      - name: 🔧 DroidSpacesLXC WildKernels Patch
-        if: ${{ github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-WildPatch' }}
+
+      - name: 🔧 NoMount Built-in Integration
+        if: ${{ github.event.inputs.NOMOUNT == 'true' }}
         shell: bash
         run: |
           set -Eeuo pipefail
 
-          # Inputs and Variables
-          CPU="${CPU:-Unknown}"  
-          KERNELVERSION="${{ env.KERNELVERSION }}"
-          FULLVER="${FULLVER:-${{ env.FULLVERSION }}}"
-      
-          # Detect Kernel Root Directory
-          echo "🔍 Detecting Kernel Root..."
-      
-          possiblekerneldirectories=(
-            "${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
-            "${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform"
-            "${GITHUB_WORKSPACE}/kernel_workspace"
-          )
-      
-          KCDIR=""
-      
-          for directory in "${possiblekerneldirectories[@]}"; do
-            echo "🔎 Checking: $directory"
-      
-            if [[ -d "$directory" ]] && [[ -f "$directory/Makefile" ]]; then
-              KCDIR="$directory"
-              echo "📌 Kernel Root Detected: $KCDIR"
-              break
-            fi
-          done
-      
-          # Fail if Kernel Root is Not Found
-          if [[ -z "${KCDIR}" ]]; then
-            echo "⚠️ No Valid Kernel Root Found"
+          # Paths
+          WS="${GITHUB_WORKSPACE}/kernel_workspace"
+          KDIR="${WS}/kernel_platform/common"
+          NMREPODIR="${WS}/NoMount"
+          NMTARGETDIR="${KDIR}/fs/nomount"
+          KCONFIGFILE="${KDIR}/fs/Kconfig"
+          MAKEFILE="${KDIR}/fs/Makefile"
+
+          # Validate Kernel Source
+          [[ -d "$KDIR" ]] || {
+            echo "⚠️ Kernel Common Directory Not Found: $KDIR"
             exit 1
-          fi
-      
-          # Move into Kernel Source Directory
-          cd "$KCDIR"
-      
-          # Patch Base Directory
-          DSPATCHDIR="${GITHUB_WORKSPACE}/kernel_workspace/AndreiMikh-Kernel-Lab/patches"
-      
-          # CPU-Based Patch Selection
-          echo "🔧 Applying SYS V IPC Kernel ABI Fixes..."
-          echo "------------------------------"
-          echo "📌 CPU Target   : ${CPU}"
-          echo "📌 Kernel Build : ${FULLVER}"
-          echo "------------------------------"
-          echo ""
-      
-          # Patch Helper Function
-          apply() {
-            local patchfile="$1"
-            local patchname      
-            patchname="$(basename "$patchfile")"      
-            echo "📦 Processing Patch:"
-            echo "   ${patchname}"
-      
-            # Validate Patch File
-            if [[ ! -f "$patchfile" ]]; then
-              echo "⚠️ Patch File Missing:"
-              echo "   ${patchfile}"
-              exit 1
-            fi
-      
-            # Apply Patch
-            if patch -p1 --dry-run --forward < "$patchfile" >/dev/null 2>&1; then
-              patch -p1 --forward < "$patchfile"      
-              echo "📌 Patch Applied Successfully"
-              echo ""
-      
-            # Already Applied
-            elif patch -p1 -R --dry-run < "$patchfile" >/dev/null 2>&1; then
-              echo "⚠️ Patch Already Applied"
-              echo ""
-      
-            # Failed
-            else
-              echo "⚠️ Patch Failed:"
-              echo "   ${patchname}"
-              exit 1
-            fi
           }
-      
-          # CPU-Specific Patch Logic
-          case "${CPU}" in      
-            # Snapdragon SM-88xx Series
-            sm8850|sm8845)
-              echo "📌 High-End Snapdragon Branch Detected"
-              apply \
-                "$DSPATCHDIR/SYSVIPC-KABI-Android16-6.12.patch"
-              ;;      
-            # Snapdragon SM-85xx / SM-75xx Series
-            sm8550|sm7550)
-              echo "📌 Mid-Range Snapdragon Branch Detected"
-              apply \
-                "$DSPATCHDIR/SYSVIPC-KABI-1-2-3.patch"
-              ;;      
-            # Mixed SoC Group
-            sm8450|sm8475|mt6895|mt6983|mt6789)
-              echo "📌 Mixed SoC Branch Detected"
-              # Android 12 + Kernel 5.10 Legacy Handling
-              if [[ "${KERNELVERSION}" == "5.10" ]]; then
-                echo "📌 Legacy Android 12 / Kernel 5.10 Mode"
-                apply \
-                  "$DSPATCHDIR/SYSVIPC-Bypass-Android16-6.12-Below.patch"      
-                apply \
-                  "$DSPATCHDIR/KABI-Padding-Posix-Mqueue.patch"      
-              else
-                echo "📌 Standard Kernel ABI Layout Mode"
-                apply \
-                  "$DSPATCHDIR/SYSVIPC-KABI-6-7-8.patch"
-              fi
-              ;;      
-            # Default Fallback
-            *)
-              echo "📌 Unknown CPU Detected"
-              echo "📌 Falling Back to Default ABI Layout Patch"
-              apply \
-                "$DSPATCHDIR/SYSVIPC-KABI-6-7-8.patch"
-              ;;
-          esac
-      
-          # Midas Ghost Task Fix
-          echo "🧠 Applying Midas Ghost Task Fix"      
-          apply \
-            "$DSPATCHDIR/001-Ghost-Task-Midas.patch"
-      
+
+          [[ -f "$KCONFIGFILE" ]] || {
+            echo "⚠️ Kernel Kconfig Not Found: $KCONFIGFILE"
+            exit 1
+          }
+
+          [[ -f "$MAKEFILE" ]] || {
+            echo "⚠️ Kernel Makefile Not Found: $MAKEFILE"
+            exit 1
+          }
+
+          cd "$KDIR"
+
+          echo "------------------------------"
+          echo "NoMount Built-in Integration"
+          echo "------------------------------"
+          echo "📂 Kernel Source   : $KDIR"
+          echo "📂 NoMount Source  : $NMREPODIR"
+          echo "📂 Target          : $NMTARGETDIR"
           echo ""
-          echo "🎉 DroidSpacesLXC Patch Complete!"
+
+          # Clone NoMount
+          if [[ ! -d "$NMREPODIR/.git" ]]; then
+            echo "📥 Cloning NoMount..."
+            git clone --depth=1 \
+              https://github.com/maxsteeel/nomount.git \
+              "$NMREPODIR"
+            echo "✔️ NoMount Repository Cloned"
+          else
+            echo "⚠️ NoMount Repository Already Exists"
+          fi
+
+          # Validate NoMount Source
+          NMSRCDIR="$NMREPODIR/kernel/src"
+          [[ -d "$NMSRCDIR" ]] || {
+            echo "⚠️ NoMount Kernel Source Directory Not Found:"
+            echo "   $NMSRCDIR"
+            exit 1
+          }
+          
+          [[ -f "$NMSRCDIR/Kconfig" ]] || {
+            echo "⚠️ NoMount Kernel Configuration Not Found:"
+            echo "   $NMSRCDIR/Kconfig"
+            exit 1
+          }
+
+          [[ -f "$NMSRCDIR/Makefile" ]] || {
+            echo "⚠️ NoMount Makefile Not Found:"
+            echo "   $NMSRCDIR/Makefile"
+            exit 1
+          }
+
+          [[ -f "$NMSRCDIR/nomount.c" ]] || {
+            echo "⚠️ NoMount Source File Not Found:"
+            echo "   $NMSRCDIR/nomount.c"
+            exit 1
+          }
+
+          echo "📂 NoMount Kernel Source: $NMSRCDIR"
+
+          # Remove Existing Integration and Synchronize NoMount Sources
+          echo "♻️ Synchronizing NoMount Kernel Sources..."
+          rm -rf "$NMTARGETDIR"
+          mkdir -p "$NMTARGETDIR"
+          cp -af "$NMSRCDIR"/. "$NMTARGETDIR"/
+          echo "✔️ NoMount Sources Installed"
+
+          # Verify Installed NoMount Files
+          echo "📁 Installed NoMount Files:"
+          find "$NMTARGETDIR" -maxdepth 2 -type f -printf '   %P\n' | sort
+
+          # Register NoMount Kernel Configuration
+          if grep -qF 'source "fs/nomount/Kconfig"' "$KCONFIGFILE"; then
+            echo "⚠️ NoMount Kernel Configuration Entry Already Exists"
+          else
+            printf '\n# NoMount Support\nsource "fs/nomount/Kconfig"\n' >> "$KCONFIGFILE"
+            echo "⚙️ NoMount Kernel Configuration Entry Added"
+          fi
+
+          # Register NoMount Makefile
+          if grep -qF 'obj-$(CONFIG_NOMOUNT) += nomount/' "$MAKEFILE"; then
+            echo "⚠️ NoMount Makefile Entry Already Exists"
+          else
+            printf '\n# NoMount Support\nobj-$(CONFIG_NOMOUNT) += nomount/\n' >> "$MAKEFILE"
+            echo "⚙️ NoMount Makefile Entry Added"
+          fi
+
+          # Validate NoMount Integration
+          echo "🔎 Verifying NoMount Integration..."
+          grep -qF 'source "fs/nomount/Kconfig"' "$KCONFIGFILE" || {
+            echo "⚠️ NoMount Kconfig Registration Missing"
+            exit 1
+          }
+
+          grep -qF 'obj-$(CONFIG_NOMOUNT) += nomount/' "$MAKEFILE" || {
+            echo "⚠️ NoMount Makefile Registration Missing"
+            exit 1
+          }
+
+          [[ -f "$NMTARGETDIR/Kconfig" ]] || {
+            echo "⚠️ NoMount Kernel Configuration File Missing"
+            exit 1
+          }
+
+          [[ -f "$NMTARGETDIR/Makefile" ]] || {
+            echo "⚠️ NoMount Makefile Missing"
+            exit 1
+          }
+
+          echo "➡️ NoMount Source Files Verified"
+          echo "➡️ NoMount Kernel Integration Verified"
+          
+          echo ""
+          echo "🎉 NoMount Built-in Integration Completed Successfully"
           
       - name: 🔧 Re-Kernel
         if: ${{ github.event.inputs.REKERNEL == 'true' }}
@@ -3824,6 +3830,7 @@ jobs:
           NET="${{ github.event.inputs.NETFILTER }}"
           LXC="${{ github.event.inputs.LXCDOCKERSUPPORT }}"
           NTSYNC="${{ github.event.inputs.NTSYNC }}"
+          NOMOUNT="${{ github.event.inputs.NOMOUNT }}"
           CPU="${{ env.CPU }}"
 
           MAKEFILE=./kernel/Makefile
@@ -3992,7 +3999,7 @@ jobs:
           echo "🎉 TMPFS Configuration Applied"
 
           # DroidspacesLXC Support Kernel Configuration
-          if [[ "$LXC" == "DroidSpacesLXC-WildPatch" || "$LXC" == "DroidSpacesLXC-Inject" ]]; then
+          if [[ "$LXC" == "DroidSpacesLXC-Inject" ]]; then
             echo "🚀 Applying DroidspacesLXC Support Kernel Configurations..."
             SETCONFIG "CONFIG_NTSYNC=y"
             SETCONFIG "CONFIG_SYSVIPC=y"
@@ -4008,6 +4015,16 @@ jobs:
             echo "🎉 DroidspacesLXC Support Core Configuration Applied"       
           else
             echo "☘️ DroidspacesLXC Support Disabled — Skipping Configuration..."
+          fi
+
+          # NoMount Built-in Configuration
+          if [[ "$NOMOUNT" == "true" ]]; then
+            echo "🚀 Enabling NoMount Built-in Support..."
+            SETCONFIG "CONFIG_NOMOUNT=y"
+            echo "🎉 NoMount Built-in Support Enabled"
+          else
+            echo "☘️ NoMount Disabled, Skipping..."
+            SETCONFIG "CONFIG_NOMOUNT=n"
           fi
 
           # BBR + ECN Kernel Configuration with Brutal Default and Cubic Fallback
@@ -5367,6 +5384,7 @@ jobs:
           LXC="${{ github.event.inputs.LXCDOCKERSUPPORT }}"
           NETFILTER="${{ github.event.inputs.NETFILTER }}"
           NTSYNC="${{ github.event.inputs.NTSYNC }}"
+          NOMOUNT="${{ github.event.inputs.NOMOUNT }}"
           TCP="${{ github.event.inputs.TCPALGORITHM }}"
           UNICODE="${{ github.event.inputs.UNICODE }}"
           XUS="${{ env.XUS }}"
@@ -5433,13 +5451,13 @@ jobs:
           )
           SUFFIX+="${SCHEDMAP[$SCHED]:-}"
       
-          # Feature Flags Layer
+          # Bootlean Feature Flags Layer
           [[ "$REKERNEL" == "true" ]] && SUFFIX+="-ReKernel"
           [[ "$LSMBBG" == "true" ]] && SUFFIX+="-BBG"
+          [[ "$NOMOUNT" == "true" ]] && SUFFIX+="-NOMOUNT"
       
           case "$LXC" in
-            "DroidSpacesLXC-WildPatch") SUFFIX+="-DroidSpaces(Wild)" ;;
-            "DroidSpacesLXC-Inject") SUFFIX+="-DroidSpaces(Inject)" ;;
+            "DroidSpacesLXC-Inject") SUFFIX+="-DS" ;;
           esac
       
           [[ "$NETFILTER" == "true" ]] && SUFFIX+="-NetFilter"
@@ -6322,5 +6340,6 @@ jobs:
             echo "| 📂 XUS Patch                                    | \`${{ env.XUS }}\`                            |"
             echo "| 🔁 Re-Kernel (Use with Freezer, NoActive, Etc.) | $(bool "${{ github.event.inputs.REKERNEL }}") |"
             echo "| 🔤 NTSync Patch                                 | $(bool "${{ github.event.inputs.NTSYNC }}")   |"
+            echo "| 🔤 Built-in NoMount                             | $(bool "${{ github.event.inputs.NOMOUNT }}")   |"
             echo "| 🆔 Workflow Run ID                              | \`${GITHUB_RUN_ID}\`                          |"
           } >> $GITHUB_STEP_SUMMARY
