@@ -1896,85 +1896,46 @@ jobs:
           # SukiSU-Ultra
           if [[ "$ROOTENGINE" == "SukiSU-Ultra" ]]; then
             echo "🚀 Setting Up SukiSU-Ultra..."
+          
             # SukiSU-Ultra Builtin Setup
             setupengine \
               "$KSUREPO" \
               "$MANAGERBRANCH" \
-              "$BRANCHPATH"
+              "$BRANCHPATH"       
             cd KernelSU || {
               echo "⚠️ SukiSU-Ultra Directory Not Found"
               exit 1
             }
-
+          
             # Get Current Git Commit Hash
             GITCOMMITHASH="$(git rev-parse --short=8 HEAD)"
             echo "🔖 Current Commit Hash : $GITCOMMITHASH"
-
-            # Read API Version From Checked-Out Makefile
-            echo "🔎 Reading SukiSU-Ultra API Version..."
           
-            APIVERSION="$(
-              sed -n 's/^KSU_VERSION_API[[:space:]]*:=//p' \
-                kernel/Makefile |
-              head -n1 |
-              tr -d '[:space:]'
-            )"
+            # Get Main Branch Commit Count
+            COMMITCOUNT="$(git rev-list --count main 2>/dev/null || echo 0)"
           
-            if [[ -z "$APIVERSION" ]]; then
-              APIVERSION="3.1.7"
-              echo "⚠️ API Version Not Found"
-              echo "⚠️ Using Fallback: $APIVERSION"
-            else
-              echo "📌 API Version: $APIVERSION"
-            fi
-          
-            echo "APIVERSION=$APIVERSION" >> "$GITHUB_ENV"
-            
-            # Remove Existing SukiSU-Ultra Version Definitions
-            sed -i \
-              '/^define get_ksu_version_full$/,/^endef$/d' \
-              kernel/Makefile
-            sed -i \
-              '/^KSU_VERSION_API[[:space:]]*:=/d' \
-              kernel/Makefile
-            sed -i \
-              '/^KSU_VERSION_FULL[[:space:]]*:=/d' \
-              kernel/Makefile
-
-            # Create Temporary Makefile With New Version Definitions
-            {
-              printf 'KSU_VERSION_API := %s\n' "$APIVERSION"
-              printf 'KSU_VERSION_FULL := v%s\n' "$APIVERSION"
-              printf '\n'
-              printf 'define get_ksu_version_full\n'
-              printf 'v%s-%s\n' "$APIVERSION" "$GITCOMMITHASH"
-              printf 'endef\n'
-              printf '\n'
-              cat kernel/Makefile
-            } > kernel/Makefile.tmp
-            mv kernel/Makefile.tmp kernel/Makefile
-
-            # Generate Custom Version Number
-            COMMITCOUNT="$(getcommitcount)"
             if [[ "$COMMITCOUNT" =~ ^[0-9]+$ ]]; then
               KSUVERSION=$((COMMITCOUNT + 37185))
             else
               KSUVERSION=114514
             fi
-
+          
+            echo "📦 SukiSU-Ultra Version : $KSUVERSION"
+            echo "🔖 SukiSU-Ultra Commit  : $GITCOMMITHASH"
+          
             # Store Version Information
             {
               echo "KSUVERSION=$KSUVERSION"
               echo "KSUVER=$KSUVERSION"
+              echo "GITCOMMITHASH=$GITCOMMITHASH"
             } >> "$GITHUB_ENV"
-
-            # Verification
-            echo "🔍 Verifying SukiSU-Ultra Version Definitions..."
+          
+            # Verify Native SukiSU-Ultra Version Logic
+            echo "🔍 Verifying SukiSU-Ultra Version Definitions..."         
             grep -n \
-              -A5 \
-              '^KSU_VERSION_API\|^KSU_VERSION_FULL\|^define get_ksu_version_full' \
+              '^VERSION_BASE\|^VERSION_OFFSET\|^KSU_VERSION_FULL\|^VERSION_TAG' \
               kernel/Makefile || true
-
+          
             echo "🎉 SukiSU-Ultra Setup Complete"
         
           # ReSukiSU
