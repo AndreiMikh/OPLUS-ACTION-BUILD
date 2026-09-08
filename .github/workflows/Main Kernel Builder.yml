@@ -2412,23 +2412,6 @@ jobs:
               fi
             fi
           fi
-
-          # SukiSU-Ultra Kernel Umount Set Handler
-          if [[ "$ROOTENGINE" == "SukiSU-Ultra" ]]; then
-            echo "🛠️ Applying Kernel Umount Set Handler Patch"
-            PATCH="SukiSU-Kernel-Umount-Fix.patch"
-            cp "$GITHUB_WORKSPACE/kernel_workspace/AndreiMikh-Kernel-Lab/patches/$PATCH" ./
-
-            if patch -R -p1 --dry-run < "$PATCH" >/dev/null 2>&1; then
-              echo "ℹ️ Kernel Umount Set Handler Patch Already Applied — Skipping"
-            elif patch --dry-run -p1 < "$PATCH" >/dev/null 2>&1; then
-              patch -p1 < "$PATCH"
-              echo "✔️ Kernel Umount Set Handler Patch Applied"
-            else
-              echo "⚠️ Kernel Umount Set Handler Patch Is Not Compatible"
-              exit 1
-            fi
-          fi
                                        
           # Optional XUS Fix
           if [[ "$XUS" == "Enabled" ]]; then          
