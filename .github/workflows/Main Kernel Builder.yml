@@ -361,27 +361,6 @@ jobs:
           remove-haskell: true          # Remove Haskell Tool Chains
           remove-codeql: true           # Remove CodeQL to Free Space
 
-      - name: 🔧 Install and Cache Build Dependencies
-        shell: bash
-        run: |
-          # Install Required Build Dependencies with APT Package Caching
-          export APTPACKAGES="bc build-essential bison clang curl dos2unix elfutils flex gawk git kmod lld llvm libdw-dev libelf-dev liblz4-tool libncurses-dev libssl-dev libxml2-utils python3 rsync unzip zip zlib1g-dev"
-    
-          SCRIPT="$GITHUB_WORKSPACE/kernel_workspace/APT-Packages.sh"
-    
-          # Download APT Package Caching Script
-          wget -qO "$SCRIPT" \
-            "https://raw.githubusercontent.com/AndreiMikh/AndreiMikh-Kernel-Lab/LiquidAndrei/scripts/APT-Packages.sh"
-    
-          # Verify APT Package Caching Script Exists
-          if [ ! -f "$SCRIPT" ]; then
-            echo "⚠️ APT Packages Script Not Found: $SCRIPT"
-            exit 1
-          fi
-    
-          # Execute APT Package Caching Script
-          bash "$SCRIPT" ~/.apt-pkg-cache
-
       - name: 🔧 Git Identity
         shell: bash
         run: |      
@@ -413,6 +392,27 @@ jobs:
           echo ""
           echo "🎉 Workspace Created and Git Configuration Applied:"
           git config --global --list
+
+      - name: 🔧 Install and Cache Build Dependencies
+        shell: bash
+        run: |
+          # Install Required Build Dependencies with APT Package Caching
+          export APTPACKAGES="bc build-essential bison clang curl dos2unix elfutils flex gawk git kmod lld llvm libdw-dev libelf-dev liblz4-tool libncurses-dev libssl-dev libxml2-utils python3 rsync unzip zip zlib1g-dev"
+    
+          SCRIPT="$GITHUB_WORKSPACE/kernel_workspace/AndreiMikh-Kernel-Lab/scripts/APT-Packages.sh"
+    
+          # Download APT Package Caching Script
+          wget -qO "$SCRIPT" \
+            "https://raw.githubusercontent.com/AndreiMikh/AndreiMikh-Kernel-Lab/LiquidAndrei/scripts/APT-Packages.sh"
+    
+          # Verify APT Package Caching Script Exists
+          if [ ! -f "$SCRIPT" ]; then
+            echo "⚠️ APT Packages Script Not Found: $SCRIPT"
+            exit 1
+          fi
+    
+          # Execute APT Package Caching Script
+          bash "$SCRIPT" ~/.apt-pkg-cache
     
       - name: 🔧 Setup Kotlin
         run: |
