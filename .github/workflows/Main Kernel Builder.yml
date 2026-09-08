@@ -1952,8 +1952,16 @@ jobs:
 
             # SukiSU-Ultra Version Definitions
             # Full Version String
-            VERSIONDEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$GIT_COMMIT_HASH"$'\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"8'
+            VERSIONDEFINITIONS="$(cat <<EOF
+            define get_ksu_version_full
+            v\$1-${GIT_COMMIT_HASH}
+            endef
 
+            KSU_VERSION_API := ${KSU_API_VERSION}
+            KSU_VERSION_FULL := v${KSU_API_VERSION}
+            EOF
+            )"
+            
             # Remove Existing Version Function
             sed -i \
               '/^define get_ksu_version_full$/,/^endef$/d' \
