@@ -123,8 +123,6 @@ on:
         required: false
         default: LZ4-1.10.0-Patch-Update
         options:
-          - LZ4-1.10.0-Custom-Patch
-          - LZ4-1.10.0-Patch
           - LZ4-1.10.0-Patch-Update
           - None        
       SUFFIX:
@@ -235,12 +233,7 @@ jobs:
           
           (github.event.inputs.LXCDOCKERSUPPORT == 'DroidSpacesLXC-Inject' && 'DS ' || ''),
           (contains(github.event.inputs.FILE, '_aosp') && 'AOSP ' || ''),
-
-          (
-            github.event.inputs.ZRAMCUSTOMPATCH == 'LZ4-1.10.0-Custom-Patch' && 'LZ4+ZSTD ' ||
-            github.event.inputs.ZRAMCUSTOMPATCH == 'LZ4-1.10.0-Patch' && 'LZ4 ' ||
-            github.event.inputs.ZRAMCUSTOMPATCH == 'LZ4-1.10.0-Patch-Update' && 'LZ4-Update ' || ''
-          ),
+          (github.event.inputs.ZRAMCUSTOMPATCH == 'LZ4-1.10.0-Patch-Update' && 'LZ4-Neon ' || ''),
           
           (github.event.inputs.SCHEDULERS == 'ADIOS' && 'ADIOS ' || ''),
 
@@ -2145,14 +2138,6 @@ jobs:
           echo "📥 Cloning Patch Dependencies..."                              
           # LZ4 / ZSTD Patch Sources
           case "$ZRAMPATCH" in
-            "LZ4-1.10.0-Custom-Patch")
-              git clone --depth=1 \
-                https://github.com/cctv18/oppo_oplus_realme_sm8750.git
-              ;;              
-            "LZ4-1.10.0-Patch")
-              git clone --depth=1 \
-                https://github.com/Xiaomichael/kernel_patches.git
-              ;;
             "LZ4-1.10.0-Patch-Update")
               git clone --depth=1 \
                 https://github.com/Numbersf/lz4_oplus.git
@@ -2287,26 +2272,6 @@ jobs:
               echo "⚠️ Failed to Copy SUSFS Patches"
             cp -r ./susfs4ksu/kernel_patches/include/linux/* "$KDIR/include/linux/" 2>/dev/null || \
               echo "⚠️ Failed to Copy SUSFS Patches"
-          fi
-
-          if [[ "$ZRAMPATCH" == "LZ4-1.10.0-Custom-Patch" ]]; then
-            echo "📥 Copying CCTV18 LZ4 1.10.0 and ZSTD 1.5.7 Patches..."
-            cp -r "$CUSTOMPATCH/001-lz4.patch" "$KDIR/" 2>/dev/null || \
-              echo "⚠️ Failed to Copy"          
-            cp -r "$CUSTOMPATCH/lz4armv8.S" "$KDIR/lib" 2>/dev/null || \
-              echo "⚠️ Failed to Copy"        
-            cp -r "$CUSTOMPATCH/002-zstd.patch" "$KDIR/" 2>/dev/null || \
-              echo "⚠️ Failed to Copy"          
-          fi
-
-          if [[ "$ZRAMPATCH" == "LZ4-1.10.0-Patch" ]]; then
-            echo "📥 Copying Xiao LZ4 1.10.0 and ZSTD 1.5.7 Patches..."
-            cp -r "$XMPATCH/001-lz4.patch" "$KDIR/" 2>/dev/null || \
-              echo "⚠️ Failed to Copy"          
-            cp -r "$XMPATCH/lz4armv8.S" "$KDIR/lib" 2>/dev/null || \
-              echo "⚠️ Failed to Copy"        
-            cp -r "$XMPATCH/002-zstd.patch" "$KDIR/" 2>/dev/null || \
-              echo "⚠️ Failed to Copy"          
           fi
 
           # Navigate to Common Directory
@@ -2484,41 +2449,28 @@ jobs:
           echo ""
           echo "🎉 Fake Patches Reverted"          
 
-      - name: 🔧 LZ4 1.10.0 / ZSTD 1.5.7 Setup
-        if: ${{ github.event.inputs.ZRAMCUSTOMPATCH != 'None' && github.event.inputs.ZRAMCUSTOMPATCH != '' }}
+      - name: 🔧 LZ4 1.10.0 Update
+        if: ${{ github.event.inputs.ZRAMCUSTOMPATCH == 'LZ4-1.10.0-Patch-Update' }}
         shell: bash
         run: |
           set -euo pipefail
       
-          # Inputs / Environment Variables      
           # Selected Patch Type
           ZRAMPATCH="${{ github.event.inputs.ZRAMCUSTOMPATCH }}"
       
-          # Kernel Version (6.1 / 6.6)
-          KERNELVERSION="${{ env.KERNELVERSION }}"
-      
-          # Directory Paths     
           # Main Kernel Common Directory
           KCDIR="${GITHUB_WORKSPACE}/kernel_workspace/kernel_platform/common"
-      
-          # CCTV18 / Oplus Patch Source
-          CUSTOMPATCH="${GITHUB_WORKSPACE}/kernel_workspace/oppo_oplus_realme_sm8750/zram_patch"
-      
-          # Xiaomichael Patch Source
-          XMPATCH="${GITHUB_WORKSPACE}/kernel_workspace/kernel_patches/zram_patches"
       
           # LZ4 Update Script Repository
           LZ4PATCHUPDATE="${GITHUB_WORKSPACE}/kernel_workspace/lz4_oplus"
       
           echo "------------------------------"
-          echo "🚀 LZ4 1.10.0 / ZSTD 1.5.7 Setup"
-          echo "📦 Patch Type     : $ZRAMPATCH"
-          echo "📁 Kernel Version : $KERNELVERSION"
+          echo "🚀 LZ4 1.10.0 Patch Update"
+          echo "📦 Patch Type : $ZRAMPATCH"
           echo "------------------------------"
           echo ""
       
-          # Validate Kernel Source Directory      
-          # Skip Step if Kernel Source does Not Exist
+          # Validate Kernel Source Directory
           if [[ ! -d "$KCDIR" ]]; then
             echo "⚠️ Kernel Common Directory Not Found"
             exit 0
@@ -2527,138 +2479,24 @@ jobs:
           # Move Into Kernel Source Directory
           cd "$KCDIR"
       
-          # Used For:
-          #   - Syncing Updated LZ4 Sources
-          #   - Updating Old Implementations
-          #   - Automated Source Refresh      
-          if [[ "$ZRAMPATCH" == "LZ4-1.10.0-Patch-Update" ]]; then
-            echo "🚀 Running LZ4 Patch Update Script..."     
-            # Ensure Updater Script Exists
-            if [[ -f "${LZ4PATCHUPDATE}/apply_lz4_oplus.sh" ]]; then      
-              # Execute Updater Script
-              . "${LZ4PATCHUPDATE}/apply_lz4_oplus.sh"      
-              echo "✔️ LZ4 OPlus Shell Script File Completed"      
-            else
-              echo "⚠️ LZ4 OPlus Shell Script File Not Found"
-            fi
+          # Ensure Updater Script Exists
+          if [[ ! -f "${LZ4PATCHUPDATE}/apply_lz4_oplus.sh" ]]; then
+            echo "⚠️ LZ4 OPlus Shell Script File Not Found"
+            exit 1
           fi
       
-          # LZ4 ARMv8 Optimized Source Injection
-          # Purpose:
-          #   - ARMv8 Optimized LZ4 Acceleration
-          #   - Faster Decompression
-          #   - Improved ZRAM Performance      
-          if [[ "$ZRAMPATCH" == "LZ4-1.10.0-Custom-Patch" && \
-                ( "$KERNELVERSION" == "6.1" || "$KERNELVERSION" == "6.6" ) ]]; then      
-            echo "📦 Checking LZ4 ARMv8 Sources..."      
-            # Target F2FS ARMv8 Directory
-            F2FS="fs/f2fs/lz4armv8"    
-            # Create Directory if Missing
-            mkdir -p "$F2FS"     
-            # Check if Files Already Exist
-            if [[ -f "$F2FS/lz4accel.c" && \
-                  -f "$F2FS/lz4accel.h" && \
-                  -f "$F2FS/lz4armv8.S" ]]; then     
-              echo "✔️ LZ4 ARMv8 Sources Already Present"      
-            else
-              echo "⬇️ Injecting Missing ARMv8 Sources..."                
-              # Base Download URL
-              BASE_URL="https://raw.githubusercontent.com/AndreiMikh/AndreiMikh-Kernel-Lab/refs/heads/${GITHUB_REF_NAME}"     
-              # Download
-              curl -fL --retry 3 \
-                -o "$F2FS/lz4accel.c" \
-                "${BASE_URL}/lz4accel.c"      
-              # Download
-              curl -fL --retry 3 \
-                -o "$F2FS/lz4accel.h" \
-                "${BASE_URL}/lz4accel.h"     
-              # Download ARMv8 Assembly Implementation
-              curl -fL --retry 3 \
-                -o "$F2FS/lz4armv8.S" \
-                "${BASE_URL}/lz4armv8.S"      
-              echo "✔️ ARMv8 Sources Ready"
-            fi
-          fi
+          # Execute LZ4 Update Script
+          echo "🚀 Running LZ4 Patch Update Script..."
+          . "${LZ4PATCHUPDATE}/apply_lz4_oplus.sh"
+          echo "✔️ LZ4 OPlus Shell Script File Completed"
       
-          # Patch Apply Helper Function
-          # Prevents Duplicate Patching and Detects Patch Conflicts
-          applypatch() {
-            local patchfile="$1"
-            local patchname
-            patchname="$(basename "$patchfile")"
-            # Ensure Patch Exists
-            if [[ ! -f "$patchfile" ]]; then
-              echo "⚠️ $patchname Not Found"
-              return 1
-            fi
-
-            echo "⚙️ Checking $patchname..."
-            # Check Whether Patch Can Be Applied
-            if git apply --check -p1 "$patchfile" >/dev/null 2>&1; then
-              echo "🚀 Applying $patchname..."
-              git apply --ignore-whitespace -p1 "$patchfile"
-              echo "✔️ $patchname Applied Successfully"
-            # Check Whether Patch Is Already Applied
-            elif git apply --reverse --check -p1 "$patchfile" >/dev/null 2>&1; then
-              echo "ℹ️ $patchname Already Applied"
-              echo "⏭️ Skipping..."
-            else
-              echo "⚠️ $patchname is Incompatible with the Current Kernel Source"
-              return 1
-            fi
-          }
-      
-          # Patch Application Logic
-          # Matrix:
-          # Linux Kernel Version 6.1:
-          #   - LZ4 Patch
-          #   - ZSTD Patch
-          # Linux Kernel Version 6.6:
-          #   - LZ4 Patch
-          #   - Optional ZSTD Patch
-          case "${KERNELVERSION}:${ZRAMPATCH}" in      
-            # Kernel 6.1 + Xiaomichael Patch
-            "6.1:LZ4-1.10.0-Patch")
-              applypatch "${XMPATCH}/001-lz4.patch"
-              applypatch "${XMPATCH}/002-zstd.patch"
-              ;;
-            # Kernel 6.1 + CCTV18 Custom Patch
-            "6.1:LZ4-1.10.0-Custom-Patch")
-              applypatch "${CUSTOMPATCH}/001-lz4.patch"
-              applypatch "${CUSTOMPATCH}/002-zstd.patch"
-              ;;
-            # Kernel 6.6 + Xiaomichael Patch
-            "6.6:LZ4-1.10.0-Patch")
-              applypatch "${XMPATCH}/001-lz4.patch"
-              ;;
-            # Kernel 6.6 + CCTV18 Custom Patch
-            "6.6:LZ4-1.10.0-Custom-Patch")
-              applypatch "${CUSTOMPATCH}/001-lz4.patch"
-              applypatch "${CUSTOMPATCH}/002-zstd.patch"
-              ;;
-            # Patch Update Mode
-            "6.1:LZ4-1.10.0-Patch-Update")
-              echo "✔️ Patch Update Mode Completed"
-              ;;
-            "6.6:LZ4-1.10.0-Patch-Update")
-              echo "✔️ Patch Update Mode Completed"
-              ;;
-            # Unsupported Combination
-            *)
-              echo "⚠️ Unsupported Combination"
-              echo "Kernel Version : $KERNELVERSION"
-              echo "Patch Type     : $ZRAMPATCH"
-              ;;
-          esac
-
           # Load Reject Checker and Run Rejection Check
           source "$REJECTCHECKER"
           checkrejects .
       
           echo ""
-          echo "🎉 LZ4 / ZSTD Setup Completed"
-          echo "📦 Kernel Version : $KERNELVERSION"
-          echo "🧩 Patch Type     : $ZRAMPATCH"
+          echo "🎉 LZ4 1.10.0 Patch Update Completed"
+          echo "📦 Patch Type : $ZRAMPATCH"
     
       - name: 🔧 Scheduler Conversion
         if: ${{ env.KERNELVERSION == '6.6' && github.event.inputs.WINDSPEED == 'false' && !endsWith(github.event.inputs.FILE, 'aosp') }}
@@ -5222,9 +5060,7 @@ jobs:
           esac
       
           declare -A ZRAMPATCHMAP=(
-            ["LZ4-1.10.0-Custom-Patch"]="-LZ4(1.10.0)+ZSTD(1.5.7)"
-            ["LZ4-1.10.0-Patch"]="-LZ4(1.10.0)"
-            ["LZ4-1.10.0-Patch-Update"]="-LZ4(1.10.0)"
+            ["LZ4-1.10.0-Patch-Update"]="-LZ4(Neon)"
           )
           
           SUFFIX+="${ZRAMPATCHMAP["$ZRAMPATCH"]:-}"
@@ -6133,8 +5969,8 @@ jobs:
             echo "|----------------------------------------------------------------------------|------------------------------------------------|"
 
             # Compression / Decompression Algorithm Formatting Output
-            echo "| ⚙️ Compression / Decompression Algorithm LZ4 1.10.0 (Kernel 6.1 / 6.6) + ZSTD (Kernel 6.1) | \`${{ github.event.inputs.ZRAMCUSTOMPATCH }}\` |"
-            echo "| 🌪️ Hmbird / Windspeed Patch Scheduler                                                      | $(bool "${{ github.event.inputs.WINDSPEED }}") |"
+            echo "| ⚙️ LZ4 1.10.0                                                             | \`${{ github.event.inputs.ZRAMCUSTOMPATCH }}\` |"
+            echo "| 🌪️ Hmbird / Windspeed Patch Scheduler                                     | $(bool "${{ github.event.inputs.WINDSPEED }}") |"
             echo ""
 
             # Miscellaneous
