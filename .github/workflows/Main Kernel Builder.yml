@@ -1774,27 +1774,22 @@ jobs:
               ;;
             KernelSU-Next-Dev-SUSFS)
               MANAGERBRANCH="dev-susfs"
-              BRANCHPATH="pershoot/KernelSU-Next"
               MANAGERARTIFACT="manager"
               ;;
             KernelSU-Next-Dev)
               MANAGERBRANCH="dev"
-              BRANCHPATH="pershoot/KernelSU-Next"
               MANAGERARTIFACT="manager-spoofed"
               ;;
             KernelSU-Main)
               MANAGERBRANCH="main"
-              BRANCHPATH="tiann/KernelSU"
               MANAGERARTIFACT="manager"
               ;;
             ReSukiSU-Main)
               MANAGERBRANCH="main"
-              BRANCHPATH="ReSukiSU/ReSukiSU"
               MANAGERARTIFACT="Manager-release"
               ;;
             ReSukiSU-Dev)
               MANAGERBRANCH="dev"
-              BRANCHPATH="ReSukiSU/ReSukiSU"
               MANAGERARTIFACT="Manager-release"
               ;;
             *)
@@ -1905,9 +1900,9 @@ jobs:
             setupengine \
               "$KSUREPO" \
               "$MANAGERBRANCH" \
-              "builtin"
+              "BRANCHPATH"
             cd KernelSU || {
-              echo "⚠️ SukiSU-Ultra KernelSU Directory was Not Created"
+              echo "⚠️ SukiSU-Ultra Directory Not Found"
               exit 1
             }
 
@@ -1996,7 +1991,7 @@ jobs:
           elif [[ "$ROOTENGINE" == "ReSukiSU" ]]; then
             echo "🚀 Setting Up ReSukiSU..."
             setupengine \
-              "$BRANCHPATH" \
+              "$KSUREPO" \
               "$MANAGERBRANCH" \
               "$MANAGERBRANCH"
             cd KernelSU || {
@@ -2030,7 +2025,7 @@ jobs:
           elif [[ "$ROOTENGINE" == "KernelSU-Next" ]]; then
             echo "🚀 Setting Up KernelSU-Next..."
             setupengine \
-              "$BRANCHPATH" \
+              "$KSUREPO" \
               "$MANAGERBRANCH" \
               "$MANAGERBRANCH"
             cd KernelSU-Next || {
@@ -2095,7 +2090,7 @@ jobs:
           elif [[ "$ROOTENGINE" == "KernelSU" ]]; then
             echo "🚀 Setting Up KernelSU..."
             setupengine \
-              "$BRANCHPATH" \
+              "$KSUREPO" \
               "$MANAGERBRANCH" \
               "$MANAGERBRANCH"
             cd KernelSU || {
@@ -2142,8 +2137,6 @@ jobs:
           echo "📂 Repository : $KSUREPO"
           echo "🌿 Branch     : $MANAGERBRANCH"
           echo "📁 Setup Repo : $BRANCHPATH"
-          echo "📦 Version    : ${KSUVERSION:-Unknown}"
-          echo "------------------------------"
       
       - name: 🔧 Apply Fake Patches
         if: ${{ github.event.inputs.SUSFSREPOSITORY != '-1' }}
