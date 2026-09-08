@@ -1900,7 +1900,7 @@ jobs:
             setupengine \
               "$KSUREPO" \
               "$MANAGERBRANCH" \
-              "BRANCHPATH"
+              "$BRANCHPATH"
             cd KernelSU || {
               echo "⚠️ SukiSU-Ultra Directory Not Found"
               exit 1
@@ -1910,36 +1910,26 @@ jobs:
             GITCOMMITHASH="$(git rev-parse --short=8 HEAD)"
             echo "🔖 Current Commit Hash : $GITCOMMITHASH"
 
-            # Fetch SukiSU-Ultra API Version
-            echo "🌐 Fetching SukiSU-Ultra API Version..."
-            APIVERSION=""
-            for i in {1..3}; do
-              APIVERSION="$(
-                curl -fsSL \
-                  "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/builtin/kernel/Makefile" \
-                  | grep -m1 '^KSU_VERSION_API[[:space:]]*[:?+]?=' \
-                  | sed -E 's/^[^=]*=[[:space:]]*//' \
-                  | tr -d '[:space:]' \
-                  || true
-              )"
-
-              if [[ -n "$APIVERSION" ]]; then
-                break
-              fi
-
-              echo "⚠️ Failed to Fetch API Version, Retrying... ($i/3)"
-              sleep 1
-            done
-
-            # API Version Fallback
+            # Read API Version From Checked-Out Makefile
+            echo "🔎 Reading SukiSU-Ultra API Version..."
+          
+            APIVERSION="$(
+              sed -n 's/^KSU_VERSION_API[[:space:]]*:=//p' \
+                kernel/Makefile |
+              head -n1 |
+              tr -d '[:space:]'
+            )"
+          
             if [[ -z "$APIVERSION" ]]; then
               APIVERSION="3.1.7"
-              echo "⚠️ API Version Fetch Failed"
+              echo "⚠️ API Version Not Found"
               echo "⚠️ Using Fallback: $APIVERSION"
+            else
+              echo "📌 API Version: $APIVERSION"
             fi
-
+          
             echo "APIVERSION=$APIVERSION" >> "$GITHUB_ENV"
-
+            
             # Remove Existing SukiSU-Ultra Version Definitions
             sed -i \
               '/^define get_ksu_version_full$/,/^endef$/d' \
@@ -1957,7 +1947,7 @@ jobs:
               printf 'KSU_VERSION_FULL := v%s\n' "$APIVERSION"
               printf '\n'
               printf 'define get_ksu_version_full\n'
-              printf 'v$1-%s\n' "$GITCOMMITHASH"
+              printf 'v%s-%s\n' "$APIVERSION" "$GITCOMMITHASH"
               printf 'endef\n'
               printf '\n'
               cat kernel/Makefile
