@@ -356,6 +356,38 @@ jobs:
             echo "XUS=$XUS"
             echo "GITRELEASE=$GITRELEASE"
           } >> "$GITHUB_OUTPUT"
+
+      - name: 🔧 Git Identity
+        shell: bash
+        run: |      
+          # Configure Git Identity if Not Already Set
+          if ! git config --global user.name >/dev/null; then
+            git config --global user.name "AndreiMikh"
+          fi
+          
+          if ! git config --global user.email >/dev/null; then
+            git config --global user.email "andreimikhail0088@gmail.com"
+          fi
+
+          # Prepare the Workspace Directory
+          WORKDIR="kernel_workspace"
+          mkdir -p "$WORKDIR" || {
+            echo "⚠️ Failed to Create Directory: $WORKDIR"
+            exit 1
+          }
+
+          # Clone Required Branch
+          echo "📥 Cloning Branch..."
+          git clone --depth=1 \
+            -b LiquidAndrei \
+            https://github.com/AndreiMikh/AndreiMikh-Kernel-Lab.git \
+            "$WORKDIR/AndreiMikh-Kernel-Lab"
+          echo "⚙️ Branch Cloned Successfully"
+          ls -la "$WORKDIR/AndreiMikh-Kernel-Lab"
+      
+          echo ""
+          echo "🎉 Workspace Created and Git Configuration Applied:"
+          git config --global --list
         
       - name: 🔧 Maximize Build Space
         if: ${{ steps.buildprofile.outputs.CLEANSPACE == 'Disabled' }}
@@ -369,36 +401,10 @@ jobs:
           remove-codeql: true           # Remove CodeQL to Free Space
 
       - name: 🔧 Install and Cache Build Dependencies
-        uses: AndreiMikh/Cache-APT-Packages@v1
-        with:
-          packages: >
-            bc
-            build-essential
-            bison
-            clang
-            curl
-            dos2unix
-            elfutils
-            flex
-            gawk
-            git
-            kmod
-            lld
-            llvm
-            libdw-dev
-            libelf-dev
-            liblz4-tool
-            libncurses-dev
-            libssl-dev
-            libxml2-utils
-            python3
-            rsync
-            unzip
-            zip
-            zlib1g-dev
-
-          # Required for Cache-APT-PKGS-Action
-          execute_install_scripts: true
+        run: |
+          # Install Required Build Dependencies with APT Package Caching
+          export APTPACKAGES="bc build-essential bison clang curl dos2unix elfutils flex gawk git kmod lld llvm libdw-dev libelf-dev liblz4-tool libncurses-dev libssl-dev libxml2-utils python3 rsync unzip zip zlib1g-dev"
+          bash "$GITHUB_WORKSPACE/kernel_workspace/AndreiMikh-Kernel-Lab/scripts/APT-Packages.sh" ~/.apt-pkg-cache
 
       - name: 🔧 Setup Kotlin
         run: |
@@ -413,7 +419,7 @@ jobs:
              "$KOTLINHOME/bin/kotlinc" -version 2>&1 | grep -q "$KOTLINVER"; then
             echo "✔️ Kotlin ${KOTLINVER} is Already Installed"
           else
-            echo "Installing Kotlin Compiler ${KOTLINVER}..."
+            echo "⚙️ Installing Kotlin Compiler ${KOTLINVER}..."
             rm -rf "$KOTLINHOME"
             rm -f kotlinc.zip
             curl --fail \
@@ -808,39 +814,6 @@ jobs:
           
           echo "🎉 Swap Enabled"
           free -h
-          
-      - name: 🔧 Git Identity
-        shell: bash
-        run: |      
-          # Identity
-          if ! git config --global user.name >/dev/null; then
-            git config --global user.name "AndreiMikh"
-          fi
-          
-          if ! git config --global user.email >/dev/null; then
-            git config --global user.email "andreimikhail0088@gmail.com"
-          fi
-
-          WORKDIR="kernel_workspace"
-          mkdir -p "$WORKDIR" || {
-            echo "⚠️ Failed to Create Directory: $WORKDIR"
-            exit 1
-          }
-
-          # Clone Branch
-          echo ""
-          echo "📥 Cloning Branch..."
-          git clone --depth=1 \
-            -b LiquidAndrei \
-            https://github.com/AndreiMikh/AndreiMikh-Kernel-Lab.git \
-            "$WORKDIR/AndreiMikh-Kernel-Lab"
-
-          echo "⚙️ Branch Cloned Successfully"
-          ls -la "$WORKDIR/AndreiMikh-Kernel-Lab"
-      
-          echo ""
-          echo "🎉 Directory Created and Git Configuration Applied:"
-          git config --global --list
 
       - name: 🔧 Setup Reject Checker
         shell: bash
