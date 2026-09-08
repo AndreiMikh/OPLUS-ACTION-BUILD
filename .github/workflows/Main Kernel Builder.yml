@@ -1808,10 +1808,6 @@ jobs:
             echo "⚠️ Failed to Resolve Root Engine Repository"
             exit 1
           }
-          [[ -n "$BRANCHPATH" ]] || {
-            echo "⚠️ Failed to Resolve Setup Repository"
-            exit 1
-          }
           {
             echo "MANAGERBRANCH=$MANAGERBRANCH"
             echo "BRANCHPATH=$BRANCHPATH"
