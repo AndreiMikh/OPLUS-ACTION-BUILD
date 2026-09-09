@@ -713,72 +713,88 @@ jobs:
       
       - name: 🔧 Debug – Show Selected Inputs
         shell: bash
+        env:
+          DEBUGBUILDTIME: ${{ github.event.inputs.BUILDTIME }}
+          DEBUGSUFFIX: ${{ github.event.inputs.SUFFIX }}
         run: |
           set -euo pipefail
-          
-           # Helper: Print Unicode Codepoints
-           printunicode() {
-             local LABEL="$1"
-             local VALUE="$2"
 
-             echo -n "$LABEL Unicode: "
+          # Helper: Print Unicode Codepoints
+          printunicode() {
+            local LABEL="$1"
+            local VALUE="$2"
 
-             python3 <<EOF
+            echo -n "$LABEL Unicode: "
+            VALUE="$VALUE" python3 <<'PY'
+          import os
           import unicodedata
-          value = """$VALUE"""
+          value = os.environ.get("VALUE", "")
           output = []
           for c in value:
-              code = f"U+{ord(c):04X}"
-              if c.isspace() or unicodedata.category(c) == "Cf":
-                  output.append(f"\033[31m{code}\033[0m")
-              else:
-                  output.append(code)
+            code = f"U+{ord(c):04X}"
+            if c.isspace() or unicodedata.category(c) == "Cf":
+              output.append(f"\033[31m{code}\033[0m")
+            else:
+              output.append(code)
           print(" ".join(output))
-          EOF
-                echo
-              }
-              
-              # Github Environment Variables (Parsed from Manifest) 
-              echo ""
-              echo "--- Manifest Parsed Values ---"
-              echo "CPU                   : ${CPU:-<empty>}"
-              echo "CPUD                  : ${CPUD:-<empty>}"
-              echo "Android Version       : ${VANDROID:-<empty>}"
-              echo "Build Profile         : ${BUILDMETHOD:-<empty>}"
-              echo "------------------------------"
-              echo ""
+          PY
+            echo
+          }
 
-              # GitHub Action Inputs
-              echo ""
-              echo "------- GitHub  Inputs -------"
-              echo "File                  : ${{ github.event.inputs.FILE }}"
-              echo "KernelPatch           : ${{ github.event.inputs.KERNELPATCH }}"
-              echo "Root Branch           : ${{ github.event.inputs.ROOTBRANCHSOURCE }}"
-              echo "SuSFS                 : ${{ github.event.inputs.SUSFSREPOSITORY }}"
-              echo "Root                  : ${{ github.event.inputs.ROOTENGINE }}"
-              echo "ZRAM                  : ${{ github.event.inputs.ZRAMCUSTOMPATCH }}"
-              echo "Build Time            : ${{ github.event.inputs.BUILDTIME }}"
-              echo "Suffix                : ${{ github.event.inputs.SUFFIX }}"
-              echo "LSM Baseband Guard    : ${{ github.event.inputs.LSMBBG }}"
-              echo "LXC Support           : ${{ github.event.inputs.LXCDOCKERSUPPORT }}"
-              echo "NoMount               : ${{ github.event.inputs.NOMOUNT }}"
-              echo "Netfilter             : ${{ github.event.inputs.NETFILTER }}"
-              echo "TCP                   : ${{ github.event.inputs.TCPALGORITHM }}"
-              echo "SuSFS Repository      : ${{ github.event.inputs.SUSFSVARIANT }}"
-              echo "SuSFS Branch          : ${{ github.event.inputs.SUSFSBRANCHDEV }}"
-              echo "Build                 : ${{ github.event.inputs.FASTBUILD }}"
-              echo "Windspeed             : ${{ github.event.inputs.WINDSPEED }}"
-              echo "Scheduler             : ${{ github.event.inputs.SCHEDULERS }}"
-              echo "Unicode Bypass        : ${{ github.event.inputs.UNICODE }}"
-              echo "Re-Kernel             : ${{ github.event.inputs.REKERNEL }}"
-              echo "NTSync                : ${{ github.event.inputs.NTSYNC }}"
-              echo "------------------------------"
-              echo ""
-              
-              # Unicode Inspection (Whitespace / Hidden Character Detection)
-              printunicode "BUILDTIME" "${{ github.event.inputs.BUILDTIME }}"
-              printunicode "SUFFIX" "${{ github.event.inputs.SUFFIX }}"
+          echo ""
+          echo "--- Manifest Parsed Values ---"
+          echo "CPU                   : ${CPU:-<Empty>}"
+          echo "CPUD                  : ${CPUD:-<Empty>}"
+          echo "Android Version       : ${VANDROID:-<Empty>}"
+          echo "Build Profile         : ${BUILDMETHOD:-<Empty>}"
+          echo "------------------------------"
+          echo ""
 
+          echo "------- GitHub Inputs -------"
+          echo "File                  : ${{ github.event.inputs.FILE }}"
+          echo "KernelPatch           : ${{ github.event.inputs.KERNELPATCH }}"
+          echo "Root Branch           : ${{ github.event.inputs.ROOTBRANCHSOURCE }}"
+          echo "SUSFS                 : ${{ github.event.inputs.SUSFSREPOSITORY }}"
+          echo "Root                  : ${{ github.event.inputs.ROOTENGINE }}"
+          echo "ZRAM                  : ${{ github.event.inputs.ZRAMCUSTOMPATCH }}"
+          echo "Build Time            : $DEBUGBUILDTIME"
+          echo "Suffix                : $DEBUGSUFFIX"
+          echo "LSM Baseband Guard    : ${{ github.event.inputs.LSMBBG }}"
+          echo "LXC Support           : ${{ github.event.inputs.LXCDOCKERSUPPORT }}"
+          echo "NoMount               : ${{ github.event.inputs.NOMOUNT }}"
+          echo "Netfilter             : ${{ github.event.inputs.NETFILTER }}"
+          echo "TCP                   : ${{ github.event.inputs.TCPALGORITHM }}"
+          echo "SUSFS Repository      : ${{ github.event.inputs.SUSFSVARIANT }}"
+          echo "SUSFS Branch          : ${{ github.event.inputs.SUSFSBRANCHDEV }}"
+          echo "Build                 : ${{ github.event.inputs.FASTBUILD }}"
+          echo "Windspeed             : ${{ github.event.inputs.WINDSPEED }}"
+          echo "Scheduler             : ${{ github.event.inputs.SCHEDULERS }}"
+          echo "Unicode Bypass        : ${{ github.event.inputs.UNICODE }}"
+          echo "Re-Kernel             : ${{ github.event.inputs.REKERNEL }}"
+          echo "NTSync                : ${{ github.event.inputs.NTSYNC }}"
+          echo "------------------------------"
+          echo ""
+
+          # Unicode Inspection
+          printunicode "BUILDTIME" "$DEBUGBUILDTIME"
+          printunicode "SUFFIX" "$DEBUGSUFFIX"
+
+          # Additional shell-level inspection
+          echo ""
+          echo "--- Raw Character Debug ---"
+          printf 'BUILDTIME bytes : '
+          printf '%s' "$DEBUGBUILDTIME" | od -An -tx1 | tr -d '\n'
+          echo
+
+          printf 'SUFFIX bytes    : '
+          printf '%s' "$DEBUGSUFFIX" | od -An -tx1 | tr -d '\n'
+          echo
+
+          echo ""
+          echo "--- Length Debug ---"
+          printf 'BUILDTIME length: %d\n' "${#DEBUGBUILDTIME}"
+          printf 'SUFFIX length   : %d\n' "${#DEBUGSUFFIX}"
+     
       - name: 🔧 Swap Disk Space
         shell: bash
         run: |      
