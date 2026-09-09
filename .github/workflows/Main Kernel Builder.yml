@@ -354,7 +354,7 @@ jobs:
         if: ${{ steps.buildprofile.outputs.CLEANSPACE == 'Disabled' }}
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 8192         # Keep 8Gib Free for OS / System
+          root-reserve-mb: 4096         # Keep 4Gib Free for OS / System
           temp-reserve-mb: 2048         # Keep 2Gib Free in Temporary Directories
           remove-dotnet: true           # Remove .NET SDKs to Free Space
           remove-android: true          # Remove Pre-Installed Android SDKs
@@ -797,9 +797,11 @@ jobs:
      
       - name: 🔧 Swap Disk Space
         shell: bash
-        run: |      
+        run: | 
+          set -euo pipefail
+          
           echo "📌 Filesystem Disk Usage:"
-          df -h
+          df -hT
 
           echo "📌 Workspace Directory Size:"
           du -sh $GITHUB_WORKSPACE 2>/dev/null || true
@@ -814,29 +816,58 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-                
+
           SWAPFILE="/swapfile"
           SWAPSIZE="4G"
-          
-          if swapon --show | grep -q "$SWAPFILE"; then
-            echo "ℹ️ Swap Already Active"
+
+          echo "🔍 Checking Existing Swap..."
+
+          if swapon --show=NAME --noheadings | grep -Fxq "$SWAPFILE"; then
+            echo "ℹ️ Swap Already Active: $SWAPFILE"
             free -h
             exit 0
           fi
-          
-          echo "📦 Creating Swap ($SWAPSIZE)..."
-          
-          # Try Fallocate First, Fallback to DD
-          if ! sudo fallocate -l "$SWAPSIZE" "$SWAPFILE"; then
-            echo "⚠️ Fallocate Failed → Using DD"
-            sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=4096
+
+          echo "📦 Creating $SWAPSIZE Swap at $SWAPFILE..."
+
+          # Remove Stale Swap File if it Exists but is Not Active
+          if [ -e "$SWAPFILE" ]; then
+            echo "🧹 Removing Stale Swap File..."
+            sudo swapoff "$SWAPFILE" 2>/dev/null || true
+            sudo rm -f "$SWAPFILE"
           fi
-          
+
+          # Try Fallocate First
+          if sudo fallocate -l "$SWAPSIZE" "$SWAPFILE"; then
+            echo "🎉 Fallocate Succeeded"
+          else
+            echo "⚠️ Fallocate Failed → Falling Back to DD"
+
+            sudo dd \
+              if=/dev/zero \
+              of="$SWAPFILE" \
+              bs=1M \
+              count=4096 \
+              status=progress
+          fi
+
           sudo chmod 600 "$SWAPFILE"
+
+          echo "🔧 Initializing Swap..."
           sudo mkswap "$SWAPFILE"
+
+          echo "🚀 Enabling Swap..."
           sudo swapon "$SWAPFILE"
-          
-          echo "🎉 Swap Enabled"
+
+          echo ""
+          echo "🎉 Swap Enabled Successfully"
+          echo ""
+
+          echo "--- Swap ---"
+          swapon --show
+ 
+          echo ""
+          echo "--- Memory ---"
           free -h
 
       - name: 🔧 Setup Reject Checker
